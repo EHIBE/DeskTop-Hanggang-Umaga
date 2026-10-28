@@ -119,6 +119,7 @@ class AppSettings:
     data_dir: Path
     port: int
     api_key: str | None = field(repr=False)
+    is_dev: bool = False
 
     @property
     def database_path(self) -> Path:
@@ -149,6 +150,11 @@ def load_settings(env: Mapping[str, str]) -> AppSettings:
     data_dir = Path(raw_data_dir) if raw_data_dir else _default_data_dir(env)
     port = _parse_port(env.get("DESKTOP_PORT", "").strip() or str(DEFAULT_PORT))
     api_key = env.get("MODEL_API_KEY", "").strip() or None
+    is_dev = env.get("DESKTOP_DEV", "").strip() == "1"
     return AppSettings(
-        token=token, data_dir=data_dir.resolve(), port=port, api_key=api_key
+        token=token,
+        data_dir=data_dir.resolve(),
+        port=port,
+        api_key=api_key,
+        is_dev=is_dev,
     )

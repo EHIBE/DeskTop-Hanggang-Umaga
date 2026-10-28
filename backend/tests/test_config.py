@@ -104,3 +104,9 @@ def test_documented_timeouts_and_budget() -> None:
     assert TIMEOUT_S[CallKind.FILES] == 60.0
     assert COST_WARN_USD == Decimal(90)
     assert COST_STOP_USD == Decimal(120)
+
+
+def test_dev_flag(tmp_path: Path) -> None:
+    env = {"DESKTOP_TOKEN": TOKEN, "DESKTOP_DATA_DIR": str(tmp_path)}
+    assert load_settings({**env, "DESKTOP_DEV": "1"}).is_dev
+    assert not load_settings(env).is_dev

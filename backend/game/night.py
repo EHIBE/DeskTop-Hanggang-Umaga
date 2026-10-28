@@ -5,6 +5,7 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
+from decimal import Decimal
 from enum import StrEnum
 from typing import Final
 
@@ -33,6 +34,7 @@ from capture.camera import (
 )
 from config import (
     HANDS_OFF_WAIT_S,
+    NIGHT_COST_ALERT_USD,
     STILL_FRAME_MEAN_DIFF_MAX,
     STREAM_FPS,
     STREAM_JPEG_QUALITY,
@@ -48,6 +50,7 @@ from db.store import (
     UnitPlacement,
     UnitRecord,
 )
+from meta_client import CostMeter
 from rules.units import (
     REROLLS_PER_UNIT,
     Difficulty,
@@ -172,8 +175,13 @@ class GameController:
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
         pipeline_factory: PipelineFactory | None = None,
+        meter: CostMeter | None = None,
     ) -> None:
         self._store = store
+        self._meter = meter
+        self._notices: list[tuple[str, dict[str, str]]] = []
+        self._night_spend_start = Decimal(0)
+        self._is_night_alerted = False
         self._pipeline_factory = pipeline_factory
         self._night: NightRecord | None = None
         self._units: list[UnitRecord] = []
@@ -367,6 +375,10 @@ class GameController:
         if self._campaign is None:
             return
         self._night = self._store.start_or_resume_night(self._campaign.id)
+        self._night_spend_start = (
+            self._meter.spent_usd if self._meter is not None else Decimal(0)
+        )
+        self._is_night_alerted = False
         self._units = self._store.night_units(self._night.id)
         self._boxes = {
             unit.sam_object_id: self._default_box(unit) for unit in self._units
@@ -410,7 +422,26 @@ class GameController:
             night.id, SETUP_TURN, SUMMON_PHASE, "gm_invalid", {"reason": reason}, 0
         )
 
+    def drain_notices(self) -> list[tuple[str, dict[str, str]]]:
+        notices = self._notices
+        self._notices = []
+        return notices
+
+    def enforce_budget(self) -> None:
+        meter = self._meter
+        if meter is None:
+            return
+        if meter.is_stopped and not self._is_demo_safe:
+            logger.warning("cost hard stop reached, switching to Demo Safe Mode")
+            self.set_demo_safe(True)
+            self._notices.append(("credits.low", {}))
+        night_spend = meter.spent_usd - self._night_spend_start
+        if night_spend > NIGHT_COST_ALERT_USD and not self._is_night_alerted:
+            logger.warning("night spend passed the alert threshold")
+            self._is_night_alerted = True
+
     def _pipeline(self) -> SummonPipeline:
+        self.enforce_budget()
         if self._pipeline_factory is None:
             raise GameError(OFFLINE_KEY, {"feature": SPARK_FEATURE})
         return self._pipeline_factory(self._is_demo_safe)

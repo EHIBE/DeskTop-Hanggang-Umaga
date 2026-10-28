@@ -1,5 +1,6 @@
 import json
 from collections.abc import Callable, Iterator
+from decimal import Decimal
 from pathlib import Path
 
 import cv2
@@ -16,8 +17,10 @@ from config import AppSettings
 from db.store import Store
 from game.night import FramePump, GameController
 from gm.schemas import ContentFilter
+from meta_client import CostMeter
 from server import Services, create_app
 from state import LiveState
+from tests.test_meta_client import MemoryLog
 from vision.sam import TrackerOnlySegmenter
 from vision.summon import FallbackDetector, SummonPipeline
 
@@ -67,11 +70,12 @@ class BusySource(SceneSource):
 
 
 def make_factory(
-    tmp_path: Path, busy: bool = False
+    tmp_path: Path, busy: bool = False, spent: Decimal = Decimal(0)
 ) -> Callable[[AppSettings], Services]:
     def factory(settings: AppSettings) -> Services:
         store = Store(settings.database_path)
         live = LiveState()
+        meter = CostMeter(MemoryLog(starting_total=spent))
 
         def source(_: int) -> VideoSource:
             return BusySource() if busy else SceneSource()
@@ -87,6 +91,7 @@ def make_factory(
             pipeline_factory=lambda _: SummonPipeline(
                 FallbackDetector(), TrackerOnlySegmenter(), CONTENT
             ),
+            meter=meter,
         )
         pump = FramePump(controller, live)
 
@@ -101,6 +106,7 @@ def make_factory(
             pump=pump,
             live=live,
             content=CONTENT,
+            meter=meter,
             close=close,
         )
 
@@ -419,3 +425,36 @@ def test_tap_without_a_pending_summon_is_rejected(client: TestClient) -> None:
         calibrated(ws)
         ws.send_text(json.dumps({"type": "summon.tap", "point": [600, 400]}))
         assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
+
+
+def test_hard_stop_turns_on_demo_safe_and_warns(tmp_path: Path) -> None:
+    settings = AppSettings(token=TOKEN, data_dir=tmp_path, port=8765, api_key=None)
+    app = create_app(
+        settings, frozenset({ORIGIN}), make_factory(tmp_path, spent=Decimal(120))
+    )
+    with TestClient(app) as stopped_client, connect(stopped_client) as ws:
+        assert receive_type(ws, "notice")["copy_key"] == "credits.low"
+        assert receive_type(ws, "state")["demo_safe"] is True
+
+
+def test_cost_messages_only_in_dev(tmp_path: Path) -> None:
+    dev = AppSettings(
+        token=TOKEN, data_dir=tmp_path, port=8765, api_key=None, is_dev=True
+    )
+    app = create_app(
+        dev, frozenset({ORIGIN}), make_factory(tmp_path, spent=Decimal("95.5"))
+    )
+    with TestClient(app) as dev_client, connect(dev_client) as ws:
+        cost = receive_type(ws, "cost")
+        assert (cost["spent_usd"], cost["warn"], cost["stopped"]) == (
+            "95.500000",
+            True,
+            False,
+        )
+
+
+def test_no_cost_messages_outside_dev(client: TestClient) -> None:
+    with connect(client) as ws:
+        receive_type(ws, "state")
+        ws.send_text(json.dumps({"type": "demo_safe", "on": False}))
+        assert json.loads(ws.receive_text())["type"] == "state"

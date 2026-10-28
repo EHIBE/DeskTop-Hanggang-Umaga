@@ -8,6 +8,7 @@ import threading
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Annotated, Final, Literal
 
@@ -162,6 +163,7 @@ class Services:
     pump: FramePump
     live: LiveState
     content: ContentFilter
+    meter: CostMeter | None
     close: Callable[[], None]
 
 
@@ -185,6 +187,7 @@ def build_services(settings: AppSettings) -> Services:
         live,
         has_api_key=settings.api_key is not None,
         pipeline_factory=build_pipeline_factory(meta, content, log_invalid),
+        meter=meta.meter,
     )
     pump = FramePump(controller, live)
 
@@ -199,6 +202,7 @@ def build_services(settings: AppSettings) -> Services:
         pump=pump,
         live=live,
         content=content,
+        meter=meta.meter,
         close=close,
     )
 
@@ -309,6 +313,18 @@ def frame_json(frame: EncodedFrame) -> JsonObject:
     }
 
 
+COST_QUANTUM: Final = Decimal("0.000001")
+
+
+def cost_json(meter: CostMeter) -> JsonObject:
+    return {
+        "type": "cost",
+        "spent_usd": str(meter.spent_usd.quantize(COST_QUANTUM)),
+        "warn": meter.is_warning,
+        "stopped": meter.is_stopped,
+    }
+
+
 def notice_json(copy_key: str, params: dict[str, str] | None = None) -> JsonObject:
     return {"type": "notice", "copy_key": copy_key, "params": params or {}}
 
@@ -326,7 +342,14 @@ class Connection:
             await self._socket.send_text(json.dumps({**message, "seq": self._seq}))
 
     async def send_state(self) -> None:
-        await self.send(state_json(self._services.controller.snapshot()))
+        controller = self._services.controller
+        controller.enforce_budget()
+        for copy_key, params in controller.drain_notices():
+            await self.send(notice_json(copy_key, params))
+        await self.send(state_json(controller.snapshot()))
+        meter = self._services.meter
+        if self._services.settings.is_dev and meter is not None:
+            await self.send(cost_json(meter))
 
     async def stream_frames(self) -> None:
         last_sequence = -1
