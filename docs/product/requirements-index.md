@@ -32,8 +32,8 @@ Update the Status column when a requirement is built (code merged) and tested (t
 | F01 | Calibration and play area | Must | 4.50 | 2 | FR-01 to FR-04 | Planned |
 | F02 | Summon: detection, masks, cards, caps | Must | 4.20 | 5 | FR-06 to FR-10, FR-14 to FR-16 | Built (live Spark and SAM runs wait on the key) |
 | F03 | Sprite pipeline | Must | 5.25 | 4 | FR-11 to FR-13 | Built (placeholder and enemy art wait on the key) |
-| F04 | Tracker overlay and occlusion freeze | Must | 5.25 | 4 | FR-26, FR-27 | Planned |
-| F05 | End Turn re-anchor and drift reconcile | Must | 4.50 | 3 | FR-28, FR-29 | Planned |
+| F04 | Tracker overlay and occlusion freeze | Must | 5.25 | 4 | FR-26, FR-27 | Tested (offline) |
+| F05 | End Turn re-anchor and drift reconcile | Must | 4.50 | 3 | FR-28, FR-29 | Built (End Turn trigger in M7) |
 | F06 | Rules engine, turn loop, HUD, campaign | Must | 4.25 | 6 | FR-05, FR-31 to FR-34, FR-37, FR-40 | Planned |
 | F07 | Aswang, Manananggal, telegraph | Must | 8.50 | 2 | FR-35 | Planned |
 | F08 | Tikbalang, Duwende, Kapre effects | Should | 2.80 | 3 | FR-36 | Planned (Kapre smoke cut) |
@@ -85,10 +85,10 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | FR-23 | | Detect overlapping speakers, "Isa-isa lang!" | F11 | JS-03 | voice/session.py | unit test | Planned |
 | FR-24 | ★ | Push-to-talk (hold Space), mode switch | F10 | JS-10 | voice/session.py, renderer | manual | Planned |
 | FR-25 | ★ | Tap menu for every voice action | F13 | JS-14 | hud/TapMenu.tsx | manual | Planned |
-| FR-26 | ★ | Local tracker, sprites follow at 10 Hz+, render 30 FPS+ | F04 | JS-05 | backend/capture/tracker.py | benchmark | Planned |
-| FR-27 | ★ | Freeze sprite on tracker loss, re-lock within 1 s | F04 | JS-07 | capture/tracker.py | manual | Planned |
-| FR-28 | ★ | Re-anchor all objects with one SAM call at End Turn | F05 | JS-05 | vision/sam.py | E2 | Planned |
-| FR-29 | ★ | Drift reconcile and identity recovery ladder | F05 | JS-07 | vision/sam.py, vision/signature.py | E2, unit tests | Planned |
+| FR-26 | ★ | Local tracker, sprites follow at 10 Hz+, render 30 FPS+ | F04 | JS-05 | backend/capture/tracker.py, game/night.py, screens/Summon.tsx | test_tracker.py benchmark: 12 KCF trackers 31.9 ms median per update on a synthetic 1200x800 frame. Real-desk check Manual: EHIBE | Tested |
+| FR-27 | ★ | Freeze sprite on tracker loss, re-lock within 1 s | F04 | JS-07 | capture/tracker.py | test_tracker.py, test_tracking_flow.py | Tested |
+| FR-28 | ★ | Re-anchor all objects with one SAM call at End Turn | F05 | JS-05 | vision/sam.py, game/night.py (`reanchor_all`) | test_reanchor.py, test_tracking_flow.py. E2 Manual: EHIBE | Built |
+| FR-29 | ★ | Drift reconcile and identity recovery ladder | F05 | JS-07 | vision/sam.py, vision/signature.py | test_reanchor.py (every ladder step) | Tested |
 | FR-30 | | Lost detection off play area | F22 | JS-05 | n/a | n/a | Cut |
 | FR-31 | ★ | Turn state machine per PRD section 8 | F06 | JS-11 | backend/game/state_machine.py | test_state_machine.py | Planned |
 | FR-32 | ★ | Move rings, green check or red dashed X | F06 | JS-05 | canvas/rings.ts, rules/geometry.py | test_geometry.py | Planned |
@@ -130,7 +130,7 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | NFR-07 | Latency | Partial caption 1.5 s p90 | E6 | Planned |
 | NFR-08 | Latency | Narration caption 6 s p90, animations never wait | E6 | Planned |
 | NFR-09 | Performance | Overlay 30 FPS+ at 1080p | manual | Planned |
-| NFR-10 | Performance | Tracker 10 Hz+ with 12 objects at 640x360 | benchmark | Planned |
+| NFR-10 | Performance | Tracker 10 Hz+ with 12 objects at 640x360 | benchmark (31.9 ms median, about 31 Hz, synthetic frame) | Tested |
 | NFR-11 | Performance | Backend CPU under 70% on 4 cores in PLAYER_PHASE | manual | Planned |
 | NFR-12 | Reliability | Timeouts: Spark 20 s, SAM image 10 s, SAM video 120 s, Muse Image 45 s, Files 60 s | unit test (test_meta_client.py) | Tested |
 | NFR-13 | Reliability | 2 retries, 0.5 s then 1 s, jitter 250 ms, Retry-After, no retry on 400 | unit test (test_meta_client.py) | Tested |

@@ -22,7 +22,8 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 | M3 app shell | Built 2026-10-28. Backend spawn on a free port with a fresh token, safeStorage key, token-gated /ws (subprotocol auth), KeySetup, Start, Calibration screens. End-to-end connect verified |
 | M4 summon | Built 2026-10-28. rules/units.py, unit_card schema and filters, Spark detector with repair, SAM segmenter, signatures, tap fallback, re-roll, rename, Summon and UnitCard screens |
 | M5 sprites and cost | Built 2026-10-28. Sprite pipeline, Muse Image generator, cache, style anchor, background push, dev credit meter, hard stop turns Demo Safe on. Asset script `backend/smoke/assets.py` waits on the key |
-| Tests | 352 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
+| M6 tracking and re-anchor | Built 2026-10-28. KCF TrackerSet (31.9 ms for 12 objects), freeze on loss, between-turn recovery, re-anchor ladder, live poses on the board |
+| Tests | 390 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
 | CI, git hooks | None |
 
 ## Pending queue
@@ -34,11 +35,10 @@ Ordered. Canonical schedule: `docs/delivery/schedule.md`.
 3. Manual: EHIBE. Look at the window: KeySetup or Start, then Calibration with the real camera (feed at 20 FPS+, 4 corner taps, ruler check)
 4. Manual: EHIBE. Install ffmpeg on PATH before Phase 13
 5. Manual: EHIBE. Run `backend\.venv\Scripts\python -m smoke.assets --date <today>` from `backend` for placeholder and enemy art, then rate sprites (E5)
-6. Phase 6: tracking and re-anchor (F04, F05)
-7. Phase 7 and 8: rules engine, turn loop, HUD, enemies (F06, F07)
-8. Phase 9 and 10: GM narration, safety features (F09, F13, F14, F17, F24)
-9. Phase 11 and 12: voice, voice claim, physical enemies (F10, F11, F08)
-10. Phase 13 to 15: recording, evals, freeze, replay, video, submission
+6. Phase 7 and 8: rules engine, turn loop, HUD, enemies (F06, F07)
+7. Phase 9 and 10: GM narration, safety features (F09, F13, F14, F17, F24)
+8. Phase 11 and 12: voice, voice claim, physical enemies (F10, F11, F08)
+9. Phase 13 to 15: recording, evals, freeze, replay, video, submission
 
 ## Constraints
 

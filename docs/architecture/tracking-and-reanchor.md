@@ -61,6 +61,18 @@ An A4 sheet gives a top-down desk plane. Local trackers move sprites between tur
 4. Convert mask centroid to cm: `x_cm = x_px / 20`, `y_cm = y_px / 20`.
 5. Snapshot timeout 10 s: use tracker positions with "?" badges.
 
+## Built (2026-10-28)
+
+| Part | Where |
+|---|---|
+| Trackers, smoothing, freeze, recovery budget | `backend/capture/tracker.py` (`TrackerSet`, KCF by default) |
+| Ladder | `reanchor()` at the end of `backend/vision/sam.py`, statuses accepted, histogram, point, concept, uncertain, tracker |
+| Live poses | `GameController.track()` inside the frame pump, sent as `frame.poses` |
+| Between-turn recovery | `GameController.recover_lost_objects()`, run once a second by the server. Off in Demo Safe Mode |
+| End Turn re-anchor | `GameController.reanchor_all()`. Allowed in Demo Safe Mode (FR-50). Positions saved in one transaction. End Turn calls it from M7 |
+
+Benchmark on 2026-10-28: 12 KCF trackers on a synthetic 1200x800 frame, median 31.9 ms per update. Real desk numbers wait on E2 and a live run.
+
 ## Look-alike objects (R03)
 
 - Two signatures within 0.05, or an IoU swap at re-anchor: use last tracker positions to break ties.
