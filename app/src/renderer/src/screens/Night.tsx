@@ -7,11 +7,13 @@ import { drawFloaters, floatersFromEvents, type Floater } from '../canvas/floate
 import { drawMoveRing, drawStartGhost } from '../canvas/rings'
 import { MIN_SCALE, drawSprite, useUnitImages } from '../canvas/sprites'
 import Bilingual from '../components/Bilingual'
+import Captions from '../hud/Captions'
 import Narration from '../hud/Narration'
 import OrderChips from '../hud/OrderChips'
 import TapMenu from '../hud/TapMenu'
 import TopBar from '../hud/TopBar'
 import UnitStrip from '../hud/UnitStrip'
+import VoiceControls from '../hud/VoiceControls'
 import { actionTarget, enemyLabel } from '../hud/targets'
 import { t } from '../lib/copy'
 import { palette } from '../lib/palette'
@@ -447,6 +449,15 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
         </div>
       </div>
       <Narration narration={nightNarration} className="mx-4 mb-2" />
+      {state.voice.status === 'down' && (
+        <div role="status" className="banner mx-4 mb-2 px-4 py-2">
+          <Bilingual copyKey="voice.down_banner" />
+        </div>
+      )}
+      <div className="mx-4 mb-2 flex shrink-0 items-center gap-4">
+        <Captions subscribe={subscribe} />
+        <VoiceControls voice={state.voice} send={send} />
+      </div>
       <footer className="flex min-h-[104px] shrink-0 items-center gap-6 border-t-2 border-gabi-dusk bg-gabi-night px-8 py-2">
         <button
           type="button"

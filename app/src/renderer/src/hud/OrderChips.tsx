@@ -47,6 +47,16 @@ function OrderChips({
             key={chip.chip_id}
             className="flex items-center border-2 border-gabi-ink bg-gabi-dusk"
           >
+            {chip.source === 'voice' && (
+              <span
+                className="ml-2 border-2 border-gabi-lantern px-2 text-gabi-lantern"
+                title={t('voice.chip_mic').en}
+              >
+                <span aria-hidden="true">{'♪ '}</span>
+                {t('voice.chip_mic').tl}
+                {chip.speaker ? ` ${chip.speaker}` : ''}
+              </span>
+            )}
             <span className="px-3">{text.tl}</span>
             <button
               type="button"

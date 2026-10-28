@@ -76,11 +76,15 @@ export type NightUnit = Readonly<{
   owner: string | null
 }>
 
+export type ChipSource = 'tap' | 'voice'
+
 export type Chip = Readonly<{
   chip_id: string
   unit_id: string
   action: IntentAction
   target_id: string | null
+  source?: ChipSource
+  speaker?: string | null
 }>
 
 export type NightSummary = Readonly<{
@@ -167,6 +171,16 @@ export type UnitSummary = Readonly<{
 
 export type Pose = Readonly<{ id: string; x_cm: number; y_cm: number; uncertain: boolean }>
 
+export type VoiceStatus = 'off' | 'connecting' | 'listening' | 'down'
+
+export type VoiceMode = 'open' | 'ptt'
+
+export type VoiceState = Readonly<{
+  status: VoiceStatus
+  mode: VoiceMode
+  ptt_down: boolean
+}>
+
 export type StateMessage = Readonly<{
   type: 'state'
   seq: number
@@ -186,6 +200,7 @@ export type StateMessage = Readonly<{
   awaiting_tap: boolean
   night: NightSummary | null
   score: ScoreSummary | null
+  voice: VoiceState
 }>
 
 export type DevicesMessage = Readonly<{
@@ -259,6 +274,14 @@ export type NarrationMessage = Readonly<{
   source: 'spark' | 'line_bank'
 }>
 
+export type CaptionMessage = Readonly<{
+  type: 'caption'
+  turn_id: string
+  text: string
+  is_final: boolean
+  speaker: string | null
+}>
+
 export type CardMessage = Readonly<{ type: 'card'; seq: number; unit: UnitSummary }>
 
 export type ServerMessage =
@@ -272,6 +295,7 @@ export type ServerMessage =
   | CostMessage
   | EventsMessage
   | NarrationMessage
+  | CaptionMessage
 
 export type CampaignStartMessage =
   | Readonly<{ type: 'campaign.start'; campaign_id: string }>
@@ -312,6 +336,9 @@ export type ClientMessage =
   | Readonly<{ type: 'campaign.delete'; campaign_id: string }>
   | Readonly<{ type: 'night.pause' }>
   | Readonly<{ type: 'night.resume'; force: boolean }>
+  | Readonly<{ type: 'ptt'; down: boolean }>
+  | Readonly<{ type: 'voice.mode'; mode: VoiceMode }>
+  | Readonly<{ type: 'voice.retry' }>
 
 export type DesktopConfig = Readonly<{ port: number; token: string }>
 

@@ -337,7 +337,24 @@ const entries = {
   'narration.mood.takot': { tl: 'Takot', en: 'Fear' },
   'narration.mood.tagumpay': { tl: 'Tagumpay', en: 'Triumph' },
   'narration.mood.umaga': { tl: 'Umaga', en: 'Morning' },
-  'narration.hint': { tl: 'Payo', en: 'Hint' }
+  'narration.hint': { tl: 'Payo', en: 'Hint' },
+  'voice.region': { tl: 'Boses', en: 'Voice' },
+  'voice.status.off': { tl: 'Patay ang mic', en: 'Mic off' },
+  'voice.status.connecting': { tl: 'Kumokonekta ang mic', en: 'Connecting mic' },
+  'voice.status.listening': { tl: 'Nakikinig', en: 'Listening' },
+  'voice.status.down': { tl: 'Walang boses', en: 'Voice down' },
+  'voice.mode.open': { tl: 'Bukas na mic', en: 'Open mic' },
+  'voice.mode.ptt': { tl: 'Pindot para magsalita', en: 'Push to talk' },
+  'voice.mode.label': { tl: 'Paraan ng mic', en: 'Mic mode' },
+  'voice.problems': { tl: 'Problema sa boses', en: 'Voice problems' },
+  'voice.down_banner': {
+    tl: 'Walang boses ngayon. Gumagana pa rin ang pag-tap.',
+    en: 'Voice is down. Tap controls still work.'
+  },
+  'voice.ptt_hold': { tl: 'Pindutin at magsalita (Space)', en: 'Hold to talk (Space)' },
+  'voice.ptt_held': { tl: 'Nakikinig... (Space)', en: 'Listening... (Space)' },
+  'voice.chip_mic': { tl: 'Mic', en: 'Mic' },
+  'voice.caption_label': { tl: 'Live na caption', en: 'Live caption' }
 } as const satisfies Record<string, CopyEntry>
 
 export type CopyKey = keyof typeof entries
