@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "moments": {
+    "night_start": [
+      {"tl": "Lumulubog na ang araw. Hanggang umaga, kapit lang!", "en": "The sun is setting. Hold on until morning!", "mood": "kalmado"}
+    ],
+    "tabi_tabi": [
+      {"tl": "Narinig ka ng mga duwende. Mukhang mabait sila ngayong gabi.", "en": "The duwende heard you. They seem kind tonight.", "mood": "kalmado"}
+    ],
+    "spawn_aswang": [
+      {"tl": "May aswang na paparating mula sa hilaga. Bantayan ang nag-iisa!", "en": "An aswang is coming from the north. Watch whoever is alone!", "mood": "takot"}
+    ],
+    "spawn_aswang_north": [
+      {"tl": "May aswang na paparating mula sa hilaga. Bantayan ang nag-iisa!", "en": "An aswang is coming from the north. Watch whoever is alone!", "mood": "takot"}
+    ],
+    "spawn_aswang_east": [
+      {"tl": "May aswang na paparating mula sa silangan. Bantayan ang nag-iisa!", "en": "An aswang is coming from the east. Watch whoever is alone!", "mood": "takot"}
+    ],
+    "spawn_aswang_south": [
+      {"tl": "May aswang na paparating mula sa timog. Bantayan ang nag-iisa!", "en": "An aswang is coming from the south. Watch whoever is alone!", "mood": "takot"}
+    ],
+    "spawn_aswang_west": [
+      {"tl": "May aswang na paparating mula sa kanluran. Bantayan ang nag-iisa!", "en": "An aswang is coming from the west. Watch whoever is alone!", "mood": "takot"}
+    ],
+    "spawn_tikbalang": [
+      {"tl": "Ramdam mo ba 'yung yabag? Tikbalang 'yan.", "en": "Feel those footsteps? That's a tikbalang.", "mood": "kaba"}
+    ],
+    "spawn_kapre": [
+      {"tl": "Amoy tabako... may kapre sa puno.", "en": "Smells like tobacco... there's a kapre in the tree.", "mood": "kaba"}
+    ],
+    "spawn_manananggal": [
+      {"tl": "Tumingala kayo. May lumilipad.", "en": "Look up. Something is flying.", "mood": "takot"}
+    ],
+    "spawn_duwende": [
+      {"tl": "Ingat sa anting-anting, may maliit na kamay na gustong humawak.", "en": "Guard the charm, a little hand wants it.", "mood": "kaba"}
+    ],
+    "hit": [
+      {"tl": "Tinamaan! Ganyan nga!", "en": "Hit! That's it!", "mood": "tagumpay"}
+    ],
+    "dodge": [
+      {"tl": "Nakaiwas! Muntik na.", "en": "Dodged! That was close.", "mood": "kaba"}
+    ],
+    "kubo_hit": [
+      {"tl": "Tinamaan ang kubo! [HP] na lang.", "en": "The kubo was hit! [HP] left.", "mood": "takot"}
+    ],
+    "unit_down": [
+      {"tl": "Bagsak si [unit]. Bawi tayo.", "en": "[unit] is down. Let's get it back.", "mood": "takot"}
+    ],
+    "last_turn": [
+      {"tl": "Huling dilim na. Konting tiis na lang!", "en": "Last stretch of dark. Just a little longer!", "mood": "kaba"}
+    ],
+    "win": [
+      {"tl": "Sumikat na ang araw! Ligtas ang baryo.", "en": "The sun is up. The barrio is safe.", "mood": "umaga"}
+    ],
+    "lose": [
+      {"tl": "Nasira ang kubo... Subukan ulit bukas ng gabi.", "en": "The kubo fell... Try again tomorrow night.", "mood": "takot"}
+    ],
+    "quiet": [
+      {"tl": "Tahimik ang gabi. Hinga muna, tapos handa ulit.", "en": "The night is quiet. Breathe, then get ready again.", "mood": "kalmado"},
+      {"tl": "Humihihip ang hangin sa bukid. Abangan ang susunod.", "en": "The wind stirs over the fields. Watch for what comes next.", "mood": "kalmado"},
+      {"tl": "Walang gumagalaw sa dilim. Sa ngayon.", "en": "Nothing moves in the dark. For now.", "mood": "kalmado"}
+    ]
+  }
+}

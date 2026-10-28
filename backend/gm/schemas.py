@@ -1,6 +1,7 @@
 import json
 import unicodedata
 from collections.abc import Collection, Sequence
+from enum import StrEnum
 from pathlib import Path
 from typing import Literal
 
@@ -12,6 +13,10 @@ POWER_NAME_MAX = 30
 CARD_TEXT_MAX = 140
 SPRITE_SUBJECT_MAX = 80
 PLAYER_NAME_MAX = 40
+NARRATION_MAX = 240
+CALLOUT_MAX = 60
+CALLOUTS_MAX = 4
+HINT_MAX = 120
 DATA_DIR = Path(__file__).parent / "data"
 
 UnitClass = Literal[
@@ -75,6 +80,14 @@ class _StrictModel(BaseModel):
     )
 
 
+class Mood(StrEnum):
+    KALMADO = "kalmado"
+    KABA = "kaba"
+    TAKOT = "takot"
+    TAGUMPAY = "tagumpay"
+    UMAGA = "umaga"
+
+
 class DetectedBox(_StrictModel):
     x1: int
     y1: int
@@ -103,6 +116,19 @@ class UnitCardDraft(_StrictModel):
 class UnitCardResponse(_StrictModel):
     detected: Detected
     card: UnitCardDraft
+
+
+class GmCallout(_StrictModel):
+    entity_id: str
+    text_tl: str = Field(max_length=CALLOUT_MAX)
+
+
+class GmTurn(_StrictModel):
+    narration_tl: str = Field(max_length=NARRATION_MAX)
+    narration_en: str = Field(max_length=NARRATION_MAX)
+    mood: Mood
+    callouts: tuple[GmCallout, ...] = Field(max_length=CALLOUTS_MAX)
+    hint_tl: str = Field(max_length=HINT_MAX)
 
 
 def _object_schema(properties: dict[str, object]) -> dict[str, object]:
@@ -166,6 +192,35 @@ def parse_unit_card(raw_json: str, known_slot_ids: Collection[str]) -> UnitCardR
     if matched is not None and matched not in known_slot_ids:
         raise SchemaError(f"matches_known_id {matched!r} is not a known slot id")
     return response
+
+
+def gm_turn_json_schema(allowed_ids: Sequence[str]) -> dict[str, object]:
+    callout = _object_schema(
+        {
+            "entity_id": {"type": "string", "enum": list(allowed_ids)},
+            "text_tl": {"type": "string", "maxLength": CALLOUT_MAX},
+        }
+    )
+    return _object_schema(
+        {
+            "narration_tl": {"type": "string", "maxLength": NARRATION_MAX},
+            "narration_en": {"type": "string", "maxLength": NARRATION_MAX},
+            "mood": {"type": "string", "enum": [mood.value for mood in Mood]},
+            "callouts": {"type": "array", "maxItems": CALLOUTS_MAX, "items": callout},
+            "hint_tl": {"type": "string", "maxLength": HINT_MAX},
+        }
+    )
+
+
+def parse_gm_turn(raw_json: str, allowed_ids: Collection[str]) -> GmTurn:
+    try:
+        turn = GmTurn.model_validate_json(raw_json)
+    except ValidationError as error:
+        raise SchemaError(str(error)) from error
+    kept = tuple(c for c in turn.callouts if c.entity_id in allowed_ids)
+    if len(kept) == len(turn.callouts):
+        return turn
+    return turn.model_copy(update={"callouts": kept})
 
 
 def clamp_box(box: DetectedBox, width: int, height: int) -> tuple[int, int, int, int]:
