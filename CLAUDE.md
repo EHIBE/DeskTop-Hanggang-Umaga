@@ -21,7 +21,7 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 | M2 camera and calibration | Backend built 2026-10-28. Real ruler check Manual: EHIBE |
 | M3 app shell | Built 2026-10-28. Backend spawn on a free port with a fresh token, safeStorage key, token-gated /ws (subprotocol auth), KeySetup, Start, Calibration screens. End-to-end connect verified |
 | M4 summon | Built 2026-10-28. rules/units.py, unit_card schema and filters, Spark detector with repair, SAM segmenter, signatures, tap fallback, re-roll, rename, Summon and UnitCard screens |
-| Tests | 289 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
+| Tests | 295 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
 | CI, git hooks | None |
 
 ## Pending queue
