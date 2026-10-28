@@ -19,7 +19,7 @@ The backend follows the PRD folder tree. Each module has one job, and dependenci
 |---|---|
 | Language | Python 3.13 (ADR-0101) |
 | Framework | FastAPI on uvicorn, 127.0.0.1:8765 |
-| Exists today | `server.py` (GET /health), `config.py`, `meta_client.py`, `db/schema.sql`, `db/store.py`, `smoke/*.py`, `capture/camera.py`, `capture/calibration.py`, `rules/geometry.py` (forest edge only), tests for each |
+| Exists today | `server.py` (GET /health), `config.py`, `meta_client.py`, `db/schema.sql`, `db/store.py`, `smoke/*.py`, `capture/camera.py`, `capture/calibration.py`, `rules/geometry.py` (forest edge only), `rules/units.py`, `gm/schemas.py` (unit_card, ContentFilter), `gm/prompts.py` (summon), `vision/sam.py`, `vision/signature.py`, `vision/summon.py`, `state.py`, `game/night.py` (GameController, FramePump), tests for each |
 | Layering | server (entry) to game (orchestration) to vision, voice, gm, replay, capture (I/O services) to rules (pure) and db (persistence) |
 | Injection | FastAPI Depends and constructor parameters. No module-level clients |
 

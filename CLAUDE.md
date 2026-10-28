@@ -20,7 +20,8 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 | M1 smoke scripts | Built 2026-10-28 (`backend/smoke`). Live runs Manual: EHIBE (key, inputs) |
 | M2 camera and calibration | Backend built 2026-10-28. Real ruler check Manual: EHIBE |
 | M3 app shell | Built 2026-10-28. Backend spawn on a free port with a fresh token, safeStorage key, token-gated /ws (subprotocol auth), KeySetup, Start, Calibration screens. End-to-end connect verified |
-| Tests | 152 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
+| M4 summon | Built 2026-10-28. rules/units.py, unit_card schema and filters, Spark detector with repair, SAM segmenter, signatures, tap fallback, re-roll, rename, Summon and UnitCard screens |
+| Tests | 289 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
 | CI, git hooks | None |
 
 ## Pending queue
@@ -31,13 +32,12 @@ Ordered. Canonical schedule: `docs/delivery/schedule.md`.
 2. Manual: EHIBE. Run the Phase 1 smoke scripts (`docs/rules-notes.md` runbook)
 3. Manual: EHIBE. Look at the window: KeySetup or Start, then Calibration with the real camera (feed at 20 FPS+, 4 corner taps, ruler check)
 4. Manual: EHIBE. Install ffmpeg on PATH before Phase 13
-5. Phase 4: summon pipeline (F02)
-6. Phase 5: sprite pipeline and cost tracker (F03, F18)
-7. Phase 6: tracking and re-anchor (F04, F05)
-8. Phase 7 and 8: rules engine, turn loop, HUD, enemies (F06, F07)
-9. Phase 9 and 10: GM narration, safety features (F09, F13, F14, F17, F24)
-10. Phase 11 and 12: voice, voice claim, physical enemies (F10, F11, F08)
-11. Phase 13 to 15: recording, evals, freeze, replay, video, submission
+5. Phase 5: sprite pipeline and cost tracker (F03, F18)
+6. Phase 6: tracking and re-anchor (F04, F05)
+7. Phase 7 and 8: rules engine, turn loop, HUD, enemies (F06, F07)
+8. Phase 9 and 10: GM narration, safety features (F09, F13, F14, F17, F24)
+9. Phase 11 and 12: voice, voice claim, physical enemies (F10, F11, F08)
+10. Phase 13 to 15: recording, evals, freeze, replay, video, submission
 
 ## Constraints
 

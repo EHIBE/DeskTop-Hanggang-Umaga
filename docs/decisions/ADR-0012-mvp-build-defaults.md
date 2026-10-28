@@ -44,6 +44,11 @@ The PRD and derived docs leave several rules and runtime details open or contrad
 | Stage | One fixed 1920x1080 stage scaled to fit the window with letterboxing. Sprites drawn nearest-neighbor at integer scales |
 | Tailwind packages | Moved to devDependencies with versions unchanged |
 | ffmpeg | Manual: EHIBE installs it before Phase 13 |
+| Class caps (added M4) | A summon that would be a third Charm or a third Wall becomes a Fighter (Fighter template, power falls back to P03). The first summon is always the kubo and ignores caps |
+| Game ids (added M4) | `u_kubo` for SAM slot 1, `u_<slot>` for slots 2 to 12. Stable for the night even when a unit is renamed |
+| Re-rolls (added M4) | One per unit, recorded in `night.flags_json` under `rerolls`, so a backend restart cannot reset it |
+| Offline summon (added M4) | Without a key, with Demo Safe on, or when Spark fails: the player taps the new object, a 6 x 6 cm box around the tap becomes the mask (SAM point prompt when SAM is up), and the card is the class default (Fighter, or the kubo first) |
+| Begin Night block (added M4) | `summon.kubo_first` when there is no kubo, `summon.need_units` for every other invalid roster |
 
 ## Consequences
 

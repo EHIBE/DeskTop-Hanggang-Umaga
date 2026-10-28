@@ -36,14 +36,14 @@ Every message is a JSON object with `type` plus fields. Proposed shared fields: 
 | Type | Status | Fields | Purpose |
 |---|---|---|---|
 | `frame` | Established | `view` (raw or warped), `width` and `height` (source pixels, the JPEG is downscaled to 960 px wide, quality 70), `jpg`, `poses` | Desk feed and sprite positions |
-| `state` | Established (M3 fields) | `phase` (START, CALIBRATE, SUMMON so far), `campaign`, `camera`, `calibrated`, `calibration_preview`, `play_w_cm`, `play_h_cm`, `demo_safe`, `has_api_key`. Night fields (`turn`, `night`, `kubo`, `units`, `enemies`, `flags`) arrive in M7 | Full snapshot on connect and after every handled message |
+| `state` | Established (M3 and M4 fields, plus `units`, `begin_block_key`, `awaiting_tap`) | `phase` (START, CALIBRATE, SUMMON so far), `campaign`, `camera`, `calibrated`, `calibration_preview`, `play_w_cm`, `play_h_cm`, `demo_safe`, `has_api_key`. Night fields (`turn`, `night`, `kubo`, `units`, `enemies`, `flags`) arrive in M7 | Full snapshot on connect and after every handled message |
 | `devices` | Established | `cameras` (index, width, height), `microphones` (index, name) | Device picker (FR-01) |
 | `campaigns` | Established | `campaigns` (id, name, difficulty, nights_survived, created_at), newest first, 20 per page | Continue list (FR-05) |
 | `events` | Proposed | `events` (ordered list) | Resolution events for animations |
 | `caption` | Proposed | `turn_id`, `text`, `is_final`, `speaker` | Live transcript (partials replace) |
 | `narration` | Proposed | `narration_tl`, `narration_en`, `mood`, `callouts`, `hint_tl`, `source` (spark or line_bank) | GM caption |
 | `chip` | Proposed | `chip_id`, `unit_id`, `action`, `target_id`, `speaker`, `status` | Order chip add, update, remove |
-| `card` | Proposed | `unit` (card fields), `sprite_url` or placeholder class | New unit card |
+| `card` | Established | `unit` (id, unit_id, sam_id, name, class, hp, hp_max, atk, move, range, power_id, power_name_tl, card_text_tl, card_text_en, x_cm, y_cm, rerolls_left). `sprite_url` arrives in M5 | New or changed unit card |
 | `sprite` | Proposed | `unit_id`, `sprite_url` | Swap placeholder for real sprite |
 | `notice` | Established | `copy_key`, `params` | Banner or prompt by copy key (never raw text) |
 | `cost` | Proposed, dev only | `spent_usd`, `warn`, `stopped` | Credit meter |
@@ -59,8 +59,10 @@ Every message is a JSON object with `type` plus fields. Proposed shared fields: 
 | `campaign.list` | Established | none | Any |
 | `devices.list` | Established | none | Any |
 | `camera.select` | Established | `index` (0 to 5). On Continue, compares the stored baseline and skips calibration when the camera has not moved | Any phase with a campaign |
-| `summon.name` | Proposed | `name` (typed) | SUMMON |
-| `summon.tap` | Proposed | `point` | SUMMON (unclear object) |
+| `summon.name` | Established | `name` (1 to 40) | SUMMON. Replies `card`, or `notice` `summon.which` with `state.awaiting_tap` true |
+| `summon.tap` | Established | `point` (warped pixels) | SUMMON while `awaiting_tap` |
+| `unit.reroll` | Established | `unit_id` (UUID) | SUMMON, one per unit |
+| `unit.rename` | Established | `unit_id`, `name` (1 to 40, profanity filtered) | SUMMON |
 | `night.begin` | Proposed | none | SUMMON with valid roster |
 | `claim.tap` | Proposed | `player_name`, `unit_ids` | VOICE_CLAIM |
 | `consent` | Proposed | `player_id`, `agree` | Before Start Night |

@@ -30,7 +30,7 @@ Update the Status column when a requirement is built (code merged) and tested (t
 | F | Feature | MoSCoW | RICE | Hours | FRs | Status |
 |---|---|---|---|---|---|---|
 | F01 | Calibration and play area | Must | 4.50 | 2 | FR-01 to FR-04 | Planned |
-| F02 | Summon: detection, masks, cards, caps | Must | 4.20 | 5 | FR-06 to FR-10, FR-14 to FR-16 | Planned |
+| F02 | Summon: detection, masks, cards, caps | Must | 4.20 | 5 | FR-06 to FR-10, FR-14 to FR-16 | Built (live Spark and SAM runs wait on the key) |
 | F03 | Sprite pipeline | Must | 5.25 | 4 | FR-11 to FR-13 | Planned |
 | F04 | Tracker overlay and occlusion freeze | Must | 5.25 | 4 | FR-26, FR-27 | Planned |
 | F05 | End Turn re-anchor and drift reconcile | Must | 4.50 | 3 | FR-28, FR-29 | Planned |
@@ -65,17 +65,17 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | FR-03 | ★ | Play area 60 x 40 cm with 5 cm forest edge | F01 | JS-01 | calibration.py, screens/Calibration.tsx | test_calibration.py, run check pending EHIBE | Built |
 | FR-04 | | Empty-desk baseline, camera-moved detection | F01 | JS-10 | calibration.py, db/store.py | test_calibration.py, test_store.py | Tested (backend) |
 | FR-05 | | New or continue campaign, difficulty | F06 | JS-09, JS-11 | backend/db/store.py, game/night.py, screens/Start.tsx | test_server.py, test_night.py | Tested |
-| FR-06 | ★ | Summon one object by voice or typed name, card in 8 s p90 | F02 | JS-02 | backend/vision/summon.py | E1, fixtures | Planned |
-| FR-07 | ★ | Spark detects new object box (0 to 1000 grid, clamped) | F02 | JS-02 | vision/summon.py | E1 | Planned |
-| FR-08 | ★ | One SAM image call with box prompts, IDs 1 to 16 | F02 | JS-02 | backend/vision/sam.py | fixture test | Planned |
-| FR-09 | ★ | Unit card from fixed class and power lists | F02 | JS-02 | vision/summon.py, gm/schemas.py | test_schemas.py | Planned |
-| FR-10 | ★ | Clamp card to class template and caps | F02 | JS-02 | backend/rules/units.py | test_units.py | Planned |
+| FR-06 | ★ | Summon one object by voice or typed name, card in 8 s p90 | F02 | JS-02 | backend/vision/summon.py, game/night.py, screens/Summon.tsx | test_summon.py, test_night.py, test_server.py. 8 s p90 is E6, Manual: EHIBE | Built (typed name, voice in M11) |
+| FR-07 | ★ | Spark detects new object box (0 to 1000 grid, clamped) | F02 | JS-02 | vision/summon.py, gm/schemas.py | test_summon.py, test_schemas.py. E1 Manual: EHIBE | Built |
+| FR-08 | ★ | One SAM image call with box prompts, IDs 1 to 16 | F02 | JS-02 | backend/vision/sam.py | test_vision.py (records and prompts). Fixture test waits on a real SAM fixture | Built |
+| FR-09 | ★ | Unit card from fixed class and power lists | F02 | JS-02 | vision/summon.py, gm/schemas.py | test_schemas.py, test_summon.py | Tested |
+| FR-10 | ★ | Clamp card to class template and caps | F02 | JS-02 | backend/rules/units.py | test_units.py (100% coverage) | Tested |
 | FR-11 | ★ | Placeholder class sprite in the same frame | F03 | JS-02 | canvas/sprites.ts, assets/sprites/placeholders | manual | Planned |
 | FR-12 | ★ | Muse Image sprite, chroma key, palette lock | F03 | JS-02 | backend/vision/sprites.py | sprite pipeline tests | Planned |
 | FR-13 | | Sprite cache by key, no repeat call | F03 | JS-09 | vision/sprites.py, db/store.py | unit test | Planned |
-| FR-14 | | Tap-to-select fallback for new object | F02 | JS-02 | screens/Summon.tsx | manual | Planned |
-| FR-15 | ★ | Exactly one kubo as first summon | F02 | JS-12 | rules/units.py | test_units.py | Planned |
-| FR-16 | | Cap 12 objects, 2 Charms, 2 Walls | F02 | JS-02 | rules/units.py | test_units.py | Planned |
+| FR-14 | | Tap-to-select fallback for new object | F02 | JS-02 | game/night.py, screens/Summon.tsx | test_server.py, test_summon.py | Tested (backend) |
+| FR-15 | ★ | Exactly one kubo as first summon | F02 | JS-12 | rules/units.py | test_units.py | Tested |
+| FR-16 | | Cap 12 objects, 2 Charms, 2 Walls | F02 | JS-02 | rules/units.py, vision/summon.py | test_units.py, test_summon.py | Tested |
 | FR-17 | ★ | Voice session per phase, ENDPOINTING then DIARIZATION | F10 | JS-03 | backend/voice/session.py | voice fixtures | Planned |
 | FR-18 | | Voice claim maps labels to players and units | F11 | JS-03 | backend/voice/claim.py | unit test | Planned |
 | FR-19 | ★ | Live partial and final captions with speaker chip | F10 | JS-04 | hud/Captions.tsx, hud/SpeakerChip.tsx | manual | Planned |
@@ -150,5 +150,5 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | NFR-27 | Accessibility | Shape plus color on rings and arrows | manual | Planned |
 | NFR-28 | Accessibility | Tap path for every voice action | manual | Planned |
 | NFR-29 | Portability | Windows 10 and 11 first | manual | Planned |
-| NFR-30 | Content | Profanity filter, content policy fallback | unit test | Planned |
+| NFR-30 | Content | Profanity filter, content policy fallback | unit test (test_schemas.py, test_summon.py) | Tested (filter). Content policy fallback in M5 |
 | NFR-31 | Maintainability | Rules coverage 90%+, fixture test per model integration | coverage | Planned |
