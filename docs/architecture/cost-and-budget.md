@@ -23,7 +23,7 @@ Expected spend is about $0.49 per night and $42.60 for the whole hackathon, agai
 | Per night | About $0.49 expected, about $1.40 worst case |
 | Whole hackathon | $42.60 expected, $98.88 worst case |
 | Prices verified | 2026-10-25 on dev.meta.ai (recheck A5) |
-| Math | Decimal (ADR-0107) |
+| Math | Decimal (ADR-0107). Built in `backend/meta_client.py` (`price_usage`, `CostMeter`). Stored as REAL rounded to 1e-8 and summed as integers |
 
 ## Unit prices
 
@@ -47,7 +47,7 @@ A 1280 px image adds about 1,300 to 1,500 tokens. System prompt about 1,200 toke
 | Call | Input tokens | Output tokens | Cost |
 |---|---|---|---|
 | Unit card (Spark, medium) | ~3,000 | ~1,500 | 3,000 x $1.25/M + 1,500 x $4.25/M = $0.0101 |
-| GM turn (Spark, low) | ~4,500 (1,200 cached) | ~850 | 1,200 x $0.15/M + 3,300 x $1.25/M + 850 x $4.25/M = $0.0081 |
+| GM turn (Spark, low) | ~4,500 (1,200 cached) | ~850 | 1,200 x $0.15/M + 3,300 x $1.25/M + 850 x $4.25/M = $0.0079 (PRD rounds to $0.0081, per-night totals keep the PRD figure) |
 | Command fallback (Spark, minimal) | ~1,500 | ~300 | $0.0032 |
 | Recap (Spark, low) | ~4,000 | ~800 | $0.0084 |
 | SAM image | 1 image | n/a | $0.0025 |

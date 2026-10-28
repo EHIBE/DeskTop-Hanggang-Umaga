@@ -80,4 +80,4 @@ The Build Guide schedule replaces the PRD timeline (ADR-0109). The date is fixed
 | Date | Planned | Actual | Notes |
 |---|---|---|---|
 | Oct 27 | Phase 0 | Scaffold commit 3379e9c | Phase 0 checklist not recorded in rules-notes.md |
-| Oct 28 | Phases 1 to 3 | Docs, agents and skills set added | Code phases pending |
+| Oct 28 | Phases 1 to 3 | Docs, agents and skills added. M0 foundations done: venv on Python 3.13, Tailwind, Electron hardening, config, store, meta_client, 67 tests | Phase 1 smoke tests wait on Manual: EHIBE (key). ffmpeg is Manual: EHIBE before Phase 13 |

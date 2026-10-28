@@ -53,13 +53,16 @@ All calls in Standard mode, never Contributor mode.
 
 ## Electron hardening checklist (ADR-0103)
 
-- [ ] `sandbox: true`, `contextIsolation: true`, `nodeIntegration: false`, `webSecurity: true`
-- [ ] Preload exposes only `{ port, token }`. No `electronAPI`, no raw `ipcRenderer`
-- [ ] `ipcMain` handlers validate the sender
-- [ ] `setWindowOpenHandler` denies, `shell.openExternal` only for allowlisted https URLs
-- [ ] CSP keeps `default-src 'self'`, adds `connect-src` for the backend only
-- [ ] Remove the scaffold `ping` handler
-- [ ] Disable auto-update publish (example.com placeholder)
+- [x] `sandbox: true`, `contextIsolation: true`, `nodeIntegration: false`, `webSecurity: true`
+- [x] Preload exposes only `getConfig()` returning `{ port, token }`. No `electronAPI`, no raw `ipcRenderer`
+- [x] `ipcMain` handlers validate the sender (main frame and exact renderer URL)
+- [x] `setWindowOpenHandler` denies, `shell.openExternal` only for allowlisted https origin and path
+- [x] CSP keeps `default-src 'self'`, adds `connect-src` for the backend only, plus `object-src`, `base-uri`, `form-action` and `frame-src` set to none
+- [x] Remove the scaffold `ping` handler
+- [x] Permission requests and checks denied by default. Navigation, redirects and webviews blocked
+- [ ] Free port at spawn instead of fixed 8765 (B11, M3)
+- [ ] Electron fuses (B12, needs approval)
+- [x] Disable auto-update publish (example.com placeholder)
 
 ## Local server checklist
 

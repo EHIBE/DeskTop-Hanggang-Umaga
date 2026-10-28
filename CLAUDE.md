@@ -12,23 +12,21 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 
 | Item | Status (2026-10-28) |
 |---|---|
-| Scaffold | Done. Commit 3379e9c. Electron starter, FastAPI `/health`, empty backend packages |
+| Scaffold | Done. Commit 3379e9c |
 | Docs | Full AI-ready doc set added 2026-10-28 (see Docs map) |
 | Project agents and skills | Added in `.claude/agents/` and `.claude/skills/` |
-| Code beyond scaffold | None. Build Guide Phase 0 and Phase 1 not yet started in code |
-| Python env | `backend/.venv` missing. `backend/requirements.txt` empty |
-| Tests | None yet |
+| M0 Foundations | Done 2026-10-28. Tailwind wired, Electron hardened, `config.py`, `db/schema.sql`, `db/store.py`, `meta_client.py` (retries, breaker, Decimal cost meter) |
+| Python env | `backend/.venv` on Python 3.13.15, 48 pins in `requirements.txt` (ADR-0101) |
+| Tests | 67 passing (config, store, meta_client). ruff and mypy --strict clean |
 | CI, git hooks | None |
 
 ## Pending queue
 
 Ordered. Canonical schedule: `docs/delivery/schedule.md`.
 
-1. Phase 0: rules notes, credits, tool checks (`docs/rules-notes.md`)
-2. Rebuild `backend/.venv` and pin `backend/requirements.txt` (needs approval, ADR-0101)
-3. Wire Tailwind into `app/electron.vite.config.ts` and `main.css` (ADR-0102)
-4. Harden Electron window and preload (ADR-0103)
-5. Phase 1: API smoke tests and fixtures
+1. Manual: EHIBE. Official Rules answers, credits, `MODEL_API_KEY` in `backend/.env`, Contributor mode off (`docs/rules-notes.md`)
+2. Phase 1: API smoke tests and fixtures (needs the key)
+3. Manual: EHIBE. Install ffmpeg on PATH before Phase 13
 6. Phase 2: camera and calibration (F01)
 7. Phase 3: app shell, backend spawn, frame stream
 8. Phase 4: summon pipeline (F02)
@@ -61,16 +59,14 @@ Each has a Proposed ADR in `docs/decisions/`.
 
 | ID | Issue | ADR |
 |---|---|---|
-| B1 | `backend/requirements.txt` empty, no `backend/.venv` | ADR-0101 |
-| B2 | Tailwind installed but not wired, listed under dependencies not devDependencies | ADR-0102 |
-| B3 | Electron `sandbox: false`, preload exposes full electronAPI, `shell.openExternal` opens any URL | ADR-0103 |
-| B4 | Build Guide `backend/capture.py` vs PRD `backend/capture/camera.py` | ADR-0104 |
-| B5 | Warped frame 1200x800 (Build Guide) vs 1280x853 (PRD example) | ADR-0105 |
-| B6 | Token check with `!=` and module-level OpenAI client in Build Guide snippets | ADR-0106 |
-| B7 | Cost columns are REAL. Money math needs Decimal | ADR-0107 |
-| B8 | Scaffold placeholders: package name `app`, appId `com.electron.app`, publish url example.com | ADR-0108 |
-| B9 | PRD schedule (freeze Nov 2) superseded by Build Guide (freeze Nov 3) | ADR-0109 |
-| B10 | Build Guide references missing `DeskTop_PRD_Prompt.md` | ADR-0110 |
+B1 to B10 resolved 2026-10-28 (ADR-0101 to ADR-0110 accepted, B1, B2, B3, B6 code paths, B7 and B8 fixed in M0).
+
+| ID | Open issue | Owner |
+|---|---|---|
+| B11 | Backend port fixed at 8765. A local squatter could receive the token. Pick a free port at spawn | M3 |
+| B12 | No Electron fuses (RunAsNode, ASAR integrity). Needs `@electron/fuses`, a new dependency | Approval: EHIBE |
+| B13 | `@electron-toolkit/preload` unused since ADR-0103. Removal is a dependency change | Approval: EHIBE |
+| B14 | Python 3.11 not installed, venv uses 3.13. ffmpeg not on PATH | ADR-0101, Manual: EHIBE |
 
 ## Commands
 
@@ -86,7 +82,9 @@ Run from repo root.
 | Audit | `npm --prefix app audit` |
 | Run app | `npm --prefix app run dev` |
 | Run backend | `cd backend` then `.venv\Scripts\python -m uvicorn server:app --host 127.0.0.1 --port 8765` |
-| Python lint, type check, audit | NONE configured |
+| Python lint | `cd backend` then `.venv\Scripts\python -m ruff check .` |
+| Python types | `cd backend` then `.venv\Scripts\python -m mypy --strict --exclude .venv .` |
+| Python audit | NONE configured |
 
 ## Docs map
 
@@ -140,4 +138,4 @@ All on Sonnet 5.5, medium effort. Files in `.claude/agents/`.
 
 ## Decisions
 
-Latest accepted: ADR-0001 to ADR-0011 (core architecture). Proposed: ADR-0101 to ADR-0110 (contradictions above). Index: `docs/decisions/README.md`.
+Accepted: ADR-0001 to ADR-0012 and ADR-0101 to ADR-0110. ADR-0012 holds the MVP build defaults (damage with shields, walls, ties, fail-closed token). Proposed: none. Index: `docs/decisions/README.md`.

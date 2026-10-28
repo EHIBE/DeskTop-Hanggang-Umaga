@@ -19,7 +19,7 @@ Secrets and per-launch values arrive as environment variables from Electron main
 |---|---|
 | Template | `backend/.env.example` (placeholders only) |
 | Dev secrets | `backend/.env` (git-ignored, never read by agents) |
-| Constants | `backend/config.py` (planned) |
+| Constants | `backend/config.py` (built. `load_settings(env)` returns a frozen `AppSettings` whose repr hides the token and key) |
 | Tunables list | `docs/game/balance-and-tuning.md` |
 
 ## Environment variables
@@ -27,11 +27,11 @@ Secrets and per-launch values arrive as environment variables from Electron main
 | Name | Set by | Purpose | In .env.example |
 |---|---|---|---|
 | `MODEL_API_KEY` | Electron main from safeStorage (dev: `backend/.env`) | Meta API key | Yes, empty |
-| `DESKTOP_TOKEN` | Electron main, random per launch | Local auth token | Proposed, empty |
-| `DESKTOP_DATA_DIR` | Electron main (`app.getPath('userData')`) | Runtime data root | Proposed, empty |
-| `DESKTOP_PORT` | Electron main | Backend port, default 8765 | Proposed, default |
+| `DESKTOP_TOKEN` | Electron main, random per launch | Local auth token. Backend refuses to start without one of 32 or more characters (ADR-0012) | Yes, empty |
+| `DESKTOP_DATA_DIR` | Electron main (`app.getPath('userData')`) | Runtime data root. Unset means `%APPDATA%\DeskTop` | Yes, empty |
+| `DESKTOP_PORT` | Electron main | Backend port, default 8765. Blank means default | Yes, 8765 |
 
-Names other than `MODEL_API_KEY` and `DESKTOP_TOKEN` are Proposed. Add each to `.env.example` with a placeholder when first used.
+All four names are Established and listed in `backend/.env.example` with placeholders.
 
 ## config.py groups (planned)
 

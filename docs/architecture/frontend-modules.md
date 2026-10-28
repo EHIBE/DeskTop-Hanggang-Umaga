@@ -17,10 +17,10 @@ The app is an electron-vite React TypeScript project. Main spawns the backend an
 
 | Fact | Value |
 |---|---|
-| Tooling | Electron ^44.7.2, electron-vite ^6.0.0, Vite ^8.3.4, React ^19.3.0, TypeScript ^5.9.3, Tailwind ^4.3.3 (not wired) |
+| Tooling | Electron ^44.7.2, electron-vite ^6.0.0, Vite ^8.3.4, React ^19.3.0, TypeScript ^5.9.3 (noImplicitAny on), Tailwind ^4.3.3 (wired, devDependency) |
 | Lint and format | ESLint ^9.39.5 flat config, Prettier (singleQuote, no semi, width 100) |
 | Alias | `@renderer` to `src/renderer/src` |
-| Exists today | Scaffold: window, ping IPC, Versions component, starter CSS |
+| Exists today | Hardened window, `desktop:config` IPC, preload `window.desktop.getConfig()`, scaffold App text and starter CSS (replaced in M3) |
 
 ## Process roles
 
@@ -51,7 +51,7 @@ The app is an electron-vite React TypeScript project. Main spawns the backend an
 | `hud/TapMenu.tsx` | Tap controls (FR-25) |
 | `screens/*.tsx` | Start, KeySetup, Calibration, Summon, UnitCard, VoiceClaim, Night, Sunrise, Defeat, Replay, Settings |
 
-## Scaffold gaps to fix (ADR-0102, ADR-0103, ADR-0108)
+## Scaffold gaps (fixed 2026-10-28, ADR-0102, ADR-0103, ADR-0108)
 
 | Gap | Fix |
 |---|---|

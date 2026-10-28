@@ -19,7 +19,8 @@ All automated tests run offline against recorded fixtures, so they cost nothing 
 |---|---|
 | Framework | pytest (backend). No frontend test framework configured |
 | Command | `backend\.venv\Scripts\python -m pytest backend/tests -q` |
-| Coverage target | 90%+ of rules functions (NFR-31) |
+| Coverage target | 90%+ of rules functions (NFR-31). Measure with `cd backend` then `.venv\Scripts\python -m pytest tests -q --cov=rules` |
+| Python static checks | ruff and mypy --strict (ADR-0101). Both clean on 2026-10-28 |
 | Fixtures | `fixtures/` from Phase 1 smoke tests and later recordings |
 | Determinism | E7 must be 100% |
 | CI | NONE yet. PRD plans GitHub Actions with pytest and TypeScript typecheck |

@@ -18,9 +18,9 @@ The scaffold commit exists, but the Python venv is missing and requirements are 
 | Fact | Value |
 |---|---|
 | Repo path | `C:\Users\ADMIN\Documents\Projects\Hackathon\DeskTop-Hanggang-Umaga` |
-| Prerequisites | Git, Node.js 20+, Python 3.11 (`py -3.11`), ffmpeg on PATH, VS Code with Python and ESLint |
+| Prerequisites | Git, Node.js 20+, Python 3.13 (`py -3.13`, ADR-0101), ffmpeg on PATH (needed from Phase 13), VS Code with Python and ESLint |
 | Backend port | 8765 on 127.0.0.1 |
-| Gaps today | No `backend/.venv`, empty `requirements.txt`, Tailwind not wired |
+| Gaps today | ffmpeg not on PATH (Manual: EHIBE before Phase 13). Venv, pins and Tailwind done 2026-10-28 |
 
 ## Check tools (PowerShell)
 
@@ -28,7 +28,7 @@ The scaffold commit exists, but the Python venv is missing and requirements are 
 |---|---|
 | Git | `git --version` |
 | Node.js | `node -v` (20 or newer) |
-| Python | `py -3.11 --version` (3.10+ needed by meta-sam-parser) |
+| Python | `py -3.13 --version` (3.10+ needed by meta-sam-parser) |
 | ffmpeg | `ffmpeg -version` |
 
 ## Frontend
@@ -43,7 +43,7 @@ A window opens. Then wire Tailwind (ADR-0102): add `import tailwindcss from '@ta
 ## Backend (needs approval, ADR-0101)
 
 ```powershell
-py -3.11 -m venv backend\.venv
+py -3.13 -m venv backend\.venv
 backend\.venv\Scripts\python -m pip install --upgrade pip
 backend\.venv\Scripts\python -m pip install fastapi "uvicorn[standard]" websockets openai opencv-contrib-python numpy pillow shapely pydantic sounddevice meta-sam-parser python-dotenv rapidfuzz pytest
 backend\.venv\Scripts\python -m pip freeze > backend\requirements.txt

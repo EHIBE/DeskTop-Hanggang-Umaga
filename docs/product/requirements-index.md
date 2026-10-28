@@ -21,7 +21,7 @@ Every functional and non-functional requirement with where it lives and its buil
 | Non-functional | NFR-01 to NFR-31 |
 | Demo-critical (★) | 31 FRs |
 | Status values | Planned, Built, Tested, Cut, Could |
-| Status on 2026-10-28 | Nothing built. Cut and Could per Build Guide |
+| Status on 2026-10-28 | M0 foundations built. NFR-12, NFR-13, NFR-14, NFR-19 tested in the backend. FR-51 waits for the UI and the Demo Safe switch (M5, M10) |
 
 Update the Status column when a requirement is built (code merged) and tested (test green). Use the `desktop-docs-sync` skill.
 
@@ -132,14 +132,14 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | NFR-09 | Performance | Overlay 30 FPS+ at 1080p | manual | Planned |
 | NFR-10 | Performance | Tracker 10 Hz+ with 12 objects at 640x360 | benchmark | Planned |
 | NFR-11 | Performance | Backend CPU under 70% on 4 cores in PLAYER_PHASE | manual | Planned |
-| NFR-12 | Reliability | Timeouts: Spark 20 s, SAM image 10 s, SAM video 120 s, Muse Image 45 s, Files 60 s | unit test | Planned |
-| NFR-13 | Reliability | 2 retries, 0.5 s then 1 s, jitter 250 ms, Retry-After, no retry on 400 | unit test | Planned |
-| NFR-14 | Reliability | Breaker: 3 failures opens fallback 2 min | unit test | Planned |
+| NFR-12 | Reliability | Timeouts: Spark 20 s, SAM image 10 s, SAM video 120 s, Muse Image 45 s, Files 60 s | unit test (test_meta_client.py) | Tested |
+| NFR-13 | Reliability | 2 retries, 0.5 s then 1 s, jitter 250 ms, Retry-After, no retry on 400 | unit test (test_meta_client.py) | Tested |
+| NFR-14 | Reliability | Breaker: 3 failures opens fallback 2 min | unit test (test_meta_client.py) | Tested |
 | NFR-15 | Reliability | Graceful degradation per model | dry run | Planned |
 | NFR-16 | Reliability | Voice reconnect rules, silence frames | voice fixtures | Planned |
 | NFR-17 | Reliability | Crash resume within 15 s | manual | Planned |
 | NFR-18 | Cost | Per night $0.50 expected, $1.40 worst | api_usage | Planned |
-| NFR-19 | Cost | Warn $90, stop $120 | unit test | Planned |
+| NFR-19 | Cost | Warn $90, stop $120 | unit test (test_meta_client.py) | Tested |
 | NFR-20 | Privacy | Consent each night, REC dot | manual | Planned |
 | NFR-21 | Privacy | Local-first data boundary | security review | Planned |
 | NFR-22 | Privacy | Proxy expires 86,400 s, deleted after processing, delete campaign | unit test | Planned |

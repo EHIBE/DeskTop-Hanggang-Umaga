@@ -11,13 +11,13 @@ related: [docs/engineering/environment-and-config.md, docs/architecture/tracking
 
 # Balance and tuning
 
-All thresholds are starting values. Put each in `backend/config.py` as a named constant, never inline, and log every change in the tuning log below.
+All thresholds are starting values. Game constants live once in `backend/rules` modules, because the rules layer imports nothing else from the backend. Vision, tracking and reliability constants live in `backend/config.py`. Never inline a number, and log every change in the tuning log below.
 
 ## Key facts
 
 | Fact | Value |
 |---|---|
-| Home of constants | `backend/config.py` |
+| Home of constants | Game: `backend/rules/*.py`. Vision, tracking, reliability, prices: `backend/config.py` (built 2026-10-28) |
 | Tune with | E1, E2 eval runs and playtests |
 | Rule | Change one constant at a time and record why |
 

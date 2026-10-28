@@ -11,7 +11,7 @@ related: [docs/architecture/backend-modules.md, docs/engineering/security-and-pr
 
 # Data model
 
-All state lives in one SQLite file in the Electron user data folder. The schema below is canonical for `backend/db/schema.sql`, which does not exist yet.
+All state lives in one SQLite file in the Electron user data folder. `backend/db/schema.sql` (schema version 1 in `PRAGMA user_version`) implements the schema below plus the changes under "Built schema changes".
 
 ## Key facts
 
@@ -22,8 +22,8 @@ All state lives in one SQLite file in the Electron user data folder. The schema 
 | Tables | campaign, calibration, player, object_signature, sprite, unit, night, night_unit, enemy, voice_map, turn_log, api_usage, settings |
 | IDs | TEXT UUIDs for entities. Game-state IDs `u_*` and `e_<type>_<n>` |
 | Time | UTC ISO 8601 text, turn timing in `t_ms` |
-| Migrations | None exist. Schema changes after a database exists need approval |
-| Money | REAL in the PRD, compute with Decimal (ADR-0107) |
+| Migrations | `PRAGMA user_version` is 1. `db/store.py` builds a fresh database and refuses a newer version. Schema changes after a database exists need approval and a stepped migration |
+| Money | REAL columns, values rounded to 1e-8 USD on write and summed as integers, Decimal in code (ADR-0107) |
 
 ## Schema
 
@@ -108,6 +108,16 @@ CREATE INDEX idx_turn_log_night ON turn_log(night_id, turn);
 | No index on `api_usage.ts` | Add for the cost meter sum |
 | Foreign keys off by default in SQLite | Run `PRAGMA foreign_keys = ON` on every connection |
 | REAL money | ADR-0107 |
+
+## Built schema changes (2026-10-28)
+
+| Change | Why |
+|---|---|
+| CHECK lists on `unit.class`, `move_class` (none, short, medium, long), `range_class` (none, melee, reach, far), `power_id`, `enemy.type`, `enemy.part` (upper, lower) | Back enum validation with storage |
+| Range checks on atk (0 to 3), hp_max (1 or more), sam_object_id (1 to 16), turns (0 to 8), costs (0 or more), 0 or 1 flags, name lengths | Back validation rules |
+| `night_unit.unit_id` and `voice_map.player_id` ON DELETE CASCADE. `unit.player_id` and `unit.sprite_id` ON DELETE SET NULL | Delete campaign leaves no orphans |
+| Indexes on every campaign_id and night_id foreign key, `unit.object_signature_id`, `night_unit.unit_id`, `voice_map.player_id`, `api_usage.ts`, `campaign.created_at` | Lookups, joins, the cost meter sum and the campaign list sort |
+| `PRAGMA foreign_keys = ON` and WAL journal on every connection | Foreign keys are off by default in SQLite |
 
 ## ID schemes
 
