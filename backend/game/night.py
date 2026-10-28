@@ -65,6 +65,7 @@ from rules.units import (
 from state import Broadcast, EncodedFrame, FrameView, LiveState, Pose
 from vision.sam import (
     Anchor,
+    ObjectMask,
     ObjectPrompt,
     PixelBox,
     ReanchorTarget,
@@ -75,7 +76,7 @@ from vision.sam import (
     pad_box,
     reanchor,
 )
-from vision.signature import bhattacharyya, histogram
+from vision.signature import SignatureError, bhattacharyya, histogram
 from vision.sprites import (
     FALLBACK_SUBJECT,
     SpriteError,
@@ -140,6 +141,25 @@ class UnitView:
 PipelineFactory = Callable[[bool], SummonPipeline]
 SpriteServiceFactory = Callable[[bool], SpriteService]
 SegmenterFactory = Callable[[bool], Segmenter]
+NO_MATCH_DISTANCE: Final = float("inf")
+
+
+def safe_histogram(image: Image, mask: ObjectMask) -> tuple[float, ...]:
+    try:
+        return histogram(image, mask)
+    except SignatureError:
+        return ()
+
+
+def safe_distance(first: tuple[float, ...], second: tuple[float, ...]) -> float:
+    if not first or not second or len(first) != len(second):
+        return NO_MATCH_DISTANCE
+    try:
+        return bhattacharyya(first, second)
+    except SignatureError:
+        return NO_MATCH_DISTANCE
+
+
 TrackerFactory = Callable[[float, tuple[int, int]], TrackerSet]
 
 
@@ -523,11 +543,30 @@ class GameController:
                 break
         return None if previous is None else warp(previous, calibration)
 
+    def _sync_boxes_from_tracker(self) -> None:
+        tracker = self._tracker
+        if tracker is None or self._is_tracker_dirty:
+            return
+        with self._lock:
+            self._boxes.update(tracker.boxes())
+
+    def _relock_after_summon(self, snapshot: Image, outcome: SummonOutcome) -> None:
+        tracker = self._tracker
+        if tracker is None or self._is_tracker_dirty:
+            return
+        width, height = self._area.warped_size
+        with self._lock:
+            for sam_id in (*outcome.known_masks, outcome.sam_id):
+                box = self._boxes.get(sam_id)
+                if box is not None:
+                    tracker.relock(sam_id, snapshot, clamp_box(box, width, height))
+
     def _summon_request(
         self, snapshot: Image, name: str, tap: tuple[int, int] | None
     ) -> SummonRequest:
         if self._campaign is None:
             raise GameError("start.ready")
+        self._sync_boxes_from_tracker()
         known = tuple(
             KnownObject(
                 sam_id=unit.sam_object_id,
@@ -583,6 +622,7 @@ class GameController:
                     self._pending_name = name
                 raise GameError(error.copy_key) from error
             unit = self._persist(outcome, started)
+            self._relock_after_summon(snapshot, outcome)
             self._remember_crop(unit, snapshot, outcome)
             self._schedule_sprite(unit)
             return self._unit_view(unit)
@@ -622,7 +662,6 @@ class GameController:
         for sam_id, mask in outcome.known_masks.items():
             self._boxes[sam_id] = clamp_box(mask.bounds, width, height)
         self._boxes[outcome.sam_id] = clamp_box(outcome.mask.bounds, width, height)
-        self._is_tracker_dirty = True
         self._units.append(unit)
         self._pending = None
         elapsed_ms = max(0, round((self._clock() - started) * 1000))
@@ -924,8 +963,11 @@ class GameController:
             mask = result.get(sam_id)
             if mask is None or (mask.confidence or 0.0) < SAM_ACCEPT_CONFIDENCE:
                 continue
+            box = clamp_box(mask.bounds, width, height)
             with self._lock:
-                tracker.relock(sam_id, warped, clamp_box(mask.bounds, width, height))
+                tracker.relock(sam_id, warped, box)
+                self._boxes[sam_id] = box
+                self._uncertain.discard(sam_id)
             recovered += 1
         return recovered
 
@@ -939,6 +981,7 @@ class GameController:
         if frame is None:
             raise GameError("cam.busy")
         signatures = self._store.unit_signatures(night.id)
+        tracker.new_turn()
         tracked = tracker.boxes()
         targets = [
             ReanchorTarget(
@@ -957,8 +1000,8 @@ class GameController:
             frame,
             targets,
             float(self._area.px_per_cm),
-            histogram,
-            bhattacharyya,
+            safe_histogram,
+            safe_distance,
         )
         self._apply_anchors(night, frame, anchors)
         return anchors

@@ -492,13 +492,20 @@ async def _reanchor_ladder(
 
     remaining: list[ReanchorTarget] = []
     if retry:
-        second = await segmenter.segment(
-            image,
-            [
-                ObjectPrompt(t.sam_id, padded[t.sam_id], point=_centre_point(t))
-                for t in retry
-            ],
-        )
+        try:
+            second = await segmenter.segment(
+                image,
+                [
+                    ObjectPrompt(t.sam_id, padded[t.sam_id], point=_centre_point(t))
+                    for t in retry
+                ],
+            )
+        except (SegmentationError, MetaError):
+            for target in retry:
+                anchors[target.sam_id] = _tracker_anchor(
+                    target, px_per_cm, AnchorStatus.UNCERTAIN
+                )
+            return anchors
         for target in retry:
             mask = second.get(target.sam_id)
             if mask is not None and _confident(mask):
@@ -512,14 +519,17 @@ async def _reanchor_ladder(
     for target in remaining:
         found: Anchor | None = None
         if concept_capable:
-            found = await _concept_anchor(
-                cast(ConceptSegmenter, segmenter),
-                image,
-                target,
-                px_per_cm,
-                histogram_of,
-                distance_of,
-            )
+            try:
+                found = await _concept_anchor(
+                    cast(ConceptSegmenter, segmenter),
+                    image,
+                    target,
+                    px_per_cm,
+                    histogram_of,
+                    distance_of,
+                )
+            except (SegmentationError, MetaError):
+                found = None
         anchors[target.sam_id] = found or _tracker_anchor(
             target, px_per_cm, AnchorStatus.UNCERTAIN
         )

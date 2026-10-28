@@ -512,6 +512,8 @@ async def recover_forever(controller: GameController) -> None:
             await controller.recover_lost_objects()
         except GameError:
             logger.warning("between-turn recovery skipped")
+        except Exception:
+            logger.exception("between-turn recovery failed, will retry")
 
 
 def create_app(

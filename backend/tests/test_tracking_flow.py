@@ -8,7 +8,7 @@ import numpy.typing as npt
 from capture.camera import VideoSource
 from capture.tracker import TrackerSet
 from db.store import Store
-from game.night import GameController
+from game.night import GameController, safe_distance, safe_histogram
 from rules.units import CardDraft, PowerId, UnitClass
 from state import LiveState
 from tests.test_night import CONTENT, ready_for_summon
@@ -214,5 +214,88 @@ def test_demo_safe_skips_between_turn_recovery(tmp_path: Path) -> None:
     anchors = asyncio.run(controller.reanchor_all())
     assert segmenter.calls == 1
     assert not anchors[1].is_uncertain
+    controller.close()
+    store.close()
+
+
+def test_safe_signature_functions_never_raise() -> None:
+    empty = ObjectMask(
+        1, 0.9, PixelBox(0, 0, 10, 10), np.zeros((10, 10), dtype=np.bool_)
+    )
+    assert safe_histogram(np.zeros((20, 20, 3), dtype=np.uint8), empty) == ()
+    assert safe_distance((), (0.5, 0.5)) == float("inf")
+    assert safe_distance((1.0,), (0.5, 0.5)) == float("inf")
+    assert safe_distance((0.5, 0.5), (0.5, 0.5)) < 0.01
+
+
+class ShiftingBackend:
+    def __init__(self) -> None:
+        self._box = (0, 0, 1, 1)
+
+    def init(self, frame: Image, box: tuple[int, int, int, int]) -> None:
+        self._box = box
+
+    def update(self, frame: Image) -> tuple[bool, tuple[int, int, int, int]]:
+        x, y, w, h = self._box
+        return True, (x + 40, y, w, h)
+
+
+def test_summon_keeps_moved_units_where_the_tracker_left_them(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+
+    def source(_: int) -> VideoSource:
+        return SceneSource()
+
+    detector = SequenceDetector()
+    controller = GameController(
+        store,
+        LiveState(),
+        has_api_key=True,
+        camera_factory=source,
+        sleep=lambda _: None,
+        pipeline_factory=lambda _: SummonPipeline(
+            detector, TrackerOnlySegmenter(), CONTENT
+        ),
+        segmenter_factory=lambda _: TrackerOnlySegmenter(),
+        tracker_factory=lambda ppc, size: TrackerSet(
+            px_per_cm=ppc, warped_size=size, backend_factory=ShiftingBackend
+        ),
+    )
+    ready_for_summon(controller)
+    asyncio.run(controller.summon("Mug"))
+    assert controller.wait_for_frame() is not None
+    controller.render_frame(1)
+    moved = controller.render_frame(2)
+    assert moved is not None
+    moved_x = moved.poses[0].x_cm
+    asyncio.run(controller.summon("Stapler"))
+    after = controller.render_frame(3)
+    assert after is not None
+    assert after.poses[0].x_cm >= moved_x
+    controller.close()
+    store.close()
+
+
+def test_recovery_clears_uncertain_and_budget_resets_each_turn(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    clock = FakeClock()
+    segmenter = ConfidentSegmenter()
+    controller = controller_for(store, segmenter, tracker_clock=clock)
+    summon_three(controller)
+    assert controller.wait_for_frame() is not None
+    controller.render_frame(1)
+    controller.render_frame(2)
+    clock.now = 6.0
+    controller.render_frame(3)
+    assert asyncio.run(controller.recover_lost_objects()) == 3
+    clock.now = 20.0
+    controller.render_frame(4)
+    assert asyncio.run(controller.recover_lost_objects()) == 0
+    asyncio.run(controller.reanchor_all())
+    clock.now = 40.0
+    controller.render_frame(5)
+    clock.now = 46.0
+    controller.render_frame(6)
+    assert asyncio.run(controller.recover_lost_objects()) == 3
     controller.close()
     store.close()

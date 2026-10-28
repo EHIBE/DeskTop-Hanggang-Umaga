@@ -186,3 +186,34 @@ def test_exceptions_give_tracker_anchors(error: Exception) -> None:
 
 def test_empty_targets() -> None:
     assert run(FakeSegmenter([]), []) == {}
+
+
+class SecondStageFails(FakeSegmenter):
+    async def segment(
+        self, image: Image, prompts: Sequence[ObjectPrompt]
+    ) -> SegmentationResult:
+        self.prompts.append(prompts)
+        if len(self.prompts) > 1:
+            raise SegmentationError("second stage down")
+        return self.steps[0]
+
+
+def test_failing_second_stage_keeps_first_stage_anchors() -> None:
+    good = mask_for(1, PixelBox(205, 205, 305, 305), 0.9)
+    seg = SecondStageFails([result(good)])
+    anchors = run(seg, [target(1), target(2)])
+    assert anchors[1].status is AnchorStatus.ACCEPTED
+    assert anchors[2].status is AnchorStatus.UNCERTAIN
+
+
+class ConceptFails(FakeSegmenter):
+    async def _segment_concept(self, image: Image, label: str) -> SegmentationResult:
+        raise SegmentationError("concept down")
+
+
+def test_failing_concept_marks_only_that_object_uncertain() -> None:
+    good = mask_for(1, PixelBox(205, 205, 305, 305), 0.9)
+    seg = ConceptFails([result(good), result()], concept={})
+    anchors = run(seg, [target(1), target(2)])
+    assert anchors[1].status is AnchorStatus.ACCEPTED
+    assert anchors[2].status is AnchorStatus.UNCERTAIN
