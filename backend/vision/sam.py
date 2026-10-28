@@ -1,7 +1,9 @@
 import base64
+import math
 from collections.abc import AsyncIterator, Callable, Sequence
-from dataclasses import dataclass, field
-from typing import Final, Protocol
+from dataclasses import dataclass, field, replace
+from enum import StrEnum
+from typing import Final, Protocol, cast
 
 import cv2
 import numpy as np
@@ -20,8 +22,16 @@ from meta_sam_parser import (
     parse_responses_stream,
 )
 
-from config import CallKind, MetaModel
-from meta_client import CallSpec, MetaClient, Usage
+from config import (
+    HISTOGRAM_MATCH_MAX,
+    REANCHOR_BOX_PADDING,
+    RECOVERY_SEARCH_RADIUS_CM,
+    SAM_ACCEPT_CONFIDENCE,
+    SAM_TRACKER_IOU_ACCEPT,
+    CallKind,
+    MetaModel,
+)
+from meta_client import CallSpec, MetaClient, MetaError, Usage
 
 Image = npt.NDArray[np.uint8]
 Mask = npt.NDArray[np.bool_]
@@ -313,3 +323,204 @@ class TrackerOnlySegmenter:
         self, image: Image, prompts: Sequence[ObjectPrompt]
     ) -> SegmentationResult:
         return SegmentationResult()
+
+
+class ConceptSegmenter(Protocol):
+    async def segment_concept(self, image: Image, label: str) -> SegmentationResult: ...
+
+
+class AnchorStatus(StrEnum):
+    ACCEPTED = "accepted"
+    HISTOGRAM = "histogram"
+    POINT = "point"
+    CONCEPT = "concept"
+    UNCERTAIN = "uncertain"
+    TRACKER = "tracker"
+
+
+@dataclass(frozen=True)
+class ReanchorTarget:
+    sam_id: int
+    tracker_box: PixelBox
+    label: str
+    histogram: tuple[float, ...]
+
+
+@dataclass(frozen=True)
+class Anchor:
+    sam_id: int
+    box: PixelBox
+    x_cm: float
+    y_cm: float
+    status: AnchorStatus
+    mask: ObjectMask | None = field(default=None, compare=False)
+
+    @property
+    def is_uncertain(self) -> bool:
+        return self.status in (AnchorStatus.UNCERTAIN, AnchorStatus.TRACKER)
+
+
+HistogramFn = Callable[[Image, ObjectMask], tuple[float, ...]]
+DistanceFn = Callable[[tuple[float, ...], tuple[float, ...]], float]
+
+
+def _box_centre(box: PixelBox) -> tuple[float, float]:
+    return (box.left + box.right) / 2, (box.top + box.bottom) / 2
+
+
+def _centre_point(target: ReanchorTarget) -> tuple[int, int]:
+    x, y = _box_centre(target.tracker_box)
+    return round(x), round(y)
+
+
+def _tracker_anchor(
+    target: ReanchorTarget, px_per_cm: float, status: AnchorStatus
+) -> Anchor:
+    x, y = _box_centre(target.tracker_box)
+    return Anchor(
+        sam_id=target.sam_id,
+        box=target.tracker_box,
+        x_cm=x / px_per_cm,
+        y_cm=y / px_per_cm,
+        status=status,
+    )
+
+
+def _mask_anchor(mask: ObjectMask, px_per_cm: float, status: AnchorStatus) -> Anchor:
+    x, y = mask_centroid_px(mask)
+    return Anchor(
+        sam_id=mask.sam_id,
+        box=mask.bounds,
+        x_cm=x / px_per_cm,
+        y_cm=y / px_per_cm,
+        status=status,
+        mask=mask,
+    )
+
+
+def _confident(mask: ObjectMask | None) -> bool:
+    return (
+        mask is not None
+        and mask.confidence is not None
+        and mask.confidence >= SAM_ACCEPT_CONFIDENCE
+    )
+
+
+async def _concept_anchor(
+    segmenter: ConceptSegmenter,
+    image: Image,
+    target: ReanchorTarget,
+    px_per_cm: float,
+    histogram_of: HistogramFn,
+    distance_of: DistanceFn,
+) -> Anchor | None:
+    result = await segmenter.segment_concept(image, target.label)
+    cx, cy = _box_centre(target.tracker_box)
+    best: tuple[float, ObjectMask] | None = None
+    for candidate in result.masks.values():
+        mx, my = mask_centroid_px(candidate)
+        if math.hypot(mx - cx, my - cy) / px_per_cm > RECOVERY_SEARCH_RADIUS_CM:
+            continue
+        distance = distance_of(target.histogram, histogram_of(image, candidate))
+        if best is None or distance < best[0]:
+            best = (distance, candidate)
+    if best is None:
+        return None
+    return _mask_anchor(
+        replace(best[1], sam_id=target.sam_id), px_per_cm, AnchorStatus.CONCEPT
+    )
+
+
+async def reanchor(
+    segmenter: Segmenter,
+    image: Image,
+    targets: Sequence[ReanchorTarget],
+    px_per_cm: float,
+    histogram_of: HistogramFn,
+    distance_of: DistanceFn,
+) -> dict[int, Anchor]:
+    if not targets:
+        return {}
+    fallback = {
+        t.sam_id: _tracker_anchor(t, px_per_cm, AnchorStatus.TRACKER) for t in targets
+    }
+    if not segmenter.is_available:
+        return fallback
+    try:
+        return await _reanchor_ladder(
+            segmenter, image, targets, px_per_cm, histogram_of, distance_of
+        )
+    except (SegmentationError, MetaError):
+        return fallback
+
+
+async def _reanchor_ladder(
+    segmenter: Segmenter,
+    image: Image,
+    targets: Sequence[ReanchorTarget],
+    px_per_cm: float,
+    histogram_of: HistogramFn,
+    distance_of: DistanceFn,
+) -> dict[int, Anchor]:
+    height, width = image.shape[:2]
+    padded = {
+        t.sam_id: pad_box(t.tracker_box, REANCHOR_BOX_PADDING, width, height)
+        for t in targets
+    }
+    first = await segmenter.segment(
+        image, [ObjectPrompt(t.sam_id, padded[t.sam_id]) for t in targets]
+    )
+    anchors: dict[int, Anchor] = {}
+    retry: list[ReanchorTarget] = []
+    for target in targets:
+        mask = first.get(target.sam_id)
+        if mask is None or not _confident(mask):
+            retry.append(target)
+            continue
+        if box_iou(mask.bounds, target.tracker_box) >= SAM_TRACKER_IOU_ACCEPT:
+            anchors[target.sam_id] = _mask_anchor(
+                mask, px_per_cm, AnchorStatus.ACCEPTED
+            )
+            continue
+        distance = distance_of(target.histogram, histogram_of(image, mask))
+        if distance <= HISTOGRAM_MATCH_MAX:
+            anchors[target.sam_id] = _mask_anchor(
+                mask, px_per_cm, AnchorStatus.HISTOGRAM
+            )
+        else:
+            retry.append(target)
+
+    remaining: list[ReanchorTarget] = []
+    if retry:
+        second = await segmenter.segment(
+            image,
+            [
+                ObjectPrompt(t.sam_id, padded[t.sam_id], point=_centre_point(t))
+                for t in retry
+            ],
+        )
+        for target in retry:
+            mask = second.get(target.sam_id)
+            if mask is not None and _confident(mask):
+                anchors[target.sam_id] = _mask_anchor(
+                    mask, px_per_cm, AnchorStatus.POINT
+                )
+            else:
+                remaining.append(target)
+
+    concept_capable = callable(getattr(segmenter, "segment_concept", None))
+    for target in remaining:
+        found: Anchor | None = None
+        if concept_capable:
+            found = await _concept_anchor(
+                cast(ConceptSegmenter, segmenter),
+                image,
+                target,
+                px_per_cm,
+                histogram_of,
+                distance_of,
+            )
+        anchors[target.sam_id] = found or _tracker_anchor(
+            target, px_per_cm, AnchorStatus.UNCERTAIN
+        )
+    return anchors
