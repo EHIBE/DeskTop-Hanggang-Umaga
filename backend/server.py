@@ -3,6 +3,8 @@ import hmac
 import json
 import logging
 import os
+import sys
+import threading
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -14,8 +16,10 @@ from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
+from capture.calibration import CalibrationError
+from capture.camera import CameraError
 from config import STREAM_FPS, AppSettings, load_settings
-from db.store import Campaign, Difficulty, NotFoundError, Store
+from db.store import Campaign, Difficulty, NotFoundError, Store, StoreError
 from game.night import FramePump, GameController, GameError, Snapshot
 from state import EncodedFrame, LiveState
 
@@ -27,6 +31,9 @@ SUBPROTOCOL_HEADER: Final = "sec-websocket-protocol"
 POLICY_VIOLATION: Final = 1008
 MAX_MESSAGE_BYTES: Final = 16_384
 INVALID_MESSAGE_KEY: Final = "cmd.unknown"
+FAILURE_KEY: Final = "restore"
+DEV_FLAG: Final = "DESKTOP_DEV"
+PARENT_WATCH_FLAG: Final = "DESKTOP_PARENT_WATCH"
 BACKEND_DIR: Final = Path(__file__).resolve().parent
 
 
@@ -228,8 +235,11 @@ class Connection:
 
     async def receive(self) -> None:
         while True:
-            raw = await self._socket.receive_text()
-            if len(raw.encode("utf-8")) > MAX_MESSAGE_BYTES:
+            event = await self._socket.receive()
+            if event["type"] == "websocket.disconnect":
+                raise WebSocketDisconnect(code=int(event.get("code", 1000)))
+            raw = event.get("text")
+            if not isinstance(raw, str) or len(raw.encode("utf-8")) > MAX_MESSAGE_BYTES:
                 logger.warning("rejected oversized websocket message")
                 await self.send(notice_json(INVALID_MESSAGE_KEY))
                 continue
@@ -251,6 +261,11 @@ class Connection:
             return
         except NotFoundError:
             await self.send(notice_json(INVALID_MESSAGE_KEY))
+            return
+        except (StoreError, CalibrationError, CameraError, OSError, ValueError):
+            logger.exception("message handling failed")
+            await self.send(notice_json(FAILURE_KEY))
+            await self.send_state()
             return
         if reply is not None:
             await self.send(reply)
@@ -364,8 +379,19 @@ def create_app(
     return app
 
 
+def exit_when_parent_closes_stdin() -> None:
+    sys.stdin.buffer.read()
+    logger.warning("parent process closed stdin, shutting down")
+    os._exit(0)
+
+
 def create_app_from_env() -> FastAPI:
-    load_dotenv(BACKEND_DIR / ".env", override=False)
+    if os.environ.get(DEV_FLAG) == "1":
+        load_dotenv(BACKEND_DIR / ".env", override=False)
+    if os.environ.get(PARENT_WATCH_FLAG) == "1":
+        threading.Thread(
+            target=exit_when_parent_closes_stdin, name="parent-watch", daemon=True
+        ).start()
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s"
     )

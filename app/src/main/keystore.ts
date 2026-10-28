@@ -25,8 +25,16 @@ export class Keystore {
   load(): string | undefined {
     if (!existsSync(this.keyPath)) return undefined
     if (!safeStorage.isEncryptionAvailable()) return undefined
-    const key = safeStorage.decryptString(readFileSync(this.keyPath))
-    return isValidKey(key) ? key : undefined
+    const key = this.decrypt()
+    return key !== undefined && isValidKey(key) ? key : undefined
+  }
+
+  private decrypt(): string | undefined {
+    try {
+      return safeStorage.decryptString(readFileSync(this.keyPath))
+    } catch {
+      return undefined
+    }
   }
 
   save(rawKey: string): KeyStatus {

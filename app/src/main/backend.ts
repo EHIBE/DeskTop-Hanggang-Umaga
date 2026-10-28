@@ -11,6 +11,7 @@ export type BackendOptions = Readonly<{
   backendDir: string
   userDataDir: string
   allowedOrigins: readonly string[]
+  isDev: boolean
   apiKey: () => string | undefined
 }>
 
@@ -22,6 +23,8 @@ const RESTART_DELAYS_MS: readonly number[] = [1_000, 2_000, 4_000, 8_000, 8_000]
 const TOKEN_HEADER = 'X-Desktop-Token'
 const LOG_DIR_NAME = 'logs'
 const LOG_FILE_NAME = 'backend.log'
+const WS_MAX_SIZE_BYTES = 16_384
+const REDACTED = '[redacted]'
 const PASSTHROUGH_ENV: readonly string[] = [
   'SYSTEMROOT',
   'WINDIR',
@@ -57,28 +60,15 @@ export function findFreePort(): Promise<number> {
   })
 }
 
-function childEnv(options: BackendOptions, config: BackendConfig): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = {}
-  for (const name of PASSTHROUGH_ENV) {
-    const value = process.env[name]
-    if (value !== undefined) env[name] = value
-  }
-  env['PYTHONUNBUFFERED'] = '1'
-  env['DESKTOP_TOKEN'] = config.token
-  env['DESKTOP_PORT'] = String(config.port)
-  env['DESKTOP_DATA_DIR'] = options.userDataDir
-  env['DESKTOP_ALLOWED_ORIGINS'] = options.allowedOrigins.join(',')
-  const apiKey = options.apiKey()
-  if (apiKey !== undefined) env['MODEL_API_KEY'] = apiKey
-  return env
-}
-
 export class BackendProcess {
   private child: ChildProcess | undefined
   private current: BackendConfig | undefined
   private log: WriteStream | undefined
-  private isStopping = false
+  private readonly secrets = new Set<string>()
+  private generation = 0
   private restarts = 0
+  private isStopping = false
+  private queue: Promise<unknown> = Promise.resolve()
 
   constructor(private readonly options: BackendOptions) {}
 
@@ -86,14 +76,63 @@ export class BackendProcess {
     return this.current
   }
 
-  async start(): Promise<BackendConfig> {
+  start(): Promise<BackendConfig> {
+    return this.enqueue(() => this.launch())
+  }
+
+  restart(): Promise<BackendConfig> {
+    return this.enqueue(async () => {
+      await this.terminate()
+      return this.launch()
+    })
+  }
+
+  stop(): Promise<void> {
+    this.isStopping = true
+    return this.enqueue(() => this.terminate())
+  }
+
+  recordFailure(error: unknown): void {
+    this.writeLog(`backend start failed: ${error instanceof Error ? error.message : 'unknown'}\n`)
+  }
+
+  private enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const next = this.queue.then(task, task)
+    this.queue = next.catch(() => undefined)
+    return next
+  }
+
+  private childEnv(config: BackendConfig): NodeJS.ProcessEnv {
+    const env: NodeJS.ProcessEnv = {}
+    for (const name of PASSTHROUGH_ENV) {
+      const value = process.env[name]
+      if (value !== undefined) env[name] = value
+    }
+    env['PYTHONUNBUFFERED'] = '1'
+    env['DESKTOP_TOKEN'] = config.token
+    env['DESKTOP_PORT'] = String(config.port)
+    env['DESKTOP_DATA_DIR'] = this.options.userDataDir
+    env['DESKTOP_ALLOWED_ORIGINS'] = this.options.allowedOrigins.join(',')
+    env['DESKTOP_PARENT_WATCH'] = '1'
+    if (this.options.isDev) env['DESKTOP_DEV'] = '1'
+    const apiKey = this.options.apiKey()
+    if (apiKey !== undefined) {
+      this.secrets.add(apiKey)
+      env['MODEL_API_KEY'] = apiKey
+    }
+    return env
+  }
+
+  private async launch(): Promise<BackendConfig> {
     this.isStopping = false
+    this.generation += 1
+    const generation = this.generation
     const config: BackendConfig = Object.freeze({
       port: await findFreePort(),
       token: randomBytes(TOKEN_BYTES).toString('hex')
     })
-    this.current = config
-    this.child = spawn(
+    this.secrets.add(config.token)
+    const child = spawn(
       this.options.pythonPath,
       [
         '-m',
@@ -104,24 +143,33 @@ export class BackendProcess {
         HOST,
         '--port',
         String(config.port),
-        '--no-access-log'
+        '--no-access-log',
+        '--ws-max-size',
+        String(WS_MAX_SIZE_BYTES)
       ],
-      { cwd: this.options.backendDir, env: childEnv(this.options, config), windowsHide: true }
+      {
+        cwd: this.options.backendDir,
+        env: this.childEnv(config),
+        windowsHide: true,
+        stdio: ['pipe', 'pipe', 'pipe']
+      }
     )
-    this.pipeLogs(this.child)
-    this.child.once('exit', (code) => void this.onExit(code))
-    await this.waitHealthy(config)
+    this.child = child
+    this.pipeLogs(child)
+    child.once('exit', (code) => void this.onExit(generation, code))
+    try {
+      await this.waitHealthy(child, config)
+    } catch (error) {
+      child.kill()
+      throw error
+    }
+    this.current = config
     this.restarts = 0
     return config
   }
 
-  async restart(): Promise<BackendConfig> {
-    await this.stop()
-    return this.start()
-  }
-
-  async stop(): Promise<void> {
-    this.isStopping = true
+  private async terminate(): Promise<void> {
+    this.generation += 1
     const child = this.child
     this.child = undefined
     this.current = undefined
@@ -132,28 +180,22 @@ export class BackendProcess {
     })
   }
 
-  private async onExit(code: number | null): Promise<void> {
-    if (this.isStopping) return
+  private async onExit(generation: number, code: number | null): Promise<void> {
+    if (this.isStopping || generation !== this.generation) return
     this.current = undefined
     this.writeLog(`backend exited with code ${code ?? 'signal'}\n`)
     const wait = RESTART_DELAYS_MS[this.restarts]
     if (wait === undefined) return
     this.restarts += 1
     await delay(wait)
-    if (this.isStopping) return
-    await this.start().catch((error: unknown) => {
-      this.writeLog(
-        `backend restart failed: ${error instanceof Error ? error.message : 'unknown'}\n`
-      )
-    })
+    if (this.isStopping || generation !== this.generation) return
+    await this.start().catch((error: unknown) => this.recordFailure(error))
   }
 
-  private async waitHealthy(config: BackendConfig): Promise<void> {
+  private async waitHealthy(child: ChildProcess, config: BackendConfig): Promise<void> {
     const deadline = Date.now() + HEALTH_TIMEOUT_MS
     while (Date.now() < deadline) {
-      if (this.child === undefined || this.child.exitCode !== null) {
-        throw new Error('backend exited before it was healthy')
-      }
+      if (child.exitCode !== null) throw new Error('backend exited before it was healthy')
       if (await this.isHealthy(config)) return
       await delay(HEALTH_INTERVAL_MS)
     }
@@ -161,35 +203,43 @@ export class BackendProcess {
   }
 
   private async isHealthy(config: BackendConfig): Promise<boolean> {
-    try {
-      const response = await fetch(`http://${HOST}:${config.port}/health`, {
-        headers: { [TOKEN_HEADER]: config.token }
-      })
-      if (!response.ok) return false
-      const body: unknown = await response.json()
-      return (
-        typeof body === 'object' &&
-        body !== null &&
-        (body as Record<string, unknown>)['ok'] === true
-      )
-    } catch {
-      return false
-    }
+    const response = await fetch(`http://${HOST}:${config.port}/health`, {
+      headers: { [TOKEN_HEADER]: config.token }
+    }).catch(() => undefined)
+    if (response === undefined || !response.ok) return false
+    const body: unknown = await response.json().catch(() => undefined)
+    return (
+      typeof body === 'object' && body !== null && (body as Record<string, unknown>)['ok'] === true
+    )
   }
 
   private pipeLogs(child: ChildProcess): void {
     if (this.log === undefined) {
       const dir = join(this.options.userDataDir, LOG_DIR_NAME)
       mkdirSync(dir, { recursive: true })
-      this.log = createWriteStream(join(dir, LOG_FILE_NAME), { flags: 'a' })
+      this.log = createWriteStream(join(dir, LOG_FILE_NAME), { flags: 'w' })
     }
-    child.stdout?.on('data', (chunk: Buffer) => this.writeLog(chunk.toString('utf8')))
-    child.stderr?.on('data', (chunk: Buffer) => this.writeLog(chunk.toString('utf8')))
+    this.lineWriter(child.stdout)
+    this.lineWriter(child.stderr)
+  }
+
+  private lineWriter(stream: NodeJS.ReadableStream | null): void {
+    if (stream === null) return
+    let pending = ''
+    stream.on('data', (chunk: Buffer) => {
+      const lines = (pending + chunk.toString('utf8')).split('\n')
+      pending = lines.pop() ?? ''
+      for (const line of lines) this.writeLog(`${line}\n`)
+    })
+    stream.on('end', () => {
+      if (pending !== '') this.writeLog(`${pending}\n`)
+      pending = ''
+    })
   }
 
   private writeLog(text: string): void {
-    const token = this.current?.token
-    const safe = token === undefined ? text : text.split(token).join('[redacted]')
+    let safe = text
+    for (const secret of this.secrets) safe = safe.split(secret).join(REDACTED)
     this.log?.write(safe)
   }
 }

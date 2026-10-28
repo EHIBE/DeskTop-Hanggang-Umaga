@@ -323,3 +323,12 @@ def test_busy_camera_gets_notice(tmp_path: Path) -> None:
         receive_type(ws, "state")
         ws.send_text(json.dumps({"type": "camera.select", "index": 0}))
         assert receive_type(ws, "notice")["copy_key"] == "cam.busy"
+
+
+def test_binary_frames_get_a_notice(client: TestClient) -> None:
+    with connect(client) as ws:
+        receive_type(ws, "state")
+        ws.send_bytes(b"\x00\x01")
+        assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
+        ws.send_text(json.dumps({"type": "campaign.list"}))
+        assert receive_type(ws, "campaigns")["campaigns"] == []

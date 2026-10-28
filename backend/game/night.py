@@ -123,6 +123,7 @@ class GameController:
         self._area = PlayArea()
         self._calibration: Calibration | None = None
         self._is_calibrated = False
+        self._is_stored_calibration = False
         self._is_demo_safe = store.get_setting(DEMO_SAFE_SETTING) == "1"
 
     def snapshot(self) -> Snapshot:
@@ -167,15 +168,22 @@ class GameController:
             self._campaign = campaign
             self._calibration = None
             self._is_calibrated = False
+            self._is_stored_calibration = False
             self._area = PlayArea()
             stored = self._store.latest_calibration(campaign.id)
             if stored is None:
                 return
-            self._area = PlayArea(width_cm=stored.play_w_cm, height_cm=stored.play_h_cm)
+            try:
+                area = PlayArea(width_cm=stored.play_w_cm, height_cm=stored.play_h_cm)
+            except CalibrationError:
+                logger.warning("stored calibration has an invalid play area")
+                return
+            self._area = area
             self._calibration = Calibration(
                 homography=np.array(stored.homography, dtype=np.float64).reshape(3, 3),
-                area=self._area,
+                area=area,
             )
+            self._is_stored_calibration = True
             if self._camera is not None:
                 self._check_stored_calibration()
 
@@ -194,7 +202,7 @@ class GameController:
             self._camera = camera
             self._camera_info = CameraInfo(index=index, width=width, height=height)
             self._store.set_setting(CAMERA_SETTING, str(index))
-            if self._calibration is not None and not self._is_calibrated:
+            if self._is_stored_calibration and not self._is_calibrated:
                 self._check_stored_calibration()
 
     def _check_stored_calibration(self) -> None:
@@ -204,9 +212,12 @@ class GameController:
         frame = self.wait_for_frame()
         if stored is None or frame is None:
             return
+        try:
+            encoded = stored.baseline_path.read_bytes()
+        except OSError as error:
+            raise GameError("cam.moved") from error
         baseline = cv2.imdecode(
-            np.frombuffer(stored.baseline_path.read_bytes(), dtype=np.uint8),
-            cv2.IMREAD_COLOR,
+            np.frombuffer(encoded, dtype=np.uint8), cv2.IMREAD_COLOR
         )
         current = warp(frame, self._calibration)
         if baseline is None or baseline.shape != current.shape:
@@ -241,6 +252,7 @@ class GameController:
                 raise GameError("calib.tap") from error
             self._area = area
             self._calibration = calibration
+            self._is_stored_calibration = False
 
     def confirm_calibration(self) -> None:
         with self._lock:
@@ -266,6 +278,7 @@ class GameController:
                 raise GameError("start.ready")
             self._calibration = None
             self._is_calibrated = False
+            self._is_stored_calibration = False
 
     def set_demo_safe(self, is_on: bool) -> None:
         with self._lock:

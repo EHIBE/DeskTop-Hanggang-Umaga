@@ -111,3 +111,36 @@ def test_list_microphones_keeps_input_devices_only() -> None:
     ]
     found = list_microphones(lambda: devices)
     assert [(m.index, m.name) for m in found] == [(1, "Mic")]
+
+
+def test_missing_baseline_file_asks_to_recalibrate(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    campaign_id = calibrate_campaign(store)
+    stored = store.latest_calibration(campaign_id)
+    assert stored is not None
+    stored.baseline_path.unlink()
+    controller = controller_with(store, SceneSource)
+    controller.continue_campaign(campaign_id)
+    with pytest.raises(GameError) as info:
+        controller.select_camera(0)
+    assert info.value.copy_key == "cam.moved"
+    controller.close()
+    store.close()
+
+
+def test_camera_change_during_unsaved_preview_keeps_calibrating(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    controller = controller_with(store, SceneSource)
+    controller.start_new_campaign("B", Difficulty.NORMAL)
+    controller.select_camera(0)
+    controller.submit_corners(SHEET, 60.0, 40.0)
+    controller.select_camera(1)
+    snapshot = controller.snapshot()
+    assert snapshot.phase is AppPhase.CALIBRATE
+    assert snapshot.is_previewing
+    assert (
+        store.latest_calibration(snapshot.campaign.id if snapshot.campaign else "")
+        is None
+    )
+    controller.close()
+    store.close()

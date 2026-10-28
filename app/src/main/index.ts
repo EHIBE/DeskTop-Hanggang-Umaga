@@ -11,7 +11,7 @@ const CONFIG_CHANNEL = 'desktop:config'
 const KEY_STATUS_CHANNEL = 'desktop:key-status'
 const SAVE_KEY_CHANNEL = 'desktop:save-key'
 const MAX_KEY_INPUT = 1024
-const FILE_ORIGINS: readonly string[] = ['file://', 'null']
+const FILE_ORIGINS: readonly string[] = ['file://']
 const EXTERNAL_URL_ALLOWLIST: readonly Readonly<{ origin: string; path: string }>[] = [
   { origin: 'https://github.com', path: '/EHIBE/DeskTop-Hanggang-Umaga' },
   { origin: 'https://dev.meta.ai', path: '/docs' }
@@ -137,15 +137,12 @@ function registerIpc(keystore: Keystore, backend: BackendProcess): void {
       throw new KeystoreError('invalid key format')
     }
     const status = keystore.save(rawKey)
-    await backend.restart()
+    await backend.restart().catch((error: unknown) => backend.recordFailure(error))
     return status
   })
 }
 
-const hasInstanceLock = app.requestSingleInstanceLock()
-if (!hasInstanceLock) app.quit()
-
-void app.whenReady().then(async () => {
+async function startApp(): Promise<void> {
   electronApp.setAppUserModelId(APP_USER_MODEL_ID)
   denyAllPermissions()
   const userDataDir = app.getPath('userData')
@@ -156,6 +153,7 @@ void app.whenReady().then(async () => {
     backendDir: dir,
     userDataDir,
     allowedOrigins: allowedOrigins(),
+    isDev: is.dev,
     apiKey: () => keystore.load()
   })
   registerIpc(keystore, backend)
@@ -166,12 +164,18 @@ void app.whenReady().then(async () => {
   })
 
   createWindow()
-  await backend.start().catch(() => undefined)
+  await backend.start().catch((error: unknown) => backend.recordFailure(error))
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
-})
+}
+
+if (app.requestSingleInstanceLock()) {
+  void app.whenReady().then(startApp)
+} else {
+  app.quit()
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
