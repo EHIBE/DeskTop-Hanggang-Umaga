@@ -153,6 +153,17 @@ def test_no_retry_on_bad_request() -> None:
     assert harness.sleeps == []
 
 
+@pytest.mark.parametrize("status", [401, 403, 404, 422])
+def test_other_client_errors_are_rejections_without_breaker(status: int) -> None:
+    harness = make_harness()
+    for _ in range(3):
+        operation, calls = scripted(status_error(status))
+        with pytest.raises(MetaRequestError):
+            run(harness.client.execute(SPARK, operation, spark_usage))
+        assert len(calls) == 1
+    assert harness.client.is_available(MetaModel.SPARK)
+
+
 def test_content_policy_violation_is_flagged() -> None:
     harness = make_harness()
     body = {"error": {"code": "content_policy_violation"}}

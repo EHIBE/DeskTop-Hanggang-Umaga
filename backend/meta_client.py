@@ -223,6 +223,12 @@ def _is_content_policy(error: openai.APIStatusError) -> bool:
     return CONTENT_POLICY_CODE in str(error)
 
 
+def _is_rejected_request(status: int) -> bool:
+    if status in (HTTP_REQUEST_TIMEOUT, HTTP_CONFLICT, HTTP_TOO_MANY_REQUESTS):
+        return False
+    return HTTP_BAD_REQUEST <= status < HTTP_SERVER_ERROR_MIN
+
+
 def _is_retryable_status(status: int) -> bool:
     if status in (HTTP_REQUEST_TIMEOUT, HTTP_CONFLICT, HTTP_TOO_MANY_REQUESTS):
         return True
@@ -395,17 +401,18 @@ class MetaClient:
         cost = UNMETERED_CALL_ESTIMATE_USD[spec.kind] if is_maybe_billed else Decimal(0)
         self._record_flat(spec, started, cost, is_ok=False)
         retry_after = _retry_after_s(error, self._wall_clock())
-        if status == HTTP_BAD_REQUEST:
-            raise MetaRequestError(
-                f"{spec.model.value} rejected the request",
-                is_content_policy=_is_content_policy(error),
-            ) from error
         is_credit_exhausted = status == HTTP_PAYMENT_REQUIRED or (
             status == HTTP_TOO_MANY_REQUESTS and retry_after is None
         )
         if is_credit_exhausted:
             self._meter.force_stop()
             raise BudgetExceededError("credits exhausted") from error
+        if _is_rejected_request(status):
+            raise MetaRequestError(
+                f"{spec.model.value} rejected the request with HTTP {status}",
+                is_content_policy=status == HTTP_BAD_REQUEST
+                and _is_content_policy(error),
+            ) from error
         is_wait_too_long = (
             retry_after is not None and retry_after > self._timeouts[spec.kind]
         )
