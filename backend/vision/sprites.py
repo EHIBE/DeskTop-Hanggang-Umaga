@@ -1,6 +1,9 @@
+import base64
+import binascii
 import hashlib
-from dataclasses import dataclass
-from typing import Final
+import logging
+from dataclasses import dataclass, field
+from typing import Final, Protocol
 
 import cv2
 import numpy as np
@@ -15,8 +18,20 @@ from config import (
     SPRITE_CROP_PADDING,
     SPRITE_SIZE_PX,
     SPRITE_SOURCE_LONG_SIDE_PX,
+    CallKind,
+    MetaModel,
 )
-from vision.sam import Image, ObjectMask
+from db.store import Store
+from meta_client import CallSpec, MetaClient, MetaError, MetaRequestError, Usage
+from vision.sam import (
+    Image,
+    ObjectMask,
+    SamSegmenter,
+    SegmentationError,
+    mask_in_frame,
+)
+
+logger = logging.getLogger("desktop.sprites")
 
 Color = tuple[int, int, int]
 
@@ -329,3 +344,202 @@ def sprite_prompt(
     if has_style_anchor:
         text = f"{text} {STYLE_ANCHOR_SENTENCE}"
     return text
+
+
+IMAGE_SPEC: Final = CallSpec(
+    model=MetaModel.IMAGE, kind=CallKind.IMAGE, is_idempotent=True
+)
+IMAGE_CALL_TYPE: Final = "image_generation_call"
+IMAGE_TOOL: Final[dict[str, object]] = {
+    "type": "image_generation",
+    "enable_web_search": False,
+    "enable_image_search": False,
+    "enable_shell": False,
+    "reasoning_strength": "low",
+    "size": "1024x1024",
+    "output_format": "png",
+}
+
+
+@dataclass(frozen=True)
+class SpriteJob:
+    unit_id: str
+    campaign_id: str
+    signature_id: str
+    unit_name: str
+    unit_class: str
+    subject: str
+    crop_rgb: Image = field(compare=False)
+
+
+@dataclass(frozen=True)
+class GeneratedSprite:
+    png: bytes
+    response_id: str | None
+
+
+class SpriteGenerator(Protocol):
+    @property
+    def is_available(self) -> bool: ...
+
+    async def generate(
+        self, job: SpriteJob, style_anchor_png: bytes | None
+    ) -> GeneratedSprite | None: ...
+
+
+class PlaceholderGenerator:
+    @property
+    def is_available(self) -> bool:
+        return False
+
+    async def generate(
+        self, job: SpriteJob, style_anchor_png: bytes | None
+    ) -> GeneratedSprite | None:
+        return None
+
+
+def image_payload(response: object) -> tuple[bytes, str | None]:
+    for item in getattr(response, "output", None) or []:
+        if getattr(item, "type", None) != IMAGE_CALL_TYPE:
+            continue
+        result = getattr(item, "result", None)
+        if not isinstance(result, str):
+            break
+        try:
+            data = base64.b64decode(result, validate=True)
+        except (binascii.Error, ValueError) as error:
+            raise SpriteError("image result is not base64") from error
+        response_id = getattr(response, "id", None)
+        return data, response_id if isinstance(response_id, str) else None
+    raise SpriteError("response has no generated image")
+
+
+def _data_url(png: bytes) -> str:
+    return "data:image/png;base64," + base64.b64encode(png).decode("ascii")
+
+
+class MuseImageGenerator:
+    def __init__(self, client: MetaClient, segmenter: SamSegmenter | None) -> None:
+        self._client = client
+        self._segmenter = segmenter
+
+    @property
+    def is_available(self) -> bool:
+        return self._client.is_available(MetaModel.IMAGE)
+
+    async def generate(
+        self, job: SpriteJob, style_anchor_png: bytes | None
+    ) -> GeneratedSprite | None:
+        crop_png = encode_png(job.crop_rgb)
+        key = pick_key_color(job.crop_rgb)
+        last_image: Image | None = None
+        last_response: str | None = None
+        for attempt_key in (key, other_key(key)):
+            try:
+                raw, response_id = await self._call(
+                    job, crop_png, attempt_key, style_anchor_png
+                )
+            except MetaRequestError as error:
+                if error.is_content_policy:
+                    logger.warning(
+                        "sprite blocked by content policy, keeping the placeholder"
+                    )
+                return None
+            except (MetaError, SpriteError):
+                logger.warning("sprite generation failed, keeping the placeholder")
+                return None
+            image = decode_png(raw)
+            sprite, check = process_generated(image, attempt_key)
+            if check.is_valid:
+                return GeneratedSprite(png=encode_png(sprite), response_id=response_id)
+            last_image, last_response = image, response_id
+        return await self._sam_cutout(job, last_image, last_response)
+
+    async def _call(
+        self,
+        job: SpriteJob,
+        crop_png: bytes,
+        key: Color,
+        style_anchor_png: bytes | None,
+    ) -> tuple[bytes, str | None]:
+        content: list[dict[str, str]] = [
+            {
+                "type": "input_text",
+                "text": sprite_prompt(
+                    job.subject, job.unit_class, key, style_anchor_png is not None
+                ),
+            },
+            {"type": "input_image", "image_url": _data_url(crop_png), "detail": "auto"},
+        ]
+        if style_anchor_png is not None:
+            content.append(
+                {
+                    "type": "input_image",
+                    "image_url": _data_url(style_anchor_png),
+                    "detail": "auto",
+                }
+            )
+
+        async def operation() -> object:
+            return await self._client.sdk().responses.create(
+                model=MetaModel.IMAGE.value,
+                extra_body={
+                    "input": [{"role": "user", "content": content}],
+                    "tools": [IMAGE_TOOL],
+                },
+            )
+
+        response = await self._client.execute(
+            IMAGE_SPEC, operation, lambda _: Usage(images=1)
+        )
+        return image_payload(response)
+
+    async def _sam_cutout(
+        self, job: SpriteJob, image: Image | None, response_id: str | None
+    ) -> GeneratedSprite | None:
+        if image is None or self._segmenter is None or not self._segmenter.is_available:
+            return None
+        rgb = np.ascontiguousarray(image[:, :, :3])
+        try:
+            result = await self._segmenter.segment_concept(
+                np.asarray(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR), dtype=np.uint8),
+                job.subject or job.unit_name,
+            )
+        except (MetaError, SegmentationError):
+            return None
+        best = max(result.masks.values(), key=lambda m: m.pixel_count, default=None)
+        if best is None:
+            return None
+        height, width = rgb.shape[:2]
+        sprite = finalize_sprite(
+            apply_mask_alpha(rgb, mask_in_frame(best, width, height))
+        )
+        if not validate_sprite(sprite).is_valid:
+            return None
+        return GeneratedSprite(png=encode_png(sprite), response_id=response_id)
+
+
+class SpriteService:
+    def __init__(self, store: Store, generator: SpriteGenerator) -> None:
+        self._store = store
+        self._generator = generator
+
+    async def ensure_sprite(self, job: SpriteJob) -> str | None:
+        key = cache_key(job.signature_id, job.unit_name, job.unit_class)
+        cached = self._store.find_sprite(key)
+        if cached is not None:
+            self._store.set_unit_sprite(job.unit_id, cached.id)
+            return cached.id
+        if not self._generator.is_available:
+            return None
+        anchor_id = self._store.style_anchor(job.campaign_id)
+        anchor_png = None if anchor_id is None else self._store.sprite_png(anchor_id)
+        generated = await self._generator.generate(job, anchor_png)
+        if generated is None:
+            return None
+        sprite = self._store.save_sprite(
+            key, generated.png, PALETTE_VERSION, PROMPT_VERSION, generated.response_id
+        )
+        self._store.set_unit_sprite(job.unit_id, sprite.id)
+        self._store.set_style_anchor_if_missing(job.campaign_id, sprite.id)
+        return sprite.id

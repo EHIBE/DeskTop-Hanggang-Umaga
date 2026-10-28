@@ -27,13 +27,15 @@ from game.night import (
     GameError,
     PipelineFactory,
     Snapshot,
+    SpriteServiceFactory,
     UnitView,
 )
 from gm.schemas import ContentFilter
 from meta_client import CostMeter, MetaClient, create_openai_client
 from rules.units import Difficulty
-from state import EncodedFrame, LiveState
+from state import Broadcast, EncodedFrame, LiveState
 from vision.sam import SamSegmenter, TrackerOnlySegmenter
+from vision.sprites import MuseImageGenerator, PlaceholderGenerator, SpriteService
 from vision.summon import FallbackDetector, SparkDetector, SummonPipeline
 
 logger = logging.getLogger("desktop.server")
@@ -164,6 +166,7 @@ class Services:
     live: LiveState
     content: ContentFilter
     meter: CostMeter | None
+    broadcast: Broadcast
     close: Callable[[], None]
 
 
@@ -176,6 +179,7 @@ def build_services(settings: AppSettings) -> Services:
     content = ContentFilter.from_data_dir()
     sdk = None if settings.api_key is None else create_openai_client(settings.api_key)
     meta = MetaClient(sdk, CostMeter(store))
+    broadcast = Broadcast()
     controller: GameController | None = None
 
     def log_invalid(reason: str) -> None:
@@ -188,6 +192,8 @@ def build_services(settings: AppSettings) -> Services:
         has_api_key=settings.api_key is not None,
         pipeline_factory=build_pipeline_factory(meta, content, log_invalid),
         meter=meta.meter,
+        sprite_service_factory=build_sprite_factory(store, meta),
+        broadcast=broadcast,
     )
     pump = FramePump(controller, live)
 
@@ -203,6 +209,7 @@ def build_services(settings: AppSettings) -> Services:
         live=live,
         content=content,
         meter=meta.meter,
+        broadcast=broadcast,
         close=close,
     )
 
@@ -216,6 +223,18 @@ def build_pipeline_factory(
         return SummonPipeline(
             SparkDetector(meta, content, log_invalid), SamSegmenter(meta), content
         )
+
+    return factory
+
+
+def build_sprite_factory(store: Store, meta: MetaClient) -> SpriteServiceFactory:
+    live_generator = MuseImageGenerator(meta, SamSegmenter(meta))
+    placeholder = PlaceholderGenerator()
+
+    def factory(is_demo_safe: bool) -> SpriteService:
+        if is_demo_safe or not meta.has_credentials:
+            return SpriteService(store, placeholder)
+        return SpriteService(store, live_generator)
 
     return factory
 
@@ -269,6 +288,7 @@ def unit_json(unit: UnitView) -> JsonObject:
         "x_cm": unit.x_cm,
         "y_cm": unit.y_cm,
         "rerolls_left": unit.rerolls_left,
+        "sprite_png": unit.sprite_png,
     }
 
 
@@ -350,6 +370,14 @@ class Connection:
         meter = self._services.meter
         if self._services.settings.is_dev and meter is not None:
             await self.send(cost_json(meter))
+
+    async def forward_broadcasts(self) -> None:
+        queue = self._services.broadcast.subscribe()
+        try:
+            while True:
+                await self.send(await queue.get())
+        finally:
+            self._services.broadcast.unsubscribe(queue)
 
     async def stream_frames(self) -> None:
         last_sequence = -1
@@ -454,11 +482,8 @@ class Connection:
         if isinstance(message, UnitRenameMessage):
             content = self._services.content
             return card_json(
-                await asyncio.to_thread(
-                    controller.rename_unit,
-                    message.unit_id,
-                    message.name,
-                    content.clean_player_name,
+                controller.rename_unit(
+                    message.unit_id, message.name, content.clean_player_name
                 )
             )
         await asyncio.to_thread(controller.set_demo_safe, message.on)
@@ -513,12 +538,14 @@ def create_app(
         connection = Connection(socket, services)
         await connection.send_state()
         sender = asyncio.create_task(connection.stream_frames())
+        forwarder = asyncio.create_task(connection.forward_broadcasts())
         try:
             await connection.receive()
         except WebSocketDisconnect:
             logger.info("websocket closed")
         finally:
             sender.cancel()
+            forwarder.cancel()
 
     return app
 

@@ -19,9 +19,10 @@ from game.night import FramePump, GameController
 from gm.schemas import ContentFilter
 from meta_client import CostMeter
 from server import Services, create_app
-from state import LiveState
+from state import Broadcast, LiveState
 from tests.test_meta_client import MemoryLog
 from vision.sam import TrackerOnlySegmenter
+from vision.sprites import GeneratedSprite, SpriteJob, SpriteService
 from vision.summon import FallbackDetector, SummonPipeline
 
 Image = npt.NDArray[np.uint8]
@@ -64,6 +65,15 @@ class SceneSource:
         return None
 
 
+class StaticGenerator:
+    is_available = True
+
+    async def generate(
+        self, job: SpriteJob, style_anchor_png: bytes | None
+    ) -> GeneratedSprite:
+        return GeneratedSprite(png=b"PNG-test", response_id=None)
+
+
 class BusySource(SceneSource):
     def isOpened(self) -> bool:
         return False
@@ -76,6 +86,7 @@ def make_factory(
         store = Store(settings.database_path)
         live = LiveState()
         meter = CostMeter(MemoryLog(starting_total=spent))
+        broadcast = Broadcast()
 
         def source(_: int) -> VideoSource:
             return BusySource() if busy else SceneSource()
@@ -92,6 +103,8 @@ def make_factory(
                 FallbackDetector(), TrackerOnlySegmenter(), CONTENT
             ),
             meter=meter,
+            sprite_service_factory=lambda _: SpriteService(store, StaticGenerator()),
+            broadcast=broadcast,
         )
         pump = FramePump(controller, live)
 
@@ -107,6 +120,7 @@ def make_factory(
             live=live,
             content=CONTENT,
             meter=meter,
+            broadcast=broadcast,
             close=close,
         )
 
@@ -458,3 +472,21 @@ def test_no_cost_messages_outside_dev(client: TestClient) -> None:
         receive_type(ws, "state")
         ws.send_text(json.dumps({"type": "demo_safe", "on": False}))
         assert json.loads(ws.receive_text())["type"] == "state"
+
+
+def test_sprite_arrives_after_the_card(client: TestClient) -> None:
+    with connect(client) as ws:
+        calibrated(ws)
+        ws.send_text(json.dumps({"type": "summon.name", "name": "Bahay Kubo"}))
+        receive_type(ws, "notice")
+        ws.send_text(json.dumps({"type": "summon.tap", "point": [600, 400]}))
+        card = receive_type(ws, "card")["unit"]
+        assert isinstance(card, dict)
+        sprite = receive_type(ws, "sprite")
+        assert sprite["unit_id"] == card["unit_id"]
+        assert sprite["sprite_png"] == "UE5HLXRlc3Q="
+        ws.send_text(json.dumps({"type": "campaign.list"}))
+        receive_type(ws, "campaigns")
+        units = receive_type(ws, "state")["units"]
+        assert isinstance(units, list)
+        assert units[0]["sprite_png"] == "UE5HLXRlc3Q="
