@@ -242,6 +242,40 @@ def test_crossing_hard_stop_blocks_next_call() -> None:
     assert second_calls == []
 
 
+def test_unreadable_usage_charges_the_estimate() -> None:
+    harness = make_harness()
+    operation, _ = scripted("ok")
+
+    def broken_usage(_: str) -> Usage:
+        raise KeyError("usage")
+
+    assert run(harness.client.execute(SPARK, operation, broken_usage)) == "ok"
+    assert harness.log.records[0].cost_usd == Decimal("0.02")
+    assert harness.log.records[0].ok
+
+
+def test_ambiguous_failures_charge_the_estimate() -> None:
+    harness = make_harness()
+    operation, _ = scripted(TimeoutError(), status_error(502), "ok")
+    run(harness.client.execute(SAM, operation, lambda _: Usage(images=1)))
+    assert [r.cost_usd for r in harness.log.records] == [
+        Decimal("0.0025"),
+        Decimal("0.0025"),
+        Decimal("0.0025"),
+    ]
+
+
+def test_unsent_and_rejected_requests_cost_nothing() -> None:
+    harness = make_harness()
+    request = httpx2.Request("POST", "https://api.meta.ai/v1/responses")
+    operation, _ = scripted(
+        openai.APIConnectionError(request=request), status_error(400)
+    )
+    with pytest.raises(MetaRequestError):
+        run(harness.client.execute(SPARK, operation, spark_usage))
+    assert [r.cost_usd for r in harness.log.records] == [Decimal(0), Decimal(0)]
+
+
 def test_breaker_opens_after_three_failed_calls_and_recovers() -> None:
     harness = make_harness()
     for _ in range(3):

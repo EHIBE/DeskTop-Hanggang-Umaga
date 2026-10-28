@@ -28,6 +28,7 @@ from config import (
     SPARK_INPUT_PER_TOKEN_USD,
     SPARK_OUTPUT_PER_TOKEN_USD,
     TIMEOUT_S,
+    UNMETERED_CALL_ESTIMATE_USD,
     VOICE_PER_SECOND_USD,
     CallKind,
     MetaModel,
@@ -311,7 +312,7 @@ class MetaClient:
                     ) from error
                 await self._sleep(self._retry_delay(attempt, failure.retry_after_s))
                 continue
-            self._record_success(spec, usage_of(result), started)
+            self._record_success(spec, self._usage_or_none(usage_of, result), started)
             breaker.record_success()
             return result
         raise MetaUnavailableError(f"{spec.model.value} call failed")
@@ -326,7 +327,21 @@ class MetaClient:
     def _latency_ms(self, started: float) -> int:
         return max(0, int((self._clock() - started) * 1000))
 
-    def _record_success(self, spec: CallSpec, usage: Usage, started: float) -> None:
+    def _usage_or_none[T](
+        self, usage_of: Callable[[T], Usage], result: T
+    ) -> Usage | None:
+        try:
+            return usage_of(result)
+        except (AttributeError, KeyError, TypeError, ValueError):
+            logger.warning("usage missing from a paid response, charging the estimate")
+            return None
+
+    def _record_success(
+        self, spec: CallSpec, usage: Usage | None, started: float
+    ) -> None:
+        if usage is None:
+            self._record_estimate(spec, started, is_ok=True)
+            return
         self._meter.record(
             ApiUsageRecord(
                 model=spec.model.value,
@@ -343,13 +358,20 @@ class MetaClient:
             )
         )
 
-    def _record_failure(self, spec: CallSpec, started: float) -> None:
+    def _record_estimate(self, spec: CallSpec, started: float, *, is_ok: bool) -> None:
+        self._record_flat(
+            spec, started, UNMETERED_CALL_ESTIMATE_USD[spec.kind], is_ok=is_ok
+        )
+
+    def _record_flat(
+        self, spec: CallSpec, started: float, cost_usd: Decimal, *, is_ok: bool
+    ) -> None:
         self._meter.record(
             ApiUsageRecord(
                 model=spec.model.value,
                 kind=spec.kind.value,
-                cost_usd=Decimal(0),
-                ok=False,
+                cost_usd=cost_usd,
+                ok=is_ok,
                 latency_ms=self._latency_ms(started),
             )
         )
@@ -360,10 +382,18 @@ class MetaClient:
         error: TimeoutError | openai.APIConnectionError | openai.APIStatusError,
         started: float,
     ) -> _AttemptFailure:
-        self._record_failure(spec, started)
+        if isinstance(error, openai.APIConnectionError) and not isinstance(
+            error, openai.APITimeoutError
+        ):
+            self._record_flat(spec, started, Decimal(0), is_ok=False)
+            return _AttemptFailure(is_retryable=True, retry_after_s=None)
         if not isinstance(error, openai.APIStatusError):
+            self._record_estimate(spec, started, is_ok=False)
             return _AttemptFailure(is_retryable=True, retry_after_s=None)
         status = error.status_code
+        is_maybe_billed = status >= HTTP_SERVER_ERROR_MIN
+        cost = UNMETERED_CALL_ESTIMATE_USD[spec.kind] if is_maybe_billed else Decimal(0)
+        self._record_flat(spec, started, cost, is_ok=False)
         retry_after = _retry_after_s(error, self._wall_clock())
         if status == HTTP_BAD_REQUEST:
             raise MetaRequestError(

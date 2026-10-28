@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import StrEnum
 from pathlib import Path
@@ -95,20 +95,29 @@ SAM_VIDEO_MIN_FRAMES: Final = 50
 IMAGE_PER_IMAGE_USD: Final = Decimal("0.01")
 VOICE_PER_SECOND_USD: Final = Decimal("0.18") / Decimal(3_600)
 
+UNMETERED_CALL_ESTIMATE_USD: Final[Mapping[CallKind, Decimal]] = {
+    CallKind.SPARK: Decimal("0.02"),
+    CallKind.SAM_IMAGE: Decimal("0.0025"),
+    CallKind.SAM_VIDEO: Decimal("0.24"),
+    CallKind.IMAGE: Decimal("0.01"),
+    CallKind.FILES: Decimal(0),
+}
+
 PALETTE_VERSION: Final = "gabi16-v1"
 PROMPT_VERSION: Final = "sprite-v1"
 
 DEFAULT_PORT: Final = 8765
+MIN_TOKEN_LENGTH: Final = 32
 DATA_DIR_NAME: Final = "DeskTop"
 DATABASE_FILE_NAME: Final = "desktop.sqlite"
 
 
 @dataclass(frozen=True)
 class AppSettings:
-    token: str
+    token: str = field(repr=False)
     data_dir: Path
     port: int
-    api_key: str | None
+    api_key: str | None = field(repr=False)
 
     @property
     def database_path(self) -> Path:
@@ -133,8 +142,8 @@ def _parse_port(raw: str) -> int:
 
 def load_settings(env: Mapping[str, str]) -> AppSettings:
     token = env.get("DESKTOP_TOKEN", "").strip()
-    if not token:
-        raise ConfigError("DESKTOP_TOKEN is required")
+    if len(token) < MIN_TOKEN_LENGTH:
+        raise ConfigError("DESKTOP_TOKEN is missing or too short")
     raw_data_dir = env.get("DESKTOP_DATA_DIR", "").strip()
     data_dir = Path(raw_data_dir) if raw_data_dir else _default_data_dir(env)
     port = _parse_port(env.get("DESKTOP_PORT", "").strip() or str(DEFAULT_PORT))

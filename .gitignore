@@ -12,3 +12,7 @@ userdata/
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+*.db

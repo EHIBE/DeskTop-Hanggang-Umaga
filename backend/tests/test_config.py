@@ -13,17 +13,19 @@ from config import (
     load_settings,
 )
 
+TOKEN = "a" * 64
+
 
 def test_load_settings_reads_every_value(tmp_path: Path) -> None:
     settings = load_settings(
         {
-            "DESKTOP_TOKEN": "abc123",
+            "DESKTOP_TOKEN": TOKEN,
             "DESKTOP_DATA_DIR": str(tmp_path),
             "DESKTOP_PORT": "9000",
             "MODEL_API_KEY": "key",
         }
     )
-    assert settings.token == "abc123"
+    assert settings.token == TOKEN
     assert settings.data_dir == tmp_path.resolve()
     assert settings.port == 9000
     assert settings.api_key == "key"
@@ -40,25 +42,44 @@ def test_blank_token_fails_closed(tmp_path: Path) -> None:
         load_settings({"DESKTOP_TOKEN": "   ", "DESKTOP_DATA_DIR": str(tmp_path)})
 
 
+def test_short_token_fails_closed(tmp_path: Path) -> None:
+    with pytest.raises(ConfigError):
+        load_settings({"DESKTOP_TOKEN": "a" * 31, "DESKTOP_DATA_DIR": str(tmp_path)})
+
+
+def test_repr_hides_secrets(tmp_path: Path) -> None:
+    settings = load_settings(
+        {
+            "DESKTOP_TOKEN": TOKEN,
+            "DESKTOP_DATA_DIR": str(tmp_path),
+            "MODEL_API_KEY": "sk-secret",
+        }
+    )
+    assert TOKEN not in repr(settings)
+    assert "sk-secret" not in repr(settings)
+
+
 def test_data_dir_defaults_to_appdata(tmp_path: Path) -> None:
-    settings = load_settings({"DESKTOP_TOKEN": "t", "APPDATA": str(tmp_path)})
+    settings = load_settings({"DESKTOP_TOKEN": TOKEN, "APPDATA": str(tmp_path)})
     assert settings.data_dir == (tmp_path / "DeskTop").resolve()
 
 
 def test_missing_data_dir_and_appdata_raises() -> None:
     with pytest.raises(ConfigError):
-        load_settings({"DESKTOP_TOKEN": "t"})
+        load_settings({"DESKTOP_TOKEN": TOKEN})
 
 
 def test_default_port_and_missing_key(tmp_path: Path) -> None:
-    settings = load_settings({"DESKTOP_TOKEN": "t", "DESKTOP_DATA_DIR": str(tmp_path)})
+    settings = load_settings(
+        {"DESKTOP_TOKEN": TOKEN, "DESKTOP_DATA_DIR": str(tmp_path)}
+    )
     assert settings.port == 8765
     assert settings.api_key is None
 
 
 def test_blank_port_uses_default(tmp_path: Path) -> None:
     settings = load_settings(
-        {"DESKTOP_TOKEN": "t", "DESKTOP_DATA_DIR": str(tmp_path), "DESKTOP_PORT": " "}
+        {"DESKTOP_TOKEN": TOKEN, "DESKTOP_DATA_DIR": str(tmp_path), "DESKTOP_PORT": " "}
     )
     assert settings.port == 8765
 
@@ -68,7 +89,7 @@ def test_invalid_port_raises(tmp_path: Path, raw_port: str) -> None:
     with pytest.raises(ConfigError):
         load_settings(
             {
-                "DESKTOP_TOKEN": "t",
+                "DESKTOP_TOKEN": TOKEN,
                 "DESKTOP_DATA_DIR": str(tmp_path),
                 "DESKTOP_PORT": raw_port,
             }
