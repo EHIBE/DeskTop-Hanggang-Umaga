@@ -10,13 +10,13 @@ import pytest
 from db.store import (
     SCHEMA_VERSION,
     ApiUsageRecord,
-    Difficulty,
     NotFoundError,
     SchemaVersionError,
     Store,
     StoreError,
     UnsafePathError,
 )
+from rules.units import Difficulty
 
 BASE_TIME = datetime(2026, 10, 28, 3, 0, tzinfo=UTC)
 

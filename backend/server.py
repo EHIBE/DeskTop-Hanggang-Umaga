@@ -19,8 +19,9 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 from capture.calibration import CalibrationError
 from capture.camera import CameraError
 from config import STREAM_FPS, AppSettings, load_settings
-from db.store import Campaign, Difficulty, NotFoundError, Store, StoreError
+from db.store import Campaign, NotFoundError, Store, StoreError
 from game.night import FramePump, GameController, GameError, Snapshot
+from rules.units import Difficulty
 from state import EncodedFrame, LiveState
 
 logger = logging.getLogger("desktop.server")

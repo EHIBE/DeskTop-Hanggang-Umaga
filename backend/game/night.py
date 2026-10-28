@@ -31,7 +31,8 @@ from capture.camera import (
     open_directshow,
 )
 from config import STREAM_FPS, STREAM_JPEG_QUALITY, STREAM_WIDTH_PX
-from db.store import Campaign, Difficulty, Store
+from db.store import Campaign, Store
+from rules.units import Difficulty
 from state import EncodedFrame, FrameView, LiveState
 
 logger = logging.getLogger("desktop.game")

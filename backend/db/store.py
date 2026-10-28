@@ -8,9 +8,10 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
-from enum import StrEnum
 from pathlib import Path
 from typing import Final
+
+from rules.units import Difficulty, MoveClass, PowerId, RangeClass, UnitClass
 
 SCHEMA_VERSION: Final = 1
 SCHEMA_PATH: Final = Path(__file__).with_name("schema.sql")
@@ -19,6 +20,8 @@ CAMPAIGN_PAGE_MAX: Final = 50
 CAMPAIGNS_DIR_NAME: Final = "campaigns"
 BASELINE_FILE_NAME: Final = "baseline.png"
 HOMOGRAPHY_SIZE: Final = 9
+REF_CROP_DIR_NAME: Final = "crops"
+SETUP_TURN: Final = 0
 
 Clock = Callable[[], datetime]
 IdFactory = Callable[[], str]
@@ -38,12 +41,6 @@ class NotFoundError(StoreError):
 
 class UnsafePathError(StoreError):
     pass
-
-
-class Difficulty(StrEnum):
-    MADALI = "madali"
-    NORMAL = "normal"
-    MAHIRAP = "mahirap"
 
 
 @dataclass(frozen=True)
@@ -81,6 +78,57 @@ class CalibrationRecord:
     play_h_cm: float
     baseline_path: Path
     created_at: str
+
+
+@dataclass(frozen=True)
+class NightRecord:
+    id: str
+    campaign_id: str
+    number: int
+    started_at: str
+    flags: dict[str, object]
+
+
+@dataclass(frozen=True)
+class CardFields:
+    name: str
+    unit_class: UnitClass
+    hp_max: int
+    atk: int
+    move_class: MoveClass
+    range_class: RangeClass
+    power_id: PowerId
+    power_name_tl: str
+    card_text_tl: str
+    card_text_en: str
+
+
+@dataclass(frozen=True)
+class SignatureFields:
+    label: str
+    histogram: tuple[float, ...]
+    area_cm2: float
+    aspect: float
+    ref_crop_png: bytes
+
+
+@dataclass(frozen=True)
+class UnitPlacement:
+    sam_object_id: int
+    x_cm: float
+    y_cm: float
+
+
+@dataclass(frozen=True)
+class UnitRecord:
+    unit_id: str
+    signature_id: str
+    sam_object_id: int
+    card: CardFields
+    hp_current: int
+    x_cm: float
+    y_cm: float
+    sprite_id: str | None
 
 
 def utc_now() -> datetime:
@@ -334,6 +382,162 @@ class Store:
             created_at=str(row["created_at"]),
         )
 
+    def start_or_resume_night(self, campaign_id: str) -> NightRecord:
+        self.get_campaign(campaign_id)
+        with self.transaction() as conn:
+            row = conn.execute(
+                "SELECT id, campaign_id, number, started_at, flags_json FROM night "
+                "WHERE campaign_id = ? AND result IS NULL ORDER BY number DESC LIMIT 1",
+                (campaign_id,),
+            ).fetchone()
+            if row is not None:
+                return _night_from_row(row)
+            last = conn.execute(
+                "SELECT COALESCE(MAX(number), 0) FROM night WHERE campaign_id = ?",
+                (campaign_id,),
+            ).fetchone()
+            night = NightRecord(
+                id=self._new_id(),
+                campaign_id=campaign_id,
+                number=int(last[0]) + 1,
+                started_at=self._now_iso(),
+                flags={},
+            )
+            conn.execute(
+                "INSERT INTO night (id, campaign_id, number, started_at) VALUES (?, ?, ?, ?)",
+                (night.id, campaign_id, night.number, night.started_at),
+            )
+        return night
+
+    def set_night_flags(self, night_id: str, flags: dict[str, object]) -> None:
+        with self.transaction() as conn:
+            cursor = conn.execute(
+                "UPDATE night SET flags_json = ? WHERE id = ?",
+                (json.dumps(flags), night_id),
+            )
+        if cursor.rowcount == 0:
+            raise NotFoundError("night not found")
+
+    def add_unit(
+        self,
+        night: NightRecord,
+        card: CardFields,
+        signature: SignatureFields,
+        placement: UnitPlacement,
+    ) -> UnitRecord:
+        crops = self.campaign_dir(night.campaign_id) / REF_CROP_DIR_NAME
+        crops.mkdir(parents=True, exist_ok=True)
+        signature_id = self._new_id()
+        unit_id = self._new_id()
+        crop_path = crops / f"{signature_id}.png"
+        crop_path.write_bytes(signature.ref_crop_png)
+        try:
+            with self.transaction() as conn:
+                conn.execute(
+                    "INSERT INTO object_signature (id, campaign_id, label, hist_json, area_cm2, "
+                    "aspect, ref_crop_path, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        signature_id,
+                        night.campaign_id,
+                        signature.label,
+                        json.dumps(list(signature.histogram)),
+                        signature.area_cm2,
+                        signature.aspect,
+                        crop_path.relative_to(self._data_root).as_posix(),
+                        self._now_iso(),
+                    ),
+                )
+                conn.execute(
+                    "INSERT INTO unit (id, campaign_id, object_signature_id, name, class, hp_max, "
+                    "atk, move_class, range_class, power_id, power_name_tl, card_text_tl, "
+                    "card_text_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (unit_id, night.campaign_id, signature_id, *_card_values(card)),
+                )
+                conn.execute(
+                    "INSERT INTO night_unit (night_id, unit_id, sam_object_id, hp_current, "
+                    "x_cm, y_cm) VALUES (?, ?, ?, ?, ?, ?)",
+                    (
+                        night.id,
+                        unit_id,
+                        placement.sam_object_id,
+                        card.hp_max,
+                        placement.x_cm,
+                        placement.y_cm,
+                    ),
+                )
+        except BaseException:
+            crop_path.unlink(missing_ok=True)
+            raise
+        return UnitRecord(
+            unit_id=unit_id,
+            signature_id=signature_id,
+            sam_object_id=placement.sam_object_id,
+            card=card,
+            hp_current=card.hp_max,
+            x_cm=placement.x_cm,
+            y_cm=placement.y_cm,
+            sprite_id=None,
+        )
+
+    def update_unit_card(self, night_id: str, unit_id: str, card: CardFields) -> None:
+        with self.transaction() as conn:
+            cursor = conn.execute(
+                "UPDATE unit SET name = ?, class = ?, hp_max = ?, atk = ?, move_class = ?, "
+                "range_class = ?, power_id = ?, power_name_tl = ?, card_text_tl = ?, "
+                "card_text_en = ? WHERE id = ?",
+                (*_card_values(card), unit_id),
+            )
+            if cursor.rowcount == 0:
+                raise NotFoundError("unit not found")
+            conn.execute(
+                "UPDATE night_unit SET hp_current = ? WHERE night_id = ? AND unit_id = ?",
+                (card.hp_max, night_id, unit_id),
+            )
+
+    def night_units(self, night_id: str) -> list[UnitRecord]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT u.id, u.object_signature_id, nu.sam_object_id, u.name, u.class, "
+                "u.hp_max, u.atk, u.move_class, u.range_class, u.power_id, u.power_name_tl, "
+                "u.card_text_tl, u.card_text_en, nu.hp_current, nu.x_cm, nu.y_cm, u.sprite_id "
+                "FROM night_unit nu JOIN unit u ON u.id = nu.unit_id "
+                "WHERE nu.night_id = ? ORDER BY nu.sam_object_id",
+                (night_id,),
+            ).fetchall()
+        return [_unit_from_row(row) for row in rows]
+
+    def log_turn(
+        self,
+        night_id: str,
+        turn: int,
+        phase: str,
+        event_type: str,
+        payload: dict[str, object],
+        t_ms: int,
+    ) -> None:
+        with self.transaction() as conn:
+            conn.execute(
+                "INSERT INTO turn_log (night_id, turn, phase, event_type, payload_json, t_ms, "
+                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    night_id,
+                    turn,
+                    phase,
+                    event_type,
+                    json.dumps(payload),
+                    t_ms,
+                    self._now_iso(),
+                ),
+            )
+
+    def turn_log_count(self, night_id: str, event_type: str) -> int:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT COUNT(*) FROM turn_log WHERE night_id = ? AND event_type = ?",
+                (night_id, event_type),
+            ).fetchone()
+        return int(row[0])
+
     def set_setting(self, key: str, value: str) -> None:
         with self.transaction() as conn:
             conn.execute(
@@ -341,6 +545,58 @@ class Store:
                 "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
                 (key, value),
             )
+
+
+def _card_values(card: CardFields) -> tuple[object, ...]:
+    return (
+        card.name,
+        card.unit_class.value,
+        card.hp_max,
+        card.atk,
+        card.move_class.value,
+        card.range_class.value,
+        card.power_id.value,
+        card.power_name_tl,
+        card.card_text_tl,
+        card.card_text_en,
+    )
+
+
+def _night_from_row(row: sqlite3.Row) -> NightRecord:
+    flags = json.loads(str(row["flags_json"]))
+    return NightRecord(
+        id=str(row["id"]),
+        campaign_id=str(row["campaign_id"]),
+        number=int(row["number"]),
+        started_at=str(row["started_at"]),
+        flags=flags if isinstance(flags, dict) else {},
+    )
+
+
+def _unit_from_row(row: sqlite3.Row) -> UnitRecord:
+    card = CardFields(
+        name=str(row["name"]),
+        unit_class=UnitClass(row["class"]),
+        hp_max=int(row["hp_max"]),
+        atk=int(row["atk"]),
+        move_class=MoveClass(row["move_class"]),
+        range_class=RangeClass(row["range_class"]),
+        power_id=PowerId(row["power_id"]),
+        power_name_tl=str(row["power_name_tl"] or ""),
+        card_text_tl=str(row["card_text_tl"] or ""),
+        card_text_en=str(row["card_text_en"] or ""),
+    )
+    sprite = row["sprite_id"]
+    return UnitRecord(
+        unit_id=str(row["id"]),
+        signature_id=str(row["object_signature_id"]),
+        sam_object_id=int(row["sam_object_id"]),
+        card=card,
+        hp_current=int(row["hp_current"]),
+        x_cm=float(row["x_cm"]),
+        y_cm=float(row["y_cm"]),
+        sprite_id=None if sprite is None else str(sprite),
+    )
 
 
 def _parse_uuid(raw: str) -> uuid.UUID:

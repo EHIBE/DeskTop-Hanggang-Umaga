@@ -6,8 +6,9 @@ import numpy.typing as npt
 import pytest
 
 from capture.camera import VideoSource, list_microphones
-from db.store import Difficulty, Store
+from db.store import Store
 from game.night import AppPhase, FramePump, GameController, GameError
+from rules.units import Difficulty
 from state import FrameView, LiveState
 from tests.test_server import SCENE, SHEET, SceneSource
 
