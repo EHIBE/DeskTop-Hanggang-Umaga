@@ -211,20 +211,112 @@ def test_empty_claim_does_not_take_a_player_slot(tmp_path: Path) -> None:
     store.close()
 
 
-def test_begin_night_refuses_a_half_played_night(tmp_path: Path) -> None:
+def play_turns(controller: GameController, turns: int) -> None:
+    for _ in range(turns):
+        if controller.snapshot().phase is not AppPhase.PLAYER_PHASE:
+            return
+        night = controller.snapshot().night
+        assert night is not None
+        if night.enemies:
+            controller.add_intent("u_2", Action.ATTACK, night.enemies[0].id)
+        asyncio.run(controller.end_turn())
+
+
+def test_restart_resumes_the_saved_turn_exactly(tmp_path: Path) -> None:
     store = Store(tmp_path / "db.sqlite")
     controller = controller_for(store, ConfidentSegmenter())
     start_night(controller)
-    asyncio.run(controller.end_turn())
-    campaign = controller.snapshot().campaign
+    play_turns(controller, 2)
+    before = controller.snapshot()
+    board_before = controller._session.board  # type: ignore[union-attr]
+    assert before.phase is AppPhase.PLAYER_PHASE
+    assert before.night is not None
+    assert before.night.turn == 3
+    campaign = before.campaign
     controller.close()
     assert campaign is not None
     again = controller_for(store, ConfidentSegmenter())
     again.continue_campaign(campaign.id)
     again.select_camera(0)
-    assert again.snapshot().phase is AppPhase.SUMMON
+    summon = again.snapshot()
+    assert summon.phase is AppPhase.SUMMON
+    assert summon.resume_turn == 3
+    with pytest.raises(GameError) as info:
+        asyncio.run(again.summon("Extra"))
+    assert info.value.copy_key == "restore"
+    again.begin_night()
+    after = again.snapshot()
+    assert after.phase is AppPhase.PLAYER_PHASE
+    assert after.resume_turn is None
+    assert after.night is not None
+    assert after.night.turn == 3
+    assert after.night.players == before.night.players
+    assert after.night.units == before.night.units
+    assert after.night.enemies == before.night.enemies
+    assert after.night.kubo_hp == before.night.kubo_hp
+    board_after = again._session.board  # type: ignore[union-attr]
+    assert board_after is not None and board_before is not None
+    assert board_after.enemy_counter == board_before.enemy_counter
+    assert board_after.enemies_defeated == board_before.enemies_defeated
+    assert board_after.damage_by_owner == board_before.damage_by_owner
+    assert ("restore", {}) in again.drain_notices()
+    night = store.start_or_resume_night(campaign.id)
+    assert store.turn_log_count(night.id, "restore") == 1
+    play_turns(again, 6)
+    assert again.snapshot().phase in (AppPhase.SUNRISE, AppPhase.DEFEAT)
+    again.close()
+    store.close()
+
+
+def test_restore_rejects_a_corrupt_board(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    controller = controller_for(store, ConfidentSegmenter())
+    start_night(controller)
+    play_turns(controller, 1)
+    campaign = controller.snapshot().campaign
+    controller.close()
+    assert campaign is not None
+    night = store.start_or_resume_night(campaign.id)
+    with store.transaction() as conn:
+        conn.execute(
+            "UPDATE night SET board_json = ? WHERE id = ?",
+            ('{"enemy_counter": [1, 2]}', night.id),
+        )
+    again = controller_for(store, ConfidentSegmenter())
+    again.continue_campaign(campaign.id)
+    again.select_camera(0)
     with pytest.raises(GameError) as info:
         again.begin_night()
     assert info.value.copy_key == "restore"
+    assert again.snapshot().phase is AppPhase.SUMMON
     again.close()
+    store.close()
+
+
+def test_interrupted_night_ends_like_an_uninterrupted_one(tmp_path: Path) -> None:
+    straight_store = Store(tmp_path / "a" / "db.sqlite")
+    straight = controller_for(straight_store, ConfidentSegmenter())
+    start_night(straight)
+    play_turns(straight, 8)
+    expected = straight.snapshot()
+    straight.close()
+    straight_store.close()
+    store = Store(tmp_path / "b" / "db.sqlite")
+    first = controller_for(store, ConfidentSegmenter())
+    start_night(first)
+    play_turns(first, 3)
+    assert first.snapshot().phase is AppPhase.PLAYER_PHASE
+    campaign = first.snapshot().campaign
+    first.close()
+    assert campaign is not None
+    second = controller_for(store, ConfidentSegmenter())
+    second.continue_campaign(campaign.id)
+    second.select_camera(0)
+    second.begin_night()
+    assert second.snapshot().night.turn == 4  # type: ignore[union-attr]
+    play_turns(second, 8)
+    final = second.snapshot()
+    assert final.phase is expected.phase
+    assert final.score == expected.score
+    second.close()
     store.close()

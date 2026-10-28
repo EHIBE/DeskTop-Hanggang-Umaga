@@ -4,7 +4,7 @@ import shutil
 import sqlite3
 import threading
 import uuid
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -14,7 +14,8 @@ from typing import Final
 
 from rules.units import Difficulty, MoveClass, PowerId, RangeClass, UnitClass
 
-SCHEMA_VERSION: Final = 1
+SCHEMA_VERSION: Final = 2
+MIGRATIONS: Final[dict[int, str]] = {1: "ALTER TABLE night ADD COLUMN board_json TEXT;"}
 SCHEMA_PATH: Final = Path(__file__).with_name("schema.sql")
 COST_SCALE: Final = 100_000_000
 CAMPAIGN_PAGE_MAX: Final = 50
@@ -166,6 +167,14 @@ class EnemySave:
     status: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class SavedNight:
+    turns_completed: int
+    board: dict[str, object]
+    units: dict[str, UnitSave]
+    enemies: tuple[EnemySave, ...]
+
+
 def utc_now() -> datetime:
     return datetime.now(UTC)
 
@@ -221,7 +230,10 @@ class Store:
             )
         if version == SCHEMA_VERSION:
             return
-        script = SCHEMA_PATH.read_text(encoding="utf-8")
+        if version == 0:
+            script = SCHEMA_PATH.read_text(encoding="utf-8")
+        else:
+            script = "\n".join(MIGRATIONS[step] for step in range(version, SCHEMA_VERSION))
         with self._lock:
             try:
                 self._conn.executescript(
@@ -648,6 +660,7 @@ class Store:
         enemies: Sequence[EnemySave],
         result: str | None,
         events: Sequence[tuple[int, str, str, dict[str, object], int]],
+        board: Mapping[str, object] | None = None,
     ) -> None:
         with self.transaction() as conn:
             conn.executemany(
@@ -704,23 +717,70 @@ class Store:
                 ],
             )
             conn.execute(
-                "UPDATE night SET turns_completed = ?, result = ?, ended_at = ? WHERE id = ?",
+                "UPDATE night SET turns_completed = ?, result = ?, ended_at = ?, board_json = ? "
+                "WHERE id = ?",
                 (
                     turns_completed,
                     result,
                     None if result is None else self._now_iso(),
+                    None if board is None else json.dumps(board),
                     night_id,
                 ),
             )
 
-    def night_turns_completed(self, night_id: str) -> int:
+    def saved_night(self, night_id: str) -> SavedNight | None:
         with self._lock:
-            row = self._conn.execute(
-                "SELECT turns_completed FROM night WHERE id = ?", (night_id,)
+            night = self._conn.execute(
+                "SELECT turns_completed, result, board_json FROM night WHERE id = ?",
+                (night_id,),
             ).fetchone()
-        if row is None:
-            raise NotFoundError("night not found")
-        return int(row[0])
+            if night is None:
+                raise NotFoundError("night not found")
+            if int(night["turns_completed"]) == 0 or night["result"] is not None:
+                return None
+            unit_rows = self._conn.execute(
+                "SELECT unit_id, hp_current, x_cm, y_cm, cooldown, status_json FROM night_unit "
+                "WHERE night_id = ?",
+                (night_id,),
+            ).fetchall()
+            enemy_rows = self._conn.execute(
+                "SELECT id, type, part, hp, x_cm, y_cm, spawn_turn, intent_json, status_json "
+                "FROM enemy WHERE night_id = ? ORDER BY rowid",
+                (night_id,),
+            ).fetchall()
+        board = json.loads(night["board_json"]) if night["board_json"] else {}
+        if not isinstance(board, dict):
+            raise StoreError("saved board is not an object")
+        prefix = f"{night_id}:"
+        return SavedNight(
+            turns_completed=int(night["turns_completed"]),
+            board=board,
+            units={
+                str(row["unit_id"]): UnitSave(
+                    unit_id=str(row["unit_id"]),
+                    hp_current=int(row["hp_current"]),
+                    x_cm=float(row["x_cm"]),
+                    y_cm=float(row["y_cm"]),
+                    cooldown=int(row["cooldown"]),
+                    status=tuple(str(s) for s in json.loads(row["status_json"])),
+                )
+                for row in unit_rows
+            },
+            enemies=tuple(
+                EnemySave(
+                    id=str(row["id"]).removeprefix(prefix),
+                    type=str(row["type"]),
+                    part=None if row["part"] is None else str(row["part"]),
+                    hp=int(row["hp"]),
+                    x_cm=float(row["x_cm"]),
+                    y_cm=float(row["y_cm"]),
+                    spawn_turn=int(row["spawn_turn"]),
+                    intent=None if row["intent_json"] is None else json.loads(row["intent_json"]),
+                    status=tuple(str(s) for s in json.loads(row["status_json"])),
+                )
+                for row in enemy_rows
+            ),
+        )
 
     def log_turn(
         self,

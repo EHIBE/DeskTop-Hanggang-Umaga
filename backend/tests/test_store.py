@@ -553,3 +553,48 @@ def test_autosave_is_one_transaction(store: Store) -> None:
     assert store.turn_log_count(night.id, "attack") == 1
     store.autosave(night.id, 8, [], [], "win", [])
     assert store.start_or_resume_night(campaign.id).number == 2
+
+
+def test_saved_night_round_trips_the_autosave(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    night = store.start_or_resume_night(campaign.id)
+    unit = store.add_unit(night, card_fields(), SIGNATURE, UnitPlacement(1, 30.0, 20.0))
+    assert store.saved_night(night.id) is None
+    enemy = EnemySave("e_aswang_1", "aswang", None, 3, 30.0, 2.5, 1, {"target_id": "u_kubo", "dmg": 2}, ())
+    upper = EnemySave("e_manananggal_2", "manananggal", "upper", 0, 5.0, 5.0, 2, None, ("reform_2",))
+    board = {"enemies_defeated": 1, "enemy_counter": {"aswang": 1}}
+    store.autosave(
+        night.id,
+        2,
+        [UnitSave(unit.unit_id, 7, 31.0, 21.0, 1, ())],
+        [enemy, upper],
+        None,
+        [],
+        board,
+    )
+    saved = store.saved_night(night.id)
+    assert saved is not None
+    assert saved.turns_completed == 2
+    assert saved.board == board
+    assert saved.units == {unit.unit_id: UnitSave(unit.unit_id, 7, 31.0, 21.0, 1, ())}
+    assert saved.enemies == (enemy, upper)
+    store.autosave(night.id, 3, [], [], "lose", [], board)
+    assert store.saved_night(night.id) is None
+    with pytest.raises(NotFoundError):
+        store.saved_night("missing")
+
+
+def test_version_one_database_migrates(tmp_path: Path) -> None:
+    path = tmp_path / "data" / "old.sqlite"
+    first = Store(path)
+    with first.transaction() as conn:
+        conn.execute("ALTER TABLE night DROP COLUMN board_json")
+    first._conn.execute("PRAGMA user_version = 1")
+    first.close()
+    second = Store(path)
+    assert second.schema_version() == SCHEMA_VERSION == 2
+    campaign = second.create_campaign("C", Difficulty.NORMAL)
+    night = second.start_or_resume_night(campaign.id)
+    second.autosave(night.id, 1, [], [], None, [], {"enemies_defeated": 0})
+    assert second.saved_night(night.id) is not None
+    second.close()

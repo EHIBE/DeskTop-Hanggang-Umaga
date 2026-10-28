@@ -52,6 +52,7 @@ from db.store import (
     CardFields,
     EnemySave,
     NightRecord,
+    SavedNight,
     SignatureFields,
     Store,
     StoreError,
@@ -69,6 +70,7 @@ from gm.narrator import (
     NarrationUnit,
 )
 from meta_client import CostMeter, MetaError
+from rules.enemies import EnemyType, Part, enemy_stats
 from rules.geometry import Hull, Point, is_move_legal
 from rules.resolve import (
     TURNS_PER_NIGHT,
@@ -286,6 +288,7 @@ class Snapshot:
     units: tuple[UnitView, ...] = field(default=())
     begin_block_key: str | None = None
     is_awaiting_tap: bool = False
+    resume_turn: int | None = None
     night: NightView | None = None
     score: FinalScore | None = None
 
@@ -345,6 +348,7 @@ class GameController:
         self._uncertain: set[int] = set()
         self._sprite_service_factory = sprite_service_factory
         self._session: NightSession | None = None
+        self._resume_turn: int | None = None
         self._broadcast = broadcast
         self._crops: dict[str, Image] = {}
         self._subjects: dict[str, str] = {}
@@ -398,6 +402,7 @@ class GameController:
                     [u.card.unit_class for u in self._units]
                 ),
                 is_awaiting_tap=self._pending is not None,
+                resume_turn=self._resume_turn,
                 night=self._night_view(),
                 score=None if self._session is None else self._session.final_score,
             )
@@ -499,8 +504,7 @@ class GameController:
         block = begin_night_block_key([u.card.unit_class for u in self._units])
         if block is not None:
             raise GameError(block)
-        if self._store.night_turns_completed(night.id) > 0:
-            raise GameError("restore")
+        saved = self._store.saved_night(night.id)
         session = NightSession(
             self._store,
             night,
@@ -511,11 +515,33 @@ class GameController:
             self._notify,
             self._clock,
         )
-        self._run_session(session.begin)
-        self._session = session
         if self._narration is not None:
             self._narration.new_night()
+        if saved is not None:
+            self._resume(session, saved)
+            return
+        self._run_session(session.begin)
+        self._session = session
         self._notify("night.start", {})
+
+    def _resume(self, session: NightSession, saved: SavedNight) -> None:
+        night = self._night
+        if night is None:
+            raise GameError("start.ready")
+        game_ids = {u.unit_id: game_id_for(u.sam_object_id) for u in self._units}
+        owners = {
+            game_ids[unit_id]: name
+            for unit_id, name in self._store.unit_owners(night.id).items()
+            if unit_id in game_ids
+        }
+        poses = {pose.id: (pose.x_cm, pose.y_cm) for pose in self._pose_list()}
+        sizes = self._unit_sizes()
+        result = self._run_session(lambda: session.restore(saved, poses, sizes, owners))
+        self._session = session
+        self._resume_turn = None
+        self._notify("restore", {})
+        self._publish_events(result)
+        self._narrate(NarrationPhase.RESOLUTION_THEN_TELEGRAPH, result.telegraph)
 
     def claim(
         self,
@@ -806,6 +832,8 @@ class GameController:
         )
         self._is_night_alerted = False
         self._units = self._store.night_units(self._night.id)
+        saved = self._store.saved_night(self._night.id)
+        self._resume_turn = None if saved is None else saved.turns_completed + 1
         self._boxes = {
             unit.sam_object_id: self._default_box(unit) for unit in self._units
         }
@@ -1011,6 +1039,7 @@ class GameController:
 
     async def summon(self, name: str) -> UnitView:
         self._require_phase(AppPhase.SUMMON)
+        self._require_fresh_night()
         if self._summon_lock.locked():
             raise GameError(BUSY_KEY)
         self._pending = None
@@ -1120,8 +1149,13 @@ class GameController:
         card = replace(unit.card, name=new_name)
         return self._replace_card(night, unit, card)
 
+    def _require_fresh_night(self) -> None:
+        if self._resume_turn is not None:
+            raise GameError("restore")
+
     async def reroll_unit(self, unit_id: str) -> UnitView:
         self._require_phase(AppPhase.SUMMON)
+        self._require_fresh_night()
         if self._summon_lock.locked():
             raise GameError(BUSY_KEY)
         async with self._summon_lock:
@@ -1528,6 +1562,9 @@ PLAYER_COLORS: Final = ("#F2C14E", "#3E7D4F", "#6B2D5C", "#C99A6B")
 TRANSITION_EVENT: Final = "transition"
 DOWN_STATUS: Final = "down"
 STUNNED_STATUS: Final = "stunned"
+REFORM_STATUS_PREFIX: Final = "reform_"
+MIN_HULL_POINTS: Final = 3
+RESTORE_EVENT: Final = "restore"
 
 
 class SessionError(Exception):
@@ -1715,11 +1752,66 @@ class NightSession:
         self._flush_log()
         return TurnResult(events=(), telegraph=telegraph, is_blocked=False)
 
+    def restore(
+        self,
+        saved: SavedNight,
+        positions: Mapping[str, Point],
+        sizes: Mapping[str, tuple[float, float]],
+        owners: Mapping[str, str],
+    ) -> TurnResult:
+        self._require(TurnState.SUMMON)
+        self._owners = {g: name for g, name in owners.items() if g in self._unit_ids}
+        meta = saved.board
+        saved_names = meta.get("player_names", [])
+        order = [str(n) for n in saved_names] if isinstance(saved_names, list) else []
+        owning = set(self._owners.values())
+        named = [name for name in order if name in owning]
+        named += sorted(owning - set(named))
+        self._players = named[:MAX_PLAYERS]
+        flags = frozenset(str(k) for k, v in self._night.flags.items() if v is True)
+        try:
+            hulls = _meta_hulls(meta)
+            units = []
+            for record in self._records.values():
+                save = saved.units.get(record.unit_id)
+                cooldown = 0 if save is None else save.cooldown
+                unit = self._unit_state(record, positions, sizes, cooldown)
+                units.append(replace(unit, hull_offsets=hulls.get(unit.id, unit.hull_offsets)))
+            units.sort(key=lambda unit: self._records[self._unit_ids[unit.id]].sam_object_id)
+            self._board = BoardState(
+                turn=saved.turns_completed,
+                difficulty=self._difficulty,
+                players=_meta_int(meta, "players", max(1, len(self._players))),
+                play_w_cm=self._play_size[0],
+                play_h_cm=self._play_size[1],
+                units=tuple(units),
+                enemies=tuple(_enemy_from_save(e, self._difficulty) for e in saved.enemies),
+                flags=flags,
+                enemies_defeated=_meta_int(meta, "enemies_defeated", 0),
+                enemy_counter=_meta_counts(meta, "enemy_counter"),
+                damage_by_owner=_meta_counts(meta, "damage_by_owner"),
+            )
+        except (ValueError, TypeError) as error:
+            raise SessionError("restore") from error
+        self._machine.force(TurnState.CHECK_END)
+        self._pending_log.append(
+            (
+                saved.turns_completed,
+                TurnState.CHECK_END.value,
+                RESTORE_EVENT,
+                {"turns_completed": saved.turns_completed},
+                self._t_ms(),
+            )
+        )
+        telegraph = self._next_turn_and_flush()
+        return TurnResult(events=(), telegraph=telegraph, is_blocked=False)
+
     def _unit_state(
         self,
         record: UnitRecord,
         positions: Mapping[str, Point],
         sizes: Mapping[str, tuple[float, float]],
+        cooldown: int = 0,
     ) -> UnitState:
         game_id = self._game_ids[record.unit_id]
         half_w, half_h = sizes.get(game_id, (2.0, 2.0))
@@ -1733,7 +1825,7 @@ class NightSession:
             move=card.move_class,
             range=card.range_class,
             power_id=card.power_id,
-            cooldown=0,
+            cooldown=cooldown,
             position=positions.get(game_id, (record.x_cm, record.y_cm)),
             start=positions.get(game_id, (record.x_cm, record.y_cm)),
             hull_offsets=hull_offsets_from_box(half_w, half_h),
@@ -1881,6 +1973,7 @@ class NightSession:
                 enemies,
                 result,
                 self._pending_log,
+                _board_meta(board, self._players),
             )
         except (StoreError, OSError):
             logger.exception("autosave failed and rolled back, play continues")
@@ -1945,7 +2038,88 @@ def _enemy_save(enemy: EnemyState) -> EnemySave:
         y_cm=enemy.position[1],
         spawn_turn=max(1, min(enemy.spawn_turn, TURNS_PER_NIGHT)),
         intent=intent,
-        status=(STUNNED_STATUS,) if enemy.is_stunned else (),
+        status=_enemy_status(enemy),
+    )
+
+
+def _enemy_status(enemy: EnemyState) -> tuple[str, ...]:
+    status: list[str] = []
+    if enemy.is_stunned:
+        status.append(STUNNED_STATUS)
+    if enemy.reform_in is not None:
+        status.append(f"{REFORM_STATUS_PREFIX}{enemy.reform_in}")
+    return tuple(status)
+
+
+def _board_meta(board: BoardState, players: Sequence[str]) -> dict[str, object]:
+    return {
+        "players": board.players,
+        "player_names": list(players),
+        "enemies_defeated": board.enemies_defeated,
+        "enemy_counter": dict(board.enemy_counter),
+        "damage_by_owner": dict(board.damage_by_owner),
+        "hulls": {u.id: [list(point) for point in u.hull_offsets] for u in board.units},
+    }
+
+
+def _meta_hulls(meta: Mapping[str, object]) -> dict[str, Hull]:
+    value = meta.get("hulls", {})
+    if not isinstance(value, dict):
+        raise TypeError("saved hulls is not an object")
+    hulls: dict[str, Hull] = {}
+    for game_id, points in value.items():
+        if not isinstance(points, list) or len(points) < MIN_HULL_POINTS:
+            raise ValueError("saved hull is too small")
+        hull: list[tuple[float, float]] = []
+        for point in points:
+            if not isinstance(point, list) or len(point) != 2:
+                raise ValueError("saved hull point is not a pair")
+            hull.append((float(point[0]), float(point[1])))
+        hulls[str(game_id)] = tuple(hull)
+    return hulls
+
+
+def _meta_int(meta: Mapping[str, object], key: str, default: int) -> int:
+    value = meta.get(key, default)
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise ValueError(f"saved {key} is not a count")
+    return value
+
+
+def _meta_counts(meta: Mapping[str, object], key: str) -> tuple[tuple[str, int], ...]:
+    value = meta.get(key, {})
+    if not isinstance(value, dict):
+        raise TypeError(f"saved {key} is not an object")
+    counts: list[tuple[str, int]] = []
+    for name, count in value.items():
+        if not isinstance(count, int) or isinstance(count, bool) or count < 0:
+            raise ValueError(f"saved {key} has a bad count")
+        counts.append((str(name), count))
+    return tuple(counts)
+
+
+def _enemy_from_save(save: EnemySave, difficulty: Difficulty) -> EnemyState:
+    enemy_type = EnemyType(save.type)
+    part = None if save.part is None else Part(save.part)
+    hp_max, atk, move_cm, range_cm, flies = enemy_stats(enemy_type, part, difficulty)
+    reform_in = None
+    for status in save.status:
+        if status.startswith(REFORM_STATUS_PREFIX):
+            reform_in = int(status.removeprefix(REFORM_STATUS_PREFIX))
+    return EnemyState(
+        id=save.id,
+        type=enemy_type,
+        part=part,
+        hp=save.hp,
+        hp_max=hp_max,
+        atk=atk,
+        move_cm=move_cm,
+        range_cm=range_cm,
+        flies=flies,
+        position=(save.x_cm, save.y_cm),
+        spawn_turn=save.spawn_turn,
+        is_stunned=STUNNED_STATUS in save.status,
+        reform_in=reform_in,
     )
 
 

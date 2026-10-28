@@ -75,6 +75,7 @@ CREATE TABLE night (
   recording_consent INTEGER NOT NULL DEFAULT 0 CHECK (recording_consent IN (0,1)),
   replay_path TEXT,
   cost_usd REAL NOT NULL DEFAULT 0 CHECK (cost_usd >= 0),
+  board_json TEXT,
   UNIQUE (campaign_id, number)
 );
 CREATE TABLE night_unit (

@@ -461,6 +461,7 @@ def state_json(snapshot: Snapshot) -> JsonObject:
         "units": [unit_json(unit) for unit in snapshot.units],
         "begin_block_key": snapshot.begin_block_key,
         "awaiting_tap": snapshot.is_awaiting_tap,
+        "resume_turn": snapshot.resume_turn,
         "night": None if snapshot.night is None else night_json(snapshot.night),
         "score": None if snapshot.score is None else score_json(snapshot.score),
     }
