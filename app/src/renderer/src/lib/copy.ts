@@ -1,0 +1,225 @@
+import type { CopyParams } from './types'
+
+export type CopyEntry = Readonly<{ tl: string; en: string }>
+
+const entries = {
+  'start.ready': {
+    tl: 'Handa na ba ang mesa? Linisin muna, tapos pindutin ang Start Night.',
+    en: 'Is the table ready? Clear it, then press Start Night.'
+  },
+  'calib.place': {
+    tl: 'Ilagay ang isang A4 na papel sa gitna ng mesa.',
+    en: 'Place one A4 sheet in the middle of the desk.'
+  },
+  'calib.tap': {
+    tl: 'I-tap ang apat na kanto ng papel.',
+    en: 'Tap the four corners of the sheet.'
+  },
+  'calib.done': {
+    tl: 'Ayos! Kita ko na ang buong mesa.',
+    en: 'Got it. I can see the whole table.'
+  },
+  'calib.dark': { tl: 'Masyadong madilim. Dagdagan ang ilaw.', en: 'Too dark. Add more light.' },
+  'summon.prompt': {
+    tl: 'Maglagay ng isang bagay at sabihin kung ano siya.',
+    en: 'Place one object and say what it is.'
+  },
+  'summon.kubo_first': {
+    tl: 'Kailangan muna ng bahay kubo. Ano ang poprotektahan natin?',
+    en: 'You need a bahay kubo first. What are we protecting?'
+  },
+  'summon.new_unit': { tl: 'Bagong kakampi: [name]!', en: 'New ally: [name]!' },
+  'summon.which': { tl: 'Alin ang bago? I-tap mo.', en: 'Which one is new? Tap it.' },
+  'summon.full': {
+    tl: 'Puno na ang baryo. Hanggang 12 lang.',
+    en: 'The barrio is full. 12 objects max.'
+  },
+  'summon.stack': { tl: 'Huwag ipatong ang mga piyesa.', en: "Don't stack the pieces." },
+  'claim.prompt': {
+    tl: 'Isa-isa: "Ako si [pangalan], hawak ko ang..."',
+    en: 'One at a time: "I\'m [name], I hold..."'
+  },
+  'claim.who': { tl: "Sino 'yon? I-tap ang pangalan mo.", en: 'Who was that? Tap your name.' },
+  'night.start': {
+    tl: 'Lumulubog na ang araw. Hanggang umaga, kapit lang!',
+    en: 'The sun is setting. Hold on until morning!'
+  },
+  'move.too_far': { tl: 'Too far! Ibalik mo.', en: 'Too far! Move it back.' },
+  'endturn.blocked': {
+    tl: 'May piyesang lumampas. Ibalik muna bago tapusin.',
+    en: 'A piece moved too far. Fix it before ending the turn.'
+  },
+  'endturn.checking': {
+    tl: 'Sandali, tinitingnan ko ang mesa...',
+    en: 'Hold on, checking the table...'
+  },
+  'endturn.hands': {
+    tl: 'Tanggalin muna ang kamay sa mesa.',
+    en: 'Hands off the table first.'
+  },
+  'cmd.heard': {
+    tl: '[unit] → [action] sa [target]. Sabihin "hindi" para ikansela.',
+    en: '[unit] → [action] on [target]. Say "hindi" to cancel.'
+  },
+  'cmd.cancel': { tl: 'Sige, kinansela.', en: 'Okay, canceled.' },
+  'cmd.unknown': {
+    tl: 'Di ko nakuha. Ulitin mo o i-tap na lang.',
+    en: "Didn't catch that. Say it again or tap."
+  },
+  'cmd.overlap': { tl: 'Isa-isa lang!', en: 'One at a time!' },
+  'cmd.no_atk': { tl: 'Walang atake si [unit].', en: "[unit] can't attack." },
+  'track.uncertain': {
+    tl: 'Hindi ko sigurado kung nasaan si [unit]. I-tap mo siya.',
+    en: "I'm not sure where [unit] is. Tap it."
+  },
+  'track.similar': {
+    tl: 'Magkamukha ang dalawang ito. I-tap kung alin si [unit].',
+    en: 'These two look alike. Tap which one is [unit].'
+  },
+  'lost.out': { tl: 'Ang [unit] ay nawala sa gubat!', en: '[unit] got lost in the forest!' },
+  'lost.back': { tl: 'Bumalik si [unit]!', en: '[unit] is back!' },
+  'enemy.dodge': { tl: 'Nakaiwas!', en: 'Dodged!' },
+  'tik.push': {
+    tl: 'Tinulak ng tikbalang si [unit]! Usugin ang [object] sa may anino.',
+    en: 'The tikbalang shoved [unit]! Slide the [object] onto the shadow.'
+  },
+  'duw.steal': {
+    tl: 'Ninakaw ng duwende si [unit]! Tanggalin muna sa mesa.',
+    en: 'The duwende stole [unit]! Take it off the table.'
+  },
+  'duw.back': {
+    tl: 'Nabawi si [unit]! Ibalik sa may marka.',
+    en: '[unit] is free! Put it back on the mark.'
+  },
+  'duw.escape': {
+    tl: 'Nakatakas ang duwende kasama si [unit].',
+    en: 'The duwende escaped with [unit].'
+  },
+  'kapre.smoke': {
+    tl: 'Usok ng kapre! Di ko makita ang nasa loob.',
+    en: "Kapre smoke! I can't see inside it."
+  },
+  'mana.split': {
+    tl: 'Humiwalay ang katawan! Hanapin ang ibabang kalahati!',
+    en: 'It split in two! Find the lower half!'
+  },
+  'kubo.hit': { tl: 'Tinamaan ang kubo! [HP] na lang.', en: 'The kubo was hit! [HP] left.' },
+  'unit.down': { tl: 'Bagsak si [unit].', en: '[unit] is down.' },
+  win: { tl: 'Sumikat na ang araw! Ligtas ang baryo.', en: 'The sun is up. The barrio is safe.' },
+  lose: {
+    tl: 'Nasira ang kubo... Subukan ulit bukas ng gabi.',
+    en: 'The kubo fell... Try again tomorrow night.'
+  },
+  'rec.consent': {
+    tl: 'Ire-record ang gabing ito para sa replay. Payag ba lahat?',
+    en: 'Tonight will be recorded for the replay. Does everyone agree?'
+  },
+  'rec.on': { tl: 'Nagre-record', en: 'Recording' },
+  'replay.making': { tl: 'Ginagawa ang replay...', en: 'Making the replay...' },
+  'net.slow': {
+    tl: 'Medyo mabagal ang koneksyon. Tuloy pa rin tayo.',
+    en: "The connection is slow. We'll keep going."
+  },
+  'net.down': {
+    tl: 'Offline muna ang [feature]. Gamitin ang tap controls.',
+    en: '[feature] is offline. Use tap controls.'
+  },
+  'credits.low': {
+    tl: 'Paubos na ang credits. Naka-Demo Safe Mode na.',
+    en: 'Credits are running low. Demo Safe Mode is on.'
+  },
+  'cam.moved': {
+    tl: 'Gumalaw ang camera! I-calibrate ulit.',
+    en: 'The camera moved! Calibrate again.'
+  },
+  'player.left': {
+    tl: "Sino'ng hahawak sa mga piyesa ni [player]?",
+    en: "Who will take [player]'s pieces?"
+  },
+  restore: {
+    tl: 'Sandali, ibinabalik ko ang laro...',
+    en: 'Hold on, restoring the game...'
+  },
+  welcome_back: {
+    tl: 'Welcome back, [unit]. Kulang ng [n] HP mula kagabi.',
+    en: 'Welcome back, [unit]. [n] HP short from last night.'
+  },
+  'calib.aim': { tl: 'Itutok ang camera sa mesa lang.', en: 'Point the camera at the table only.' },
+  'cam.busy': {
+    tl: 'May ibang app na gumagamit ng camera.',
+    en: 'Another app is using the camera.'
+  },
+  'kubo.moved': { tl: 'Huwag galawin ang kubo!', en: "Don't move the kubo!" },
+  'tik.thrown': {
+    tl: 'Itinapon ng tikbalang si [unit] sa gubat!',
+    en: 'The tikbalang threw [unit] into the forest!'
+  },
+  'effect.timeout': { tl: 'Sige, pwede na.', en: 'Okay, that works.' },
+  'voice.reclaim': {
+    tl: 'Sabihin ulit ang pangalan ninyo, isa-isa.',
+    en: 'Say your names again, one at a time.'
+  },
+  'net.offline': {
+    tl: 'Offline muna ang [feature]. Tuloy pa rin tayo.',
+    en: "[feature] is offline for now. We'll keep going."
+  },
+  'key.prompt': {
+    tl: 'I-paste ang Meta Model API key mo.',
+    en: 'Paste your Meta Model API key.'
+  },
+  'key.label': { tl: 'API key', en: 'API key' },
+  'key.save': { tl: 'I-save', en: 'Save' },
+  'key.saved': { tl: 'Na-save na ang key.', en: 'Key saved.' },
+  'key.invalid': {
+    tl: 'Hindi gumana ang key. Subukan ulit.',
+    en: 'That key did not work. Try again.'
+  },
+  'key.privacy': {
+    tl: 'Naka-encrypt ang key sa laptop na ito. Ang game backend lang ang nakakabasa.',
+    en: 'The key is stored encrypted on this laptop. Only the game backend reads it.'
+  },
+  'key.offline': {
+    tl: 'Maglaro offline gamit ang Demo Safe Mode',
+    en: 'Play offline with Demo Safe Mode'
+  },
+  'start.new': { tl: 'Bagong Kampanya', en: 'New Campaign' },
+  'start.continue': { tl: 'Ituloy ang Kampanya', en: 'Continue Campaign' },
+  'start.name': { tl: 'Pangalan ng baryo', en: 'Barrio name' },
+  'start.difficulty': { tl: 'Hirap', en: 'Difficulty' },
+  'start.demo_safe': { tl: 'Demo Safe Mode', en: 'Demo Safe Mode' },
+  'start.empty': { tl: 'Wala pang na-save na kampanya.', en: 'No saved campaigns yet.' },
+  'start.begin': { tl: 'Start Night', en: 'Start Night' },
+  'start.nights': { tl: 'Gabing nalampasan: [n]', en: 'Nights survived: [n]' },
+  'diff.madali': { tl: 'Madali', en: 'Easy' },
+  'diff.normal': { tl: 'Normal', en: 'Normal' },
+  'diff.mahirap': { tl: 'Mahirap', en: 'Hard' },
+  'calib.camera': { tl: 'Pumili ng camera', en: 'Pick a camera' },
+  'calib.no_camera': { tl: 'Walang nakitang camera.', en: 'No camera found.' },
+  'calib.reset': { tl: 'Ulitin ang mga kanto', en: 'Redo the corners' },
+  'calib.remove': {
+    tl: 'Alisin ang papel, tapos pindutin ang Tapos na.',
+    en: 'Remove the sheet, then press Done.'
+  },
+  'calib.confirm': { tl: 'Tapos na', en: 'Done' },
+  'calib.width': { tl: 'Lapad (cm)', en: 'Width (cm)' },
+  'calib.height': { tl: 'Taas (cm)', en: 'Height (cm)' }
+} as const satisfies Record<string, CopyEntry>
+
+export type CopyKey = keyof typeof entries
+
+export const copyKeys = Object.keys(entries) as readonly CopyKey[]
+
+export function isCopyKey(key: string): key is CopyKey {
+  return Object.prototype.hasOwnProperty.call(entries, key)
+}
+
+function fill(text: string, params: CopyParams): string {
+  return text.replace(/\[([A-Za-z_]+)\]/g, (match, name: string) =>
+    Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match
+  )
+}
+
+export function t(key: CopyKey, params: CopyParams = {}): CopyEntry {
+  const entry: CopyEntry = entries[key]
+  return { tl: fill(entry.tl, params), en: fill(entry.en, params) }
+}

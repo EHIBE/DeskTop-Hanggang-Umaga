@@ -17,7 +17,7 @@ All player-facing text, keyed. This file is canonical until `app/src/renderer/sr
 
 | Fact | Value |
 |---|---|
-| UI keys | 48 from PRD plus 7 Proposed |
+| UI keys | 48 from PRD plus 32 Proposed |
 | Line bank moments | 14 |
 | Placeholders | [name], [unit], [object], [player], [feature], [HP], [n], [action], [target], [pangalan] |
 | Review | 2 Filipino playtesters review every Taglish line before recording |
@@ -91,6 +91,31 @@ English text for these is a proposal for playtester review.
 | effect.timeout | Sige, pwede na. | Okay, that works. | Edge case 22 |
 | voice.reclaim | Sabihin ulit ang pangalan ninyo, isa-isa. | Say your names again, one at a time. | Edge case 27 |
 | net.offline | Offline muna ang [feature]. Tuloy pa rin tayo. | [feature] is offline for now. We'll keep going. | Flow F10 |
+| key.prompt | I-paste ang Meta Model API key mo. | Paste your Meta Model API key. | M3 app shell, playtester review |
+| key.label | API key | API key | M3, playtester review |
+| key.save | I-save | Save | M3, playtester review |
+| key.saved | Na-save na ang key. | Key saved. | M3, playtester review |
+| key.invalid | Hindi gumana ang key. Subukan ulit. | That key did not work. Try again. | M3, playtester review |
+| key.privacy | Naka-encrypt ang key sa laptop na ito. Ang game backend lang ang nakakabasa. | The key is stored encrypted on this laptop. Only the game backend reads it. | M3, playtester review |
+| key.offline | Maglaro offline gamit ang Demo Safe Mode | Play offline with Demo Safe Mode | M3, playtester review |
+| start.new | Bagong Kampanya | New Campaign | M3, playtester review |
+| start.continue | Ituloy ang Kampanya | Continue Campaign | M3, playtester review |
+| start.name | Pangalan ng baryo | Barrio name | M3, playtester review |
+| start.difficulty | Hirap | Difficulty | M3, playtester review |
+| start.demo_safe | Demo Safe Mode | Demo Safe Mode | M3, playtester review |
+| start.empty | Wala pang na-save na kampanya. | No saved campaigns yet. | M3, playtester review |
+| start.begin | Start Night | Start Night | M3, playtester review |
+| start.nights | Gabing nalampasan: [n] | Nights survived: [n] | M3, playtester review |
+| diff.madali | Madali | Easy | M3, playtester review |
+| diff.normal | Normal | Normal | M3, playtester review |
+| diff.mahirap | Mahirap | Hard | M3, playtester review |
+| calib.camera | Pumili ng camera | Pick a camera | M3, playtester review |
+| calib.no_camera | Walang nakitang camera. | No camera found. | M3, playtester review |
+| calib.reset | Ulitin ang mga kanto | Redo the corners | M3, playtester review |
+| calib.remove | Alisin ang papel, tapos pindutin ang Tapos na. | Remove the sheet, then press Done. | M3, playtester review |
+| calib.confirm | Tapos na | Done | M3, playtester review |
+| calib.width | Lapad (cm) | Width (cm) | M3, playtester review |
+| calib.height | Taas (cm) | Height (cm) | M3, playtester review |
 
 ## GM line bank (local fallback and Spark style reference)
 
