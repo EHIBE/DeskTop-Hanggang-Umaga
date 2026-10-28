@@ -20,9 +20,20 @@ from capture.calibration import CalibrationError
 from capture.camera import CameraError
 from config import STREAM_FPS, AppSettings, load_settings
 from db.store import Campaign, NotFoundError, Store, StoreError
-from game.night import FramePump, GameController, GameError, Snapshot
+from game.night import (
+    FramePump,
+    GameController,
+    GameError,
+    PipelineFactory,
+    Snapshot,
+    UnitView,
+)
+from gm.schemas import ContentFilter
+from meta_client import CostMeter, MetaClient, create_openai_client
 from rules.units import Difficulty
 from state import EncodedFrame, LiveState
+from vision.sam import SamSegmenter, TrackerOnlySegmenter
+from vision.summon import FallbackDetector, SparkDetector, SummonPipeline
 
 logger = logging.getLogger("desktop.server")
 
@@ -93,6 +104,32 @@ class CalibrateRestartMessage(ClientModel):
     type: Literal["calibrate.restart"]
 
 
+UnitId = Annotated[str, Field(min_length=36, max_length=36)]
+UnitName = Annotated[str, Field(min_length=1, max_length=40)]
+PixelCoordinate = Annotated[int, Field(ge=0, le=10_000)]
+
+
+class SummonNameMessage(ClientModel):
+    type: Literal["summon.name"]
+    name: UnitName
+
+
+class SummonTapMessage(ClientModel):
+    type: Literal["summon.tap"]
+    point: tuple[PixelCoordinate, PixelCoordinate]
+
+
+class UnitRerollMessage(ClientModel):
+    type: Literal["unit.reroll"]
+    unit_id: UnitId
+
+
+class UnitRenameMessage(ClientModel):
+    type: Literal["unit.rename"]
+    unit_id: UnitId
+    name: UnitName
+
+
 class DemoSafeMessage(ClientModel):
     type: Literal["demo_safe"]
     on: bool
@@ -107,6 +144,10 @@ ClientMessage = (
     | CalibrateCornersMessage
     | CalibrateDoneMessage
     | CalibrateRestartMessage
+    | SummonNameMessage
+    | SummonTapMessage
+    | UnitRerollMessage
+    | UnitRenameMessage
     | DemoSafeMessage
 )
 CLIENT_MESSAGE: Final = TypeAdapter[ClientMessage](ClientMessage)
@@ -120,6 +161,7 @@ class Services:
     controller: GameController
     pump: FramePump
     live: LiveState
+    content: ContentFilter
     close: Callable[[], None]
 
 
@@ -129,7 +171,21 @@ ServicesFactory = Callable[[AppSettings], Services]
 def build_services(settings: AppSettings) -> Services:
     store = Store(settings.database_path)
     live = LiveState()
-    controller = GameController(store, live, has_api_key=settings.api_key is not None)
+    content = ContentFilter.from_data_dir()
+    sdk = None if settings.api_key is None else create_openai_client(settings.api_key)
+    meta = MetaClient(sdk, CostMeter(store))
+    controller: GameController | None = None
+
+    def log_invalid(reason: str) -> None:
+        if controller is not None:
+            controller.log_invalid(reason)
+
+    controller = GameController(
+        store,
+        live,
+        has_api_key=settings.api_key is not None,
+        pipeline_factory=build_pipeline_factory(meta, content, log_invalid),
+    )
     pump = FramePump(controller, live)
 
     def close() -> None:
@@ -138,8 +194,26 @@ def build_services(settings: AppSettings) -> Services:
         store.close()
 
     return Services(
-        settings=settings, controller=controller, pump=pump, live=live, close=close
+        settings=settings,
+        controller=controller,
+        pump=pump,
+        live=live,
+        content=content,
+        close=close,
     )
+
+
+def build_pipeline_factory(
+    meta: MetaClient, content: ContentFilter, log_invalid: Callable[[str], None]
+) -> PipelineFactory:
+    def factory(is_demo_safe: bool) -> SummonPipeline:
+        if is_demo_safe or not meta.has_credentials:
+            return SummonPipeline(FallbackDetector(), TrackerOnlySegmenter(), content)
+        return SummonPipeline(
+            SparkDetector(meta, content, log_invalid), SamSegmenter(meta), content
+        )
+
+    return factory
 
 
 def is_token_valid(expected: str, supplied: str | None) -> bool:
@@ -171,6 +245,29 @@ def campaign_json(campaign: Campaign) -> JsonObject:
     }
 
 
+def unit_json(unit: UnitView) -> JsonObject:
+    card = unit.card
+    return {
+        "id": unit.game_id,
+        "unit_id": unit.unit_id,
+        "sam_id": unit.sam_id,
+        "name": card.name,
+        "class": card.unit_class.value,
+        "hp": unit.hp_current,
+        "hp_max": card.hp_max,
+        "atk": card.atk,
+        "move": card.move_class.value,
+        "range": card.range_class.value,
+        "power_id": card.power_id.value,
+        "power_name_tl": card.power_name_tl,
+        "card_text_tl": card.card_text_tl,
+        "card_text_en": card.card_text_en,
+        "x_cm": unit.x_cm,
+        "y_cm": unit.y_cm,
+        "rerolls_left": unit.rerolls_left,
+    }
+
+
 def state_json(snapshot: Snapshot) -> JsonObject:
     camera = snapshot.camera
     return {
@@ -188,7 +285,14 @@ def state_json(snapshot: Snapshot) -> JsonObject:
         "play_h_cm": snapshot.play_h_cm,
         "demo_safe": snapshot.is_demo_safe,
         "has_api_key": snapshot.has_api_key,
+        "units": [unit_json(unit) for unit in snapshot.units],
+        "begin_block_key": snapshot.begin_block_key,
+        "awaiting_tap": snapshot.is_awaiting_tap,
     }
+
+
+def card_json(unit: UnitView) -> JsonObject:
+    return {"type": "card", "unit": unit_json(unit)}
 
 
 def frame_json(frame: EncodedFrame) -> JsonObject:
@@ -205,8 +309,8 @@ def frame_json(frame: EncodedFrame) -> JsonObject:
     }
 
 
-def notice_json(copy_key: str) -> JsonObject:
-    return {"type": "notice", "copy_key": copy_key, "params": {}}
+def notice_json(copy_key: str, params: dict[str, str] | None = None) -> JsonObject:
+    return {"type": "notice", "copy_key": copy_key, "params": params or {}}
 
 
 class Connection:
@@ -257,7 +361,7 @@ class Connection:
         try:
             reply = await self._handle(controller, message)
         except GameError as error:
-            await self.send(notice_json(error.copy_key))
+            await self.send(notice_json(error.copy_key, error.params))
             await self.send_state()
             return
         except NotFoundError:
@@ -318,6 +422,22 @@ class Connection:
         if isinstance(message, CalibrateRestartMessage):
             await asyncio.to_thread(controller.restart_calibration)
             return None
+        if isinstance(message, SummonNameMessage):
+            return card_json(await controller.summon(message.name))
+        if isinstance(message, SummonTapMessage):
+            return card_json(await controller.summon_tap(message.point))
+        if isinstance(message, UnitRerollMessage):
+            return card_json(await controller.reroll_unit(message.unit_id))
+        if isinstance(message, UnitRenameMessage):
+            content = self._services.content
+            return card_json(
+                await asyncio.to_thread(
+                    controller.rename_unit,
+                    message.unit_id,
+                    message.name,
+                    content.clean_player_name,
+                )
+            )
         await asyncio.to_thread(controller.set_demo_safe, message.on)
         return None
 

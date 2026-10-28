@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 import cv2
@@ -8,11 +9,15 @@ import pytest
 from capture.camera import VideoSource, list_microphones
 from db.store import Store
 from game.night import AppPhase, FramePump, GameController, GameError
-from rules.units import Difficulty
+from gm.schemas import ContentFilter
+from rules.units import CardDraft, Difficulty, PowerId, UnitClass
 from state import FrameView, LiveState
 from tests.test_server import SCENE, SHEET, SceneSource
+from vision.sam import PixelBox, TrackerOnlySegmenter
+from vision.summon import CardText, Detection, SummonPipeline
 
 Image = npt.NDArray[np.uint8]
+CONTENT = ContentFilter.from_data_dir()
 
 
 class ShiftedSource(SceneSource):
@@ -143,5 +148,115 @@ def test_camera_change_during_unsaved_preview_keeps_calibrating(tmp_path: Path) 
         store.latest_calibration(snapshot.campaign.id if snapshot.campaign else "")
         is None
     )
+    controller.close()
+    store.close()
+
+
+def spark_controller(store: Store, boxes: list[PixelBox]) -> GameController:
+    detections = iter(boxes)
+
+    class SequenceDetector:
+        is_available = True
+
+        async def detect(
+            self, snapshot: Image, spoken_name: str, known: object
+        ) -> Detection:
+            return Detection(
+                found_new=True,
+                label=spoken_name.lower(),
+                box=next(detections, boxes[-1]),
+                draft=CardDraft(UnitClass.REACH, 0, 0, PowerId.P04),
+                text=CardText("Tigil", "Hinto", "Stops", spoken_name),
+                source="spark",
+            )
+
+    def factory(_: bool) -> SummonPipeline:
+        return SummonPipeline(SequenceDetector(), TrackerOnlySegmenter(), CONTENT)
+
+    def source(_: int) -> VideoSource:
+        return SceneSource()
+
+    return GameController(
+        store,
+        LiveState(),
+        has_api_key=True,
+        camera_factory=source,
+        sleep=lambda _: None,
+        pipeline_factory=factory,
+    )
+
+
+def ready_for_summon(controller: GameController) -> None:
+    controller.start_new_campaign("B", Difficulty.NORMAL)
+    controller.select_camera(0)
+    controller.submit_corners(SHEET, 60.0, 40.0)
+    controller.confirm_calibration()
+
+
+def test_summons_reroll_and_rename(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    boxes = [
+        PixelBox(100, 100, 180, 180),
+        PixelBox(400, 300, 460, 360),
+        PixelBox(800, 500, 860, 560),
+    ]
+    controller = spark_controller(store, boxes)
+    ready_for_summon(controller)
+    kubo = asyncio.run(controller.summon("Mug"))
+    assert kubo.card.unit_class is UnitClass.KUBO
+    asyncio.run(controller.summon("Pen"))
+    pencil = asyncio.run(controller.summon("Lapis"))
+    assert pencil.card.unit_class is UnitClass.REACH
+    assert controller.snapshot().begin_block_key is None
+    rerolled = asyncio.run(controller.reroll_unit(pencil.unit_id))
+    assert rerolled.rerolls_left == 0
+    with pytest.raises(GameError):
+        asyncio.run(controller.reroll_unit(pencil.unit_id))
+    bad = (
+        Path("gm/data/blocklist_en.txt")
+        .read_text(encoding="utf-8")
+        .splitlines()[0]
+        .strip()
+    )
+    renamed = controller.rename_unit(pencil.unit_id, bad, CONTENT.clean_player_name)
+    assert renamed.card.name == "Reach"
+    snapshot = controller.snapshot()
+    assert [u.game_id for u in snapshot.units] == ["u_kubo", "u_2", "u_3"]
+    controller.log_invalid("SchemaError")
+    assert snapshot.campaign is not None
+    night = store.start_or_resume_night(snapshot.campaign.id)
+    assert store.turn_log_count(night.id, "gm_invalid") == 1
+    assert store.turn_log_count(night.id, "summon") == 3
+    controller.close()
+    store.close()
+
+
+def test_resume_reloads_units_and_rerolls(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    controller = spark_controller(
+        store, [PixelBox(100, 100, 180, 180), PixelBox(400, 300, 460, 360)]
+    )
+    ready_for_summon(controller)
+    asyncio.run(controller.summon("Mug"))
+    pen = asyncio.run(controller.summon("Pen"))
+    asyncio.run(controller.reroll_unit(pen.unit_id))
+    campaign = controller.snapshot().campaign
+    controller.close()
+    assert campaign is not None
+    again = spark_controller(store, [PixelBox(700, 300, 760, 360)])
+    again.continue_campaign(campaign.id)
+    again.select_camera(0)
+    units = again.snapshot().units
+    assert [u.card.name for u in units] == ["Mug", "Pen"]
+    assert units[1].rerolls_left == 0
+    again.close()
+    store.close()
+
+
+def test_summon_outside_summon_phase_is_rejected(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    controller = spark_controller(store, [PixelBox(100, 100, 180, 180)])
+    with pytest.raises(GameError):
+        asyncio.run(controller.summon("Mug"))
     controller.close()
     store.close()

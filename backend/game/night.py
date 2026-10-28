@@ -1,9 +1,10 @@
+import asyncio
 import base64
 import logging
 import threading
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from typing import Final
 
@@ -30,10 +31,40 @@ from capture.camera import (
     list_microphones,
     open_directshow,
 )
-from config import STREAM_FPS, STREAM_JPEG_QUALITY, STREAM_WIDTH_PX
-from db.store import Campaign, Store
-from rules.units import Difficulty
+from config import (
+    HANDS_OFF_WAIT_S,
+    STILL_FRAME_MEAN_DIFF_MAX,
+    STREAM_FPS,
+    STREAM_JPEG_QUALITY,
+    STREAM_WIDTH_PX,
+    SUMMON_SNAPSHOT_DELAY_S,
+)
+from db.store import (
+    Campaign,
+    CardFields,
+    NightRecord,
+    SignatureFields,
+    Store,
+    UnitPlacement,
+    UnitRecord,
+)
+from rules.units import (
+    REROLLS_PER_UNIT,
+    Difficulty,
+    UnitClass,
+    begin_night_block_key,
+    clamp_card,
+)
 from state import EncodedFrame, FrameView, LiveState
+from vision.sam import PixelBox, clamp_box
+from vision.summon import (
+    Detection,
+    KnownObject,
+    SummonError,
+    SummonOutcome,
+    SummonPipeline,
+    SummonRequest,
+)
 
 logger = logging.getLogger("desktop.game")
 
@@ -43,6 +74,15 @@ FIRST_FRAME_TIMEOUT_S: Final = 3.0
 FIRST_FRAME_POLL_S: Final = 0.05
 DEMO_SAFE_SETTING: Final = "demo_safe"
 CAMERA_SETTING: Final = "camera_index"
+REROLLS_FLAG: Final = "rerolls"
+SETUP_TURN: Final = 0
+SUMMON_PHASE: Final = "SUMMON"
+DEFAULT_BOX_HALF_CM: Final = 2.0
+KUBO_GAME_ID: Final = "u_kubo"
+KUBO_SAM_ID: Final = 1
+BUSY_KEY: Final = "endturn.checking"
+OFFLINE_KEY: Final = "net.down"
+SPARK_FEATURE: Final = "Muse Spark"
 
 
 class AppPhase(StrEnum):
@@ -52,9 +92,29 @@ class AppPhase(StrEnum):
 
 
 class GameError(Exception):
-    def __init__(self, copy_key: str) -> None:
+    def __init__(self, copy_key: str, params: dict[str, str] | None = None) -> None:
         super().__init__(copy_key)
         self.copy_key = copy_key
+        self.params: dict[str, str] = params or {}
+
+
+@dataclass(frozen=True)
+class UnitView:
+    game_id: str
+    unit_id: str
+    sam_id: int
+    card: CardFields
+    hp_current: int
+    x_cm: float
+    y_cm: float
+    rerolls_left: int
+
+
+PipelineFactory = Callable[[bool], SummonPipeline]
+
+
+def game_id_for(sam_id: int) -> str:
+    return KUBO_GAME_ID if sam_id == KUBO_SAM_ID else f"u_{sam_id}"
 
 
 @dataclass(frozen=True)
@@ -68,6 +128,9 @@ class Snapshot:
     play_h_cm: float
     is_demo_safe: bool
     has_api_key: bool
+    units: tuple[UnitView, ...] = field(default=())
+    begin_block_key: str | None = None
+    is_awaiting_tap: bool = False
 
 
 @dataclass(frozen=True)
@@ -108,8 +171,16 @@ class GameController:
         list_microphone_devices: Callable[[], list[MicrophoneInfo]] = list_microphones,
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
+        pipeline_factory: PipelineFactory | None = None,
     ) -> None:
         self._store = store
+        self._pipeline_factory = pipeline_factory
+        self._night: NightRecord | None = None
+        self._units: list[UnitRecord] = []
+        self._boxes: dict[int, PixelBox] = {}
+        self._pending: Detection | None = None
+        self._pending_name = ""
+        self._summon_lock = asyncio.Lock()
         self._live = live
         self._has_api_key = has_api_key
         self._camera_factory = camera_factory
@@ -139,6 +210,11 @@ class GameController:
                 play_h_cm=self._area.height_cm,
                 is_demo_safe=self._is_demo_safe,
                 has_api_key=self._has_api_key,
+                units=tuple(self._unit_view(unit) for unit in self._units),
+                begin_block_key=begin_night_block_key(
+                    [u.card.unit_class for u in self._units]
+                ),
+                is_awaiting_tap=self._pending is not None,
             )
 
     def _phase(self) -> AppPhase:
@@ -171,6 +247,10 @@ class GameController:
             self._is_calibrated = False
             self._is_stored_calibration = False
             self._area = PlayArea()
+            self._night = None
+            self._units = []
+            self._boxes = {}
+            self._pending = None
             stored = self._store.latest_calibration(campaign.id)
             if stored is None:
                 return
@@ -226,6 +306,7 @@ class GameController:
         if is_camera_moved(np.asarray(baseline, dtype=np.uint8), current, self._area):
             raise GameError("cam.moved")
         self._is_calibrated = True
+        self._enter_summon()
 
     def wait_for_frame(self) -> Image | None:
         camera = self._camera
@@ -272,6 +353,7 @@ class GameController:
                 encode_png(baseline),
             )
             self._is_calibrated = True
+            self._enter_summon()
 
     def restart_calibration(self) -> None:
         with self._lock:
@@ -280,6 +362,275 @@ class GameController:
             self._calibration = None
             self._is_calibrated = False
             self._is_stored_calibration = False
+
+    def _enter_summon(self) -> None:
+        if self._campaign is None:
+            return
+        self._night = self._store.start_or_resume_night(self._campaign.id)
+        self._units = self._store.night_units(self._night.id)
+        self._boxes = {
+            unit.sam_object_id: self._default_box(unit) for unit in self._units
+        }
+        self._pending = None
+
+    def _default_box(self, unit: UnitRecord) -> PixelBox:
+        ppc = self._area.px_per_cm
+        half = DEFAULT_BOX_HALF_CM * ppc
+        width, height = self._area.warped_size
+        x, y = unit.x_cm * ppc, unit.y_cm * ppc
+        box = PixelBox(
+            round(x - half), round(y - half), round(x + half), round(y + half)
+        )
+        return clamp_box(box, width, height)
+
+    def _rerolled(self) -> list[str]:
+        if self._night is None:
+            return []
+        value = self._night.flags.get(REROLLS_FLAG, [])
+        return [str(item) for item in value] if isinstance(value, list) else []
+
+    def _unit_view(self, unit: UnitRecord) -> UnitView:
+        used = self._rerolled().count(unit.unit_id)
+        return UnitView(
+            game_id=game_id_for(unit.sam_object_id),
+            unit_id=unit.unit_id,
+            sam_id=unit.sam_object_id,
+            card=unit.card,
+            hp_current=unit.hp_current,
+            x_cm=unit.x_cm,
+            y_cm=unit.y_cm,
+            rerolls_left=max(0, REROLLS_PER_UNIT - used),
+        )
+
+    def log_invalid(self, reason: str) -> None:
+        night = self._night
+        if night is None:
+            return
+        self._store.log_turn(
+            night.id, SETUP_TURN, SUMMON_PHASE, "gm_invalid", {"reason": reason}, 0
+        )
+
+    def _pipeline(self) -> SummonPipeline:
+        if self._pipeline_factory is None:
+            raise GameError(OFFLINE_KEY, {"feature": SPARK_FEATURE})
+        return self._pipeline_factory(self._is_demo_safe)
+
+    def wait_for_still_frame(self) -> Image | None:
+        camera = self._camera
+        calibration = self._calibration
+        if camera is None or calibration is None:
+            return None
+        deadline = self._clock() + HANDS_OFF_WAIT_S + SUMMON_SNAPSHOT_DELAY_S
+        previous = self.wait_for_frame()
+        while previous is not None and self._clock() < deadline:
+            self._sleep(SUMMON_SNAPSHOT_DELAY_S)
+            latest = camera.latest()
+            if latest is None:
+                break
+            difference = cv2.absdiff(
+                cv2.cvtColor(previous, cv2.COLOR_BGR2GRAY),
+                cv2.cvtColor(latest.image, cv2.COLOR_BGR2GRAY),
+            )
+            previous = latest.image
+            if float(difference.mean()) <= STILL_FRAME_MEAN_DIFF_MAX:
+                break
+        return None if previous is None else warp(previous, calibration)
+
+    def _summon_request(
+        self, snapshot: Image, name: str, tap: tuple[int, int] | None
+    ) -> SummonRequest:
+        if self._campaign is None:
+            raise GameError("start.ready")
+        known = tuple(
+            KnownObject(
+                sam_id=unit.sam_object_id,
+                label=unit.card.name,
+                unit_class=unit.card.unit_class,
+                box=self._boxes.get(unit.sam_object_id) or self._default_box(unit),
+            )
+            for unit in self._units
+        )
+        return SummonRequest(
+            snapshot=snapshot,
+            spoken_name=name,
+            known=known,
+            difficulty=self._campaign.difficulty,
+            px_per_cm=float(self._area.px_per_cm),
+            tap_point=tap,
+            prior=self._pending,
+        )
+
+    async def summon(self, name: str) -> UnitView:
+        self._require_phase(AppPhase.SUMMON)
+        return await self._run_summon(name, None)
+
+    async def summon_tap(self, point: tuple[int, int]) -> UnitView:
+        self._require_phase(AppPhase.SUMMON)
+        if self._pending is None:
+            raise GameError("cmd.unknown")
+        width, height = self._area.warped_size
+        if not (0 <= point[0] < width and 0 <= point[1] < height):
+            raise GameError("summon.which")
+        return await self._run_summon(self._pending_name, point)
+
+    async def _run_summon(self, name: str, tap: tuple[int, int] | None) -> UnitView:
+        if self._summon_lock.locked():
+            raise GameError(BUSY_KEY)
+        async with self._summon_lock:
+            started = self._clock()
+            snapshot = await asyncio.to_thread(self.wait_for_still_frame)
+            if snapshot is None:
+                raise GameError("cam.busy")
+            pipeline = self._pipeline()
+            request = self._summon_request(snapshot, name, tap)
+            detection = await pipeline.detect(request)
+            try:
+                outcome = await pipeline.run(request, detection)
+            except SummonError as error:
+                if error.copy_key == "summon.which":
+                    self._pending = detection
+                    self._pending_name = name
+                raise GameError(error.copy_key) from error
+            unit = self._persist(outcome, started)
+            return self._unit_view(unit)
+
+    def _persist(self, outcome: SummonOutcome, started: float) -> UnitRecord:
+        night = self._night
+        if night is None:
+            raise GameError("start.ready")
+        card = CardFields(
+            name=outcome.name,
+            unit_class=outcome.card.unit_class,
+            hp_max=outcome.card.hp_max,
+            atk=outcome.card.atk,
+            move_class=outcome.card.move,
+            range_class=outcome.card.range,
+            power_id=outcome.card.power_id,
+            power_name_tl=outcome.text.power_name_tl,
+            card_text_tl=outcome.text.card_text_tl,
+            card_text_en=outcome.text.card_text_en,
+        )
+        signature = outcome.signature.signature
+        unit = self._store.add_unit(
+            night,
+            card,
+            SignatureFields(
+                label=signature.label,
+                histogram=signature.histogram,
+                area_cm2=signature.area_cm2,
+                aspect=signature.aspect,
+                ref_crop_png=outcome.signature.ref_crop_png,
+            ),
+            UnitPlacement(
+                sam_object_id=outcome.sam_id, x_cm=outcome.x_cm, y_cm=outcome.y_cm
+            ),
+        )
+        for sam_id, mask in outcome.known_masks.items():
+            self._boxes[sam_id] = mask.bounds
+        self._boxes[outcome.sam_id] = outcome.mask.bounds
+        self._units.append(unit)
+        self._pending = None
+        elapsed_ms = max(0, round((self._clock() - started) * 1000))
+        self._store.log_turn(
+            night.id,
+            SETUP_TURN,
+            SUMMON_PHASE,
+            "summon",
+            {
+                "unit": game_id_for(outcome.sam_id),
+                "class": card.unit_class.value,
+                "source": outcome.source,
+            },
+            elapsed_ms,
+        )
+        return unit
+
+    def _find_unit(self, unit_id: str) -> UnitRecord:
+        for unit in self._units:
+            if unit.unit_id == unit_id:
+                return unit
+        raise GameError("cmd.unknown")
+
+    def rename_unit(
+        self, unit_id: str, name: str, clean: Callable[[str, str], str]
+    ) -> UnitView:
+        self._require_phase(AppPhase.SUMMON)
+        night = self._night
+        if night is None:
+            raise GameError("start.ready")
+        unit = self._find_unit(unit_id)
+        new_name = clean(name, unit.card.unit_class.value.title())
+        card = replace(unit.card, name=new_name)
+        return self._replace_card(night, unit, card)
+
+    async def reroll_unit(self, unit_id: str) -> UnitView:
+        self._require_phase(AppPhase.SUMMON)
+        night = self._night
+        if night is None or self._campaign is None:
+            raise GameError("start.ready")
+        unit = self._find_unit(unit_id)
+        if self._unit_view(unit).rerolls_left <= 0:
+            raise GameError("cmd.unknown")
+        snapshot = await asyncio.to_thread(self.wait_for_frame)
+        calibration = self._calibration
+        if snapshot is None or calibration is None:
+            raise GameError("cam.busy")
+        pipeline = self._pipeline()
+        others = [u for u in self._units if u.unit_id != unit.unit_id]
+        request = self._summon_request(
+            warp(snapshot, calibration), unit.card.name, None
+        )
+        request = SummonRequest(
+            snapshot=request.snapshot,
+            spoken_name=unit.card.name,
+            known=tuple(k for k in request.known if k.sam_id != unit.sam_object_id),
+            difficulty=request.difficulty,
+            px_per_cm=request.px_per_cm,
+        )
+        detection = await pipeline.detect(request)
+        if detection.draft is None or detection.source != "spark":
+            raise GameError(OFFLINE_KEY, {"feature": SPARK_FEATURE})
+        earlier = [
+            u.card.unit_class for u in others if u.sam_object_id < unit.sam_object_id
+        ]
+        roster: list[UnitClass] = earlier if unit.sam_object_id != KUBO_SAM_ID else []
+        clamped = clamp_card(detection.draft, roster, self._campaign.difficulty)
+        card = CardFields(
+            name=unit.card.name,
+            unit_class=clamped.unit_class,
+            hp_max=clamped.hp_max,
+            atk=clamped.atk,
+            move_class=clamped.move,
+            range_class=clamped.range,
+            power_id=clamped.power_id,
+            power_name_tl=detection.text.power_name_tl,
+            card_text_tl=detection.text.card_text_tl,
+            card_text_en=detection.text.card_text_en,
+        )
+        flags = dict(night.flags)
+        flags[REROLLS_FLAG] = [*self._rerolled(), unit.unit_id]
+        self._store.set_night_flags(night.id, flags)
+        self._night = NightRecord(
+            night.id, night.campaign_id, night.number, night.started_at, flags
+        )
+        return self._replace_card(self._night, unit, card)
+
+    def _replace_card(
+        self, night: NightRecord, unit: UnitRecord, card: CardFields
+    ) -> UnitView:
+        self._store.update_unit_card(night.id, unit.unit_id, card)
+        updated = UnitRecord(
+            unit_id=unit.unit_id,
+            signature_id=unit.signature_id,
+            sam_object_id=unit.sam_object_id,
+            card=card,
+            hp_current=card.hp_max,
+            x_cm=unit.x_cm,
+            y_cm=unit.y_cm,
+            sprite_id=unit.sprite_id,
+        )
+        self._units = [updated if u.unit_id == unit.unit_id else u for u in self._units]
+        return self._unit_view(updated)
 
     def set_demo_safe(self, is_on: bool) -> None:
         with self._lock:

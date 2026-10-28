@@ -15,12 +15,16 @@ from capture.camera import CameraInfo, MicrophoneInfo, VideoSource
 from config import AppSettings
 from db.store import Store
 from game.night import FramePump, GameController
+from gm.schemas import ContentFilter
 from server import Services, create_app
 from state import LiveState
+from vision.sam import TrackerOnlySegmenter
+from vision.summon import FallbackDetector, SummonPipeline
 
 Image = npt.NDArray[np.uint8]
 TOKEN = "t" * 64
 ORIGIN = "http://localhost:5173"
+CONTENT = ContentFilter.from_data_dir()
 SHEET: Corners = ((820.0, 300.0), (1140.0, 310.0), (1190.0, 760.0), (780.0, 750.0))
 
 
@@ -79,6 +83,10 @@ def make_factory(
             camera_factory=source,
             list_camera_devices=lambda: [CameraInfo(0, 1920, 1080)],
             list_microphone_devices=lambda: [MicrophoneInfo(1, "Mic")],
+            sleep=lambda _: None,
+            pipeline_factory=lambda _: SummonPipeline(
+                FallbackDetector(), TrackerOnlySegmenter(), CONTENT
+            ),
         )
         pump = FramePump(controller, live)
 
@@ -88,7 +96,12 @@ def make_factory(
             store.close()
 
         return Services(
-            settings=settings, controller=controller, pump=pump, live=live, close=close
+            settings=settings,
+            controller=controller,
+            pump=pump,
+            live=live,
+            content=CONTENT,
+            close=close,
         )
 
     return factory
@@ -332,3 +345,77 @@ def test_binary_frames_get_a_notice(client: TestClient) -> None:
         assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
         ws.send_text(json.dumps({"type": "campaign.list"}))
         assert receive_type(ws, "campaigns")["campaigns"] == []
+
+
+def calibrated(ws: WebSocketTestSession) -> None:
+    receive_type(ws, "state")
+    ws.send_text(
+        json.dumps(
+            {"type": "campaign.start", "new": {"name": "B", "difficulty": "normal"}}
+        )
+    )
+    receive_type(ws, "state")
+    ws.send_text(json.dumps({"type": "camera.select", "index": 0}))
+    receive_type(ws, "state")
+    ws.send_text(
+        json.dumps(
+            {
+                "type": "calibrate.corners",
+                "corners": SHEET,
+                "play_w_cm": 60,
+                "play_h_cm": 40,
+            }
+        )
+    )
+    receive_type(ws, "state")
+    ws.send_text(json.dumps({"type": "calibrate.done"}))
+    state = receive_type(ws, "state")
+    assert state["phase"] == "SUMMON"
+    assert state["units"] == []
+    assert state["begin_block_key"] == "summon.kubo_first"
+
+
+def test_offline_summon_asks_for_a_tap_then_makes_the_kubo(client: TestClient) -> None:
+    with connect(client) as ws:
+        calibrated(ws)
+        ws.send_text(json.dumps({"type": "summon.name", "name": "Bahay Kubo"}))
+        assert receive_type(ws, "notice")["copy_key"] == "summon.which"
+        assert receive_type(ws, "state")["awaiting_tap"] is True
+        ws.send_text(json.dumps({"type": "summon.tap", "point": [600, 400]}))
+        card = receive_type(ws, "card")["unit"]
+        assert isinstance(card, dict)
+        assert card["id"] == "u_kubo"
+        assert card["class"] == "kubo"
+        assert card["name"] == "Bahay Kubo"
+        assert card["x_cm"] == pytest.approx(30.0, abs=0.1)
+        state = receive_type(ws, "state")
+        assert state["awaiting_tap"] is False
+        assert len(state["units"]) == 1  # type: ignore[arg-type]
+        assert state["begin_block_key"] == "summon.need_units"
+
+
+def test_summon_messages_are_validated_and_phase_checked(client: TestClient) -> None:
+    with connect(client) as ws:
+        receive_type(ws, "state")
+        ws.send_text(json.dumps({"type": "summon.name", "name": "Pen"}))
+        assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
+        for payload in (
+            {"type": "summon.name", "name": ""},
+            {"type": "summon.name", "name": "x" * 41},
+            {"type": "summon.tap", "point": [-1, 5]},
+            {"type": "unit.reroll", "unit_id": "short"},
+            {
+                "type": "unit.rename",
+                "unit_id": "6f1d2a1e-7c1b-4c2e-9a3b-0a1b2c3d4e5f",
+                "name": "",
+            },
+        ):
+            ws.send_text(json.dumps(payload))
+            assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
+
+
+def test_tap_without_a_pending_summon_is_rejected(client: TestClient) -> None:
+    with connect(client) as ws:
+        calibrated(ws)
+        ws.send_text(json.dumps({"type": "summon.tap", "point": [600, 400]}))
+        assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"

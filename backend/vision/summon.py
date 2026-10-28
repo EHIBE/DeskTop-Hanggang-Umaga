@@ -19,7 +19,7 @@ from gm.schemas import (
     parse_unit_card,
     unit_card_json_schema,
 )
-from meta_client import CallSpec, MetaClient, Usage
+from meta_client import CallSpec, MetaClient, MetaError, Usage
 from rules.units import (
     CardDraft,
     ClampedCard,
@@ -280,7 +280,11 @@ class SparkDetector:
         prompt = summon_input_text(spoken_name, known_boxes(known, width, height))
         repair = ""
         for _ in range(2):
-            raw = await self._ask(image_url, prompt + repair, schema)
+            try:
+                raw = await self._ask(image_url, prompt + repair, schema)
+            except MetaError:
+                logger.warning("spark detection unavailable, falling back to tap")
+                break
             try:
                 response = parse_unit_card(raw, slot_ids)
             except SchemaError as error:
@@ -431,6 +435,7 @@ class SummonPipeline:
         prompts.append(ObjectPrompt(sam_id, box, point))
         try:
             result = await self._segmenter.segment(request.snapshot, prompts)
-        except SegmentationError:
+        except (SegmentationError, MetaError):
+            logger.warning("summon masks unavailable, using boxes")
             return {}
         return dict(result.masks)
