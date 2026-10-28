@@ -206,6 +206,8 @@ def test_connect_sends_start_state(client: TestClient) -> None:
             {"type": "campaign.start", "new": {"name": "x", "difficulty": "easy"}}
         ),
         json.dumps({"type": "demo_safe", "on": "yes"}),
+        json.dumps({"type": "night.resume", "force": "yes"}),
+        json.dumps({"type": "night.pause", "now": True}),
         "x" * 20_000,
     ],
 )
@@ -282,6 +284,15 @@ def test_campaign_delete_is_refused_outside_start(client: TestClient) -> None:
         campaign = receive_type(ws, "state")["campaign"]
         assert isinstance(campaign, dict)
         ws.send_text(json.dumps({"type": "campaign.delete", "campaign_id": campaign["id"]}))
+        assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
+
+
+def test_pause_and_resume_need_a_night(client: TestClient) -> None:
+    with connect(client) as ws:
+        receive_type(ws, "state")
+        ws.send_text(json.dumps({"type": "night.pause"}))
+        assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
+        ws.send_text(json.dumps({"type": "night.resume"}))
         assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
 
 

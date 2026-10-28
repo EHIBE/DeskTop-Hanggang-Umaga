@@ -1,12 +1,14 @@
 import asyncio
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from db.store import Store, StoreError
 from game.night import AppPhase, GameController, GameError
 from rules.resolve import Action
 from rules.units import Difficulty
+from state import Broadcast
 from tests.test_night import CONTENT
 from tests.test_tracking_flow import ConfidentSegmenter, controller_for, summon_three
 from vision.sam import TrackerOnlySegmenter
@@ -163,7 +165,7 @@ def test_end_turn_failure_returns_to_player_phase(tmp_path: Path) -> None:
     controller = controller_for(store, ConfidentSegmenter())
     start_night(controller)
 
-    async def broken() -> dict[int, object]:
+    async def broken(_: object = None) -> dict[int, object]:
         raise OSError("camera unplugged")
 
     controller.reanchor_all = broken  # type: ignore[method-assign,assignment]
@@ -319,4 +321,71 @@ def test_interrupted_night_ends_like_an_uninterrupted_one(tmp_path: Path) -> Non
     assert final.phase is expected.phase
     assert final.score == expected.score
     second.close()
+    store.close()
+
+
+def test_pause_blocks_orders_until_resume(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    controller = controller_for(store, ConfidentSegmenter())
+    start_night(controller)
+    controller.pause_night()
+    assert controller.snapshot().phase is AppPhase.PAUSED
+    with pytest.raises(GameError):
+        asyncio.run(controller.end_turn())
+    with pytest.raises(GameError):
+        controller.pause_night()
+    controller.resume_night(is_forced=False)
+    assert controller.snapshot().phase is AppPhase.PLAYER_PHASE
+    with pytest.raises(GameError):
+        controller.resume_night(is_forced=False)
+    asyncio.run(controller.end_turn())
+    assert controller.snapshot().night.turn == 2  # type: ignore[union-attr]
+    controller.close()
+    store.close()
+
+
+def test_moved_camera_pauses_end_turn(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    controller = controller_for(store, ConfidentSegmenter())
+    start_night(controller)
+    baseline = controller._baseline
+    assert baseline is not None
+    controller._baseline = np.roll(baseline, 120, axis=1)
+    asyncio.run(controller.end_turn())
+    snapshot = controller.snapshot()
+    assert snapshot.phase is AppPhase.PAUSED
+    assert snapshot.night is not None
+    assert snapshot.night.turn == 1
+    assert ("cam.moved", {}) in controller.drain_notices()
+    with pytest.raises(GameError) as info:
+        controller.resume_night(is_forced=False)
+    assert info.value.copy_key == "cam.moved"
+    controller.resume_night(is_forced=True)
+    assert controller.snapshot().phase is AppPhase.PLAYER_PHASE
+    asyncio.run(controller.end_turn())
+    assert controller.snapshot().night.turn == 2  # type: ignore[union-attr]
+    controller.close()
+    store.close()
+
+
+def test_voice_claim_ends_after_the_timeout(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    broadcast = Broadcast()
+    queue = broadcast.subscribe()
+    controller = controller_for(store, ConfidentSegmenter(), broadcast=broadcast)
+    summon_three(controller)
+    controller.begin_night()
+    controller.claim("Migs", ["u_2"], CONTENT.clean_player_name)
+    assert not controller.enforce_claim_timeout()
+    assert controller.snapshot().phase is AppPhase.VOICE_CLAIM
+    controller._claim_started -= 61.0
+    assert controller.enforce_claim_timeout()
+    assert controller.snapshot().phase is AppPhase.PLAYER_PHASE
+    assert controller.snapshot().night.players == ("Migs",)  # type: ignore[union-attr]
+    types = []
+    while not queue.empty():
+        types.append(queue.get_nowait()["type"])
+    assert types[-1] == "state.changed"
+    assert not controller.enforce_claim_timeout()
+    controller.close()
     store.close()

@@ -22,6 +22,7 @@ from capture.camera import CameraError
 from config import STREAM_FPS, AppSettings, load_settings
 from db.store import Campaign, NotFoundError, Store, StoreError
 from game.night import (
+    STATE_CHANGED,
     FinalScore,
     FramePump,
     GameController,
@@ -187,6 +188,15 @@ class NightQuitMessage(ClientModel):
     type: Literal["night.quit"]
 
 
+class NightPauseMessage(ClientModel):
+    type: Literal["night.pause"]
+
+
+class NightResumeMessage(ClientModel):
+    type: Literal["night.resume"]
+    force: bool = False
+
+
 class DemoSafeMessage(ClientModel):
     type: Literal["demo_safe"]
     on: bool
@@ -219,6 +229,8 @@ ClientMessage = (
     | EndTurnMessage
     | NightNextMessage
     | NightQuitMessage
+    | NightPauseMessage
+    | NightResumeMessage
     | DemoSafeMessage
     | DemoSafeSamMessage
 )
@@ -534,7 +546,11 @@ class Connection:
         queue = self._services.broadcast.subscribe()
         try:
             while True:
-                await self.send(await queue.get())
+                message = await queue.get()
+                if message.get("type") == STATE_CHANGED:
+                    await self.send_state()
+                else:
+                    await self.send(message)
         finally:
             self._services.broadcast.unsubscribe(queue)
 
@@ -679,6 +695,12 @@ class Connection:
         if isinstance(message, NightQuitMessage):
             controller.quit_night()
             return None
+        if isinstance(message, NightPauseMessage):
+            controller.pause_night()
+            return None
+        if isinstance(message, NightResumeMessage):
+            await asyncio.to_thread(controller.resume_night, message.force)
+            return None
         if isinstance(message, DemoSafeSamMessage):
             await asyncio.to_thread(controller.set_demo_safe_sam, message.on)
             return None
@@ -692,6 +714,12 @@ RECOVERY_INTERVAL_S: Final = 1.0
 async def recover_forever(controller: GameController) -> None:
     while True:
         await asyncio.sleep(RECOVERY_INTERVAL_S)
+        try:
+            controller.enforce_claim_timeout()
+        except GameError:
+            logger.warning("voice claim timeout skipped")
+        except Exception:
+            logger.exception("voice claim timeout failed, will retry")
         try:
             await controller.recover_lost_objects()
         except GameError:

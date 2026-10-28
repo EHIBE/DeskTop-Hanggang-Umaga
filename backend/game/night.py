@@ -46,6 +46,7 @@ from config import (
     STREAM_JPEG_QUALITY,
     STREAM_WIDTH_PX,
     SUMMON_SNAPSHOT_DELAY_S,
+    VOICE_CLAIM_TIMEOUT_S,
 )
 from db.store import (
     Campaign,
@@ -350,6 +351,8 @@ class GameController:
         self._sprite_service_factory = sprite_service_factory
         self._session: NightSession | None = None
         self._resume_turn: int | None = None
+        self._baseline: Image | None = None
+        self._claim_started = 0.0
         self._broadcast = broadcast
         self._crops: dict[str, Image] = {}
         self._subjects: dict[str, str] = {}
@@ -524,7 +527,19 @@ class GameController:
             return
         self._run_session(session.begin)
         self._session = session
+        self._claim_started = self._clock()
         self._notify("night.start", {})
+
+    def enforce_claim_timeout(self) -> bool:
+        session = self._session
+        if session is None or session.state is not TurnState.VOICE_CLAIM:
+            return False
+        if self._clock() - self._claim_started < VOICE_CLAIM_TIMEOUT_S:
+            return False
+        self.finish_claims()
+        if self._broadcast is not None:
+            self._broadcast.publish({"type": STATE_CHANGED})
+        return True
 
     def _resume(self, session: NightSession, saved: SavedNight) -> None:
         night = self._night
@@ -590,7 +605,15 @@ class GameController:
         session = self._session_or_error()
         self._run_session(session.start_end_turn)
         try:
-            anchors = await self.reanchor_all()
+            frame = await asyncio.to_thread(self.wait_for_still_frame)
+            if frame is None:
+                raise GameError("cam.busy")
+            if self._is_camera_moved(frame):
+                session.cancel_end_turn()
+                self._run_session(session.pause)
+                self._notify("cam.moved", {})
+                return
+            anchors = await self.reanchor_all(frame)
         except GameError:
             session.cancel_end_turn()
             raise
@@ -644,6 +667,31 @@ class GameController:
                     "events": [event_json(e) for e in result.telegraph],
                 }
             )
+
+    def _is_camera_moved(self, warped: Image) -> bool:
+        baseline = self._baseline
+        if baseline is None or baseline.shape != warped.shape:
+            return False
+        try:
+            return is_camera_moved(baseline, warped, self._area)
+        except (CalibrationError, cv2.error):
+            logger.exception("camera move check failed")
+            return False
+
+    def pause_night(self) -> None:
+        session = self._session_or_error()
+        self._run_session(session.pause)
+
+    def resume_night(self, is_forced: bool) -> None:
+        session = self._session_or_error()
+        if session.state is not TurnState.PAUSED:
+            raise GameError("cmd.unknown")
+        frame = self.wait_for_still_frame()
+        if frame is not None and self._is_camera_moved(frame):
+            if not is_forced:
+                raise GameError("cam.moved")
+            self._baseline = frame
+        self._run_session(session.resume)
 
     def next_night(self) -> None:
         session = self._session_or_error()
@@ -765,8 +813,10 @@ class GameController:
         current = warp(frame, self._calibration)
         if baseline is None or baseline.shape != current.shape:
             raise GameError("cam.moved")
-        if is_camera_moved(np.asarray(baseline, dtype=np.uint8), current, self._area):
+        stored_baseline = np.asarray(baseline, dtype=np.uint8)
+        if is_camera_moved(stored_baseline, current, self._area):
             raise GameError("cam.moved")
+        self._baseline = stored_baseline
         self._is_calibrated = True
         self._enter_summon()
 
@@ -807,6 +857,7 @@ class GameController:
             if frame is None:
                 raise GameError("cam.busy")
             baseline = warp(frame, self._calibration)
+            self._baseline = baseline
             self._store.save_calibration(
                 self._campaign.id,
                 self._calibration.homography_list(),
@@ -1435,13 +1486,13 @@ class GameController:
             recovered += 1
         return recovered
 
-    async def reanchor_all(self) -> dict[int, Anchor]:
+    async def reanchor_all(self, still: Image | None = None) -> dict[int, Anchor]:
         night = self._night
         calibration = self._calibration
         tracker = self._tracker
         if night is None or calibration is None or tracker is None:
             raise GameError("cmd.unknown")
-        frame = await asyncio.to_thread(self.wait_for_still_frame)
+        frame = still if still is not None else await asyncio.to_thread(self.wait_for_still_frame)
         if frame is None:
             raise GameError("cam.busy")
         signatures = self._store.unit_signatures(night.id)
@@ -1570,6 +1621,7 @@ TRANSITION_EVENT: Final = "transition"
 DOWN_STATUS: Final = "down"
 STUNNED_STATUS: Final = "stunned"
 REFORM_STATUS_PREFIX: Final = "reform_"
+STATE_CHANGED: Final = "state.changed"
 MIN_HULL_POINTS: Final = 3
 RESTORE_EVENT: Final = "restore"
 
@@ -1873,6 +1925,16 @@ class NightSession:
     def start_end_turn(self) -> None:
         self._require(TurnState.PLAYER_PHASE)
         self._machine.transition(TurnEvent.END_TURN)
+
+    def pause(self) -> None:
+        self._require(TurnState.PLAYER_PHASE)
+        self._machine.transition(TurnEvent.PAUSE)
+        self._flush_log()
+
+    def resume(self) -> None:
+        self._require(TurnState.PAUSED)
+        self._machine.transition(TurnEvent.RESUME)
+        self._flush_log()
 
     def cancel_end_turn(self) -> None:
         self._require(TurnState.END_TURN_SNAPSHOT)
