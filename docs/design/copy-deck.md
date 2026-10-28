@@ -17,7 +17,7 @@ All player-facing text, keyed. This file is canonical until `app/src/renderer/sr
 
 | Fact | Value |
 |---|---|
-| UI keys | 46 from PRD plus 7 Proposed |
+| UI keys | 48 from PRD plus 7 Proposed |
 | Line bank moments | 14 |
 | Placeholders | [name], [unit], [object], [player], [feature], [HP], [n], [action], [target], [pangalan] |
 | Review | 2 Filipino playtesters review every Taglish line before recording |
