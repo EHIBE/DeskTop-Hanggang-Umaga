@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import Board from './canvas/Board'
 import Bilingual from './components/Bilingual'
 import Stage from './components/Stage'
 import { isCopyKey, t, type CopyKey } from './lib/copy'
@@ -8,6 +7,7 @@ import type { CopyParams, KeyStatus, StateMessage } from './lib/types'
 import Calibration from './screens/Calibration'
 import KeySetup from './screens/KeySetup'
 import Start from './screens/Start'
+import Summon from './screens/Summon'
 
 type ActiveNotice = Readonly<{ id: number; key: CopyKey; params: CopyParams }>
 
@@ -82,14 +82,7 @@ function App(): React.JSX.Element {
   } else if (state.phase === 'CALIBRATE') {
     screen = <Calibration state={state} send={send} subscribe={subscribe} />
   } else {
-    screen = (
-      <main className="relative h-full w-full">
-        <Board subscribe={subscribe} label={t('calib.done').en} />
-        <div className="panel absolute bottom-8 left-1/2 w-[960px] -translate-x-1/2 p-4">
-          <Bilingual copyKey="calib.done" className="text-center" />
-        </div>
-      </main>
-    )
+    screen = <Summon state={state} send={send} subscribe={subscribe} />
   }
 
   return (

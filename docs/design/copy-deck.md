@@ -116,6 +116,51 @@ English text for these is a proposal for playtester review.
 | calib.confirm | Tapos na | Done | M3, playtester review |
 | calib.width | Lapad (cm) | Width (cm) | M3, playtester review |
 | calib.height | Taas (cm) | Height (cm) | M3, playtester review |
+| summon.need_units | Kailangan pa ng hindi bababa sa 2 kakampi bukod sa kubo. | Need at least 2 more allies besides the kubo. | M4, Proposed, playtester review |
+| summon.name_label | Pangalan ng bagay | Name of the object | M4, Proposed, playtester review |
+| summon.name_go | Sige | Go | M4, Proposed, playtester review |
+| summon.busy | Sandali... | One moment... | M4, Proposed, playtester review |
+| summon.reroll | Ulitin ang card | Re-roll card | M4, Proposed, playtester review |
+| summon.rename | Palitan ang pangalan | Rename | M4, Proposed, playtester review |
+| summon.rename_save | I-save | Save | M4, Proposed, playtester review |
+| summon.begin | Begin Night | Begin Night | M4, Proposed, playtester review |
+| summon.roster | Mga kakampi | Allies | M4, Proposed, playtester review |
+| summon.close | Isara | Close | M4, Proposed, playtester review |
+| card.owner_none | Wala pa | None yet | M4, Proposed, playtester review |
+| card.owner | Hawak ni | Owner | M4, Proposed, playtester review |
+| card.power | Kapangyarihan | Power | M4, Proposed, playtester review |
+| card.move | Galaw | Move | M4, Proposed, playtester review |
+| card.range | Abot | Reach | M4, Proposed, playtester review |
+| card.class | Uri | Class | M4, Proposed, playtester review |
+| class.kubo | Kubo | Kubo, the objective | M4, Proposed, playtester review |
+| class.charm | Anting | Charm, passive support | M4, Proposed, playtester review |
+| class.healer | Manggagamot | Healer | M4, Proposed, playtester review |
+| class.fighter | Mandirigma | Fighter | M4, Proposed, playtester review |
+| class.reach | Sibat | Reach, long melee | M4, Proposed, playtester review |
+| class.ranged | Pana | Ranged | M4, Proposed, playtester review |
+| class.scout | Sugo | Scout | M4, Proposed, playtester review |
+| class.wall | Hadlang | Wall | M4, Proposed, playtester review |
+| move.none | Wala | None | M4, Proposed, playtester review |
+| move.short | Maikli | Short | M4, Proposed, playtester review |
+| move.medium | Katamtaman | Medium | M4, Proposed, playtester review |
+| move.long | Malayo | Long | M4, Proposed, playtester review |
+| range.none | Wala | None | M4, Proposed, playtester review |
+| range.melee | Lapit | Melee | M4, Proposed, playtester review |
+| range.reach | Abot | Reach | M4, Proposed, playtester review |
+| range.far | Layo | Far | M4, Proposed, playtester review |
+| power.none | Wala | None | M4, Proposed, playtester review |
+| power.P01 | Gamot | Heal an ally within 10 cm for 2 HP. | M4, Proposed, playtester review |
+| power.P02 | Kalasag | An ally within 10 cm absorbs the next 2 damage. | M4, Proposed, playtester review |
+| power.P03 | Tulak | Push an enemy in melee 8 cm away. | M4, Proposed, playtester review |
+| power.P04 | Tigil | An enemy in range skips its next attack. | M4, Proposed, playtester review |
+| power.P05 | Hampas | 1 damage to every enemy within 6 cm. | M4, Proposed, playtester review |
+| power.P06 | Bantay | The kubo absorbs the next 3 damage. | M4, Proposed, playtester review |
+| power.P07 | Taboy | Enemies cannot end a move within 8 cm. | M4, Proposed, playtester review |
+| power.P08 | Liwanag | Clears smoke within 12 cm. | M4, Proposed, playtester review |
+| power.P09 | Tusok | Hits the target and one more enemy behind it. | M4, Proposed, playtester review |
+| power.P10 | Sigaw | Allies within 10 cm get +1 ATK this turn. | M4, Proposed, playtester review |
+| power.P11 | Habol | +2 damage against a duwende in melee. | M4, Proposed, playtester review |
+| power.P12 | Asin | 3 damage to a manananggal lower half. | M4, Proposed, playtester review |
 
 ## GM line bank (local fallback and Spark style reference)
 
