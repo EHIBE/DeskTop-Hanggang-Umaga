@@ -692,7 +692,7 @@ def bayani(state: BoardState) -> tuple[str, ...]:
 def _next_id(counter: dict[str, int], enemy_type: EnemyType) -> str:
     number = counter.get(enemy_type.value, 0) + 1
     counter[enemy_type.value] = number
-    return f"{enemy_type.value}_{number}"
+    return f"e_{enemy_type.value}_{number}"
 
 
 def _reform(

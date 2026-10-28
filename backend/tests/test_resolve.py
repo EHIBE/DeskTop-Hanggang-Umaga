@@ -1309,12 +1309,12 @@ def test_begin_turn_spawns_telegraphs_and_moves() -> None:
     new, events = begin_turn(state)
     assert types(events) == [EventType.SPAWN, EventType.INTENT]
     spawn, intent = events
-    assert spawn.src == "aswang_1"
+    assert spawn.src == "e_aswang_1"
     assert spawn.edge is Edge.NORTH
     assert spawn.pos == (30.0, 2.5)
     assert intent.dst == "a"
     assert intent.dmg == 2
-    e = find_enemy(new, "aswang_1")
+    e = find_enemy(new, "e_aswang_1")
     assert e.target_id == "a" and e.intent_dmg == 2
     assert e.position[1] == pytest.approx(16.5)
     assert intent.pos == e.position
@@ -1325,7 +1325,7 @@ def test_begin_turn_spawns_telegraphs_and_moves() -> None:
 def test_begin_turn_enemy_stops_at_range_of_target() -> None:
     state = board([kubo(), unit("a", pos=(30.0, 25.0))], turn=0)
     new, _ = begin_turn(state)
-    e = find_enemy(new, "aswang_1")
+    e = find_enemy(new, "e_aswang_1")
     gap = hull_point_distance(find_unit(new, "a").hull, e.position)
     assert gap == pytest.approx(5.0, abs=1e-6)
 
@@ -1334,7 +1334,7 @@ def test_begin_turn_counter_ids_are_stable_across_turns() -> None:
     state = board([kubo(), unit("a", pos=(30.0, 10.0))], turn=0)
     state, _ = begin_turn(state)
     state, _ = begin_turn(state)
-    assert [e.id for e in state.enemies] == ["aswang_1", "aswang_2", "duwende_1"]
+    assert [e.id for e in state.enemies] == ["e_aswang_1", "e_aswang_2", "e_duwende_1"]
 
 
 def test_begin_turn_tabi_tabi_skips_duwende() -> None:
@@ -1342,16 +1342,16 @@ def test_begin_turn_tabi_tabi_skips_duwende() -> None:
         [kubo(), unit("a", pos=(30.0, 10.0))], turn=1, flags=frozenset({"tabi_tabi"})
     )
     new, events = begin_turn(state)
-    assert [e.id for e in new.enemies] == ["aswang_1"]
+    assert [e.id for e in new.enemies] == ["e_aswang_1"]
     assert len(of_type(events, EventType.SPAWN)) == 1
 
 
 def test_begin_turn_duwende_telegraphs_one() -> None:
     state = board([kubo(), unit("c", UnitClass.CHARM, (10.0, 20.0))], turn=1)
     new, events = begin_turn(state)
-    duwende = find_enemy(new, "duwende_1")
+    duwende = find_enemy(new, "e_duwende_1")
     assert duwende.intent_dmg == 1 and duwende.target_id == "c"
-    intents = [e for e in of_type(events, EventType.INTENT) if e.src == "duwende_1"]
+    intents = [e for e in of_type(events, EventType.INTENT) if e.src == "e_duwende_1"]
     assert intents[0].dmg == 1
 
 
@@ -1373,7 +1373,7 @@ def test_begin_turn_aura_keeps_enemy_out() -> None:
     charm = unit("c", UnitClass.CHARM, (30.0, 16.0), power=PowerId.P07)
     state = board([kubo((50.0, 35.0)), charm], turn=0)
     new, _ = begin_turn(state)
-    e = find_enemy(new, "aswang_1")
+    e = find_enemy(new, "e_aswang_1")
     assert e.target_id == "c"
     assert e.position[1] == pytest.approx(4.5, abs=1e-6)
     assert hull_point_distance(charm.hull, e.position) >= 8.0
