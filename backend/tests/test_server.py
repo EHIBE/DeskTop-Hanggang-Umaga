@@ -490,3 +490,35 @@ def test_sprite_arrives_after_the_card(client: TestClient) -> None:
         units = receive_type(ws, "state")["units"]
         assert isinstance(units, list)
         assert units[0]["sprite_png"] == "UE5HLXRlc3Q="
+
+
+def test_websocket_rejects_bad_night_messages(client: TestClient) -> None:
+    with connect(client) as ws:
+        receive_type(ws, "state")
+        for payload in (
+            {
+                "type": "intent.tap",
+                "unit_id": "kubo",
+                "action": "attack",
+                "target_id": None,
+            },
+            {
+                "type": "intent.tap",
+                "unit_id": "u_2",
+                "action": "fly",
+                "target_id": None,
+            },
+            {
+                "type": "intent.tap",
+                "unit_id": "u_2",
+                "action": "attack",
+                "target_id": "x; drop",
+            },
+            {"type": "claim.tap", "player_name": "", "unit_ids": []},
+            {"type": "claim.tap", "player_name": "Migs", "unit_ids": ["u_1000"]},
+            {"type": "chip.cancel", "chip_id": "short"},
+        ):
+            ws.send_text(json.dumps(payload))
+            assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
+        ws.send_text(json.dumps({"type": "end_turn"}))
+        assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"

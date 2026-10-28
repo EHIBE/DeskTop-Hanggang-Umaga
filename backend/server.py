@@ -22,9 +22,11 @@ from capture.camera import CameraError
 from config import STREAM_FPS, AppSettings, load_settings
 from db.store import Campaign, NotFoundError, Store, StoreError
 from game.night import (
+    FinalScore,
     FramePump,
     GameController,
     GameError,
+    NightView,
     PipelineFactory,
     SegmenterFactory,
     Snapshot,
@@ -33,6 +35,7 @@ from game.night import (
 )
 from gm.schemas import ContentFilter
 from meta_client import CostMeter, MetaClient, create_openai_client
+from rules.resolve import Action
 from rules.units import Difficulty
 from state import Broadcast, EncodedFrame, LiveState
 from vision.sam import SamSegmenter, Segmenter, TrackerOnlySegmenter
@@ -134,6 +137,50 @@ class UnitRenameMessage(ClientModel):
     name: UnitName
 
 
+UnitGameId = Annotated[str, Field(pattern=r"^u_(kubo|[0-9]{1,2})$")]
+TargetGameId = Annotated[
+    str, Field(pattern=r"^(u_(kubo|[0-9]{1,2})|e_[a-z]{1,12}_[0-9]{1,3})$")
+]
+
+
+class NightBeginMessage(ClientModel):
+    type: Literal["night.begin"]
+
+
+class ClaimTapMessage(ClientModel):
+    type: Literal["claim.tap"]
+    player_name: Annotated[str, Field(min_length=1, max_length=24)]
+    unit_ids: Annotated[list[UnitGameId], Field(max_length=12)]
+
+
+class ClaimDoneMessage(ClientModel):
+    type: Literal["claim.done"]
+
+
+class IntentTapMessage(ClientModel):
+    type: Literal["intent.tap"]
+    unit_id: UnitGameId
+    action: Action
+    target_id: TargetGameId | None
+
+
+class ChipCancelMessage(ClientModel):
+    type: Literal["chip.cancel"]
+    chip_id: Annotated[str, Field(min_length=36, max_length=36)]
+
+
+class EndTurnMessage(ClientModel):
+    type: Literal["end_turn"]
+
+
+class NightNextMessage(ClientModel):
+    type: Literal["night.next"]
+
+
+class NightQuitMessage(ClientModel):
+    type: Literal["night.quit"]
+
+
 class DemoSafeMessage(ClientModel):
     type: Literal["demo_safe"]
     on: bool
@@ -152,6 +199,14 @@ ClientMessage = (
     | SummonTapMessage
     | UnitRerollMessage
     | UnitRenameMessage
+    | NightBeginMessage
+    | ClaimTapMessage
+    | ClaimDoneMessage
+    | IntentTapMessage
+    | ChipCancelMessage
+    | EndTurnMessage
+    | NightNextMessage
+    | NightQuitMessage
     | DemoSafeMessage
 )
 CLIENT_MESSAGE: Final = TypeAdapter[ClientMessage](ClientMessage)
@@ -304,6 +359,69 @@ def unit_json(unit: UnitView) -> JsonObject:
     }
 
 
+def night_json(night: NightView) -> JsonObject:
+    return {
+        "number": night.number,
+        "turn": night.turn,
+        "difficulty": night.difficulty,
+        "players": list(night.players),
+        "units": [
+            {
+                "id": u.game_id,
+                "hp": u.hp,
+                "hp_max": u.hp_max,
+                "cooldown": u.cooldown,
+                "is_down": u.is_down,
+                "is_move_legal": u.is_move_legal,
+                "start_x_cm": u.start[0],
+                "start_y_cm": u.start[1],
+                "move_cm": u.move_cm,
+                "range_cm": u.range_cm,
+                "owner": u.owner,
+            }
+            for u in night.units
+        ],
+        "enemies": [
+            {
+                "id": e.id,
+                "type": e.type,
+                "part": e.part,
+                "hp": e.hp,
+                "hp_max": e.hp_max,
+                "x_cm": e.x_cm,
+                "y_cm": e.y_cm,
+                "intent": None
+                if e.target_id is None
+                else {"target_id": e.target_id, "dmg": e.intent_dmg or 0},
+                "stunned": e.is_stunned,
+            }
+            for e in night.enemies
+        ],
+        "chips": [
+            {
+                "chip_id": c.chip_id,
+                "unit_id": c.unit_id,
+                "action": c.action,
+                "target_id": c.target_id,
+            }
+            for c in night.chips
+        ],
+        "illegal_units": list(night.illegal_units),
+        "kubo_hp": night.kubo_hp,
+        "kubo_hp_max": night.kubo_hp_max,
+    }
+
+
+def score_json(score: FinalScore) -> JsonObject:
+    return {
+        "units_alive": score.units_alive,
+        "kubo_hp": score.kubo_hp,
+        "enemies_defeated": score.enemies_defeated,
+        "score": score.score,
+        "bayani": list(score.bayani),
+    }
+
+
 def state_json(snapshot: Snapshot) -> JsonObject:
     camera = snapshot.camera
     return {
@@ -324,6 +442,8 @@ def state_json(snapshot: Snapshot) -> JsonObject:
         "units": [unit_json(unit) for unit in snapshot.units],
         "begin_block_key": snapshot.begin_block_key,
         "awaiting_tap": snapshot.is_awaiting_tap,
+        "night": None if snapshot.night is None else night_json(snapshot.night),
+        "score": None if snapshot.score is None else score_json(snapshot.score),
     }
 
 
@@ -498,6 +618,33 @@ class Connection:
                     message.unit_id, message.name, content.clean_player_name
                 )
             )
+        if isinstance(message, NightBeginMessage):
+            controller.begin_night()
+            return None
+        if isinstance(message, ClaimTapMessage):
+            content = self._services.content
+            controller.claim(
+                message.player_name, message.unit_ids, content.clean_player_name
+            )
+            return None
+        if isinstance(message, ClaimDoneMessage):
+            controller.finish_claims()
+            return None
+        if isinstance(message, IntentTapMessage):
+            controller.add_intent(message.unit_id, message.action, message.target_id)
+            return None
+        if isinstance(message, ChipCancelMessage):
+            controller.cancel_chip(message.chip_id)
+            return None
+        if isinstance(message, EndTurnMessage):
+            await controller.end_turn()
+            return None
+        if isinstance(message, NightNextMessage):
+            controller.next_night()
+            return None
+        if isinstance(message, NightQuitMessage):
+            controller.quit_night()
+            return None
         await asyncio.to_thread(controller.set_demo_safe, message.on)
         return None
 

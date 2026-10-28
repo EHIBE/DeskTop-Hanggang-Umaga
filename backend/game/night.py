@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import asyncio
 import base64
 import logging
 import threading
 import time
-from collections.abc import Callable
+import uuid
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from decimal import Decimal
 from enum import StrEnum
@@ -47,15 +50,42 @@ from config import (
 from db.store import (
     Campaign,
     CardFields,
+    EnemySave,
     NightRecord,
     SignatureFields,
     Store,
     StoreError,
     UnitPlacement,
     UnitRecord,
+    UnitSave,
 )
+from game.state_machine import Transition, TurnEvent, TurnState, TurnStateMachine
 from meta_client import CostMeter, MetaError
+from rules.geometry import Hull, Point, is_move_legal
+from rules.resolve import (
+    TURNS_PER_NIGHT,
+    Action,
+    BoardState,
+    EnemyState,
+    Event,
+    EventType,
+    Intent,
+    Outcome,
+    UnitState,
+    bayani,
+    begin_turn,
+    check_outcome,
+    illegal_moves,
+    intent_error,
+    moved_kubo,
+    resolve_turn,
+    score,
+    start_night,
+    with_positions,
+)
 from rules.units import (
+    MOVE_CM,
+    RANGE_CM,
     REROLLS_PER_UNIT,
     Difficulty,
     UnitClass,
@@ -116,6 +146,69 @@ class AppPhase(StrEnum):
     START = "START"
     CALIBRATE = "CALIBRATE"
     SUMMON = "SUMMON"
+    VOICE_CLAIM = "VOICE_CLAIM"
+    SPAWN_TELEGRAPH = "SPAWN_TELEGRAPH"
+    PLAYER_PHASE = "PLAYER_PHASE"
+    END_TURN_SNAPSHOT = "END_TURN_SNAPSHOT"
+    VALIDATE = "VALIDATE"
+    RESOLVE_PLAYER = "RESOLVE_PLAYER"
+    RESOLVE_ENEMY = "RESOLVE_ENEMY"
+    PHYSICAL_EFFECTS = "PHYSICAL_EFFECTS"
+    CHECK_END = "CHECK_END"
+    SUNRISE = "SUNRISE"
+    DEFEAT = "DEFEAT"
+    REPLAY = "REPLAY"
+    PAUSED = "PAUSED"
+
+
+@dataclass(frozen=True)
+class NightUnitView:
+    game_id: str
+    hp: int
+    hp_max: int
+    cooldown: int
+    is_down: bool
+    is_move_legal: bool
+    start: tuple[float, float]
+    move_cm: float
+    range_cm: float
+    owner: str | None
+
+
+@dataclass(frozen=True)
+class EnemyView:
+    id: str
+    type: str
+    part: str | None
+    hp: int
+    hp_max: int
+    x_cm: float
+    y_cm: float
+    target_id: str | None
+    intent_dmg: int | None
+    is_stunned: bool
+
+
+@dataclass(frozen=True)
+class ChipView:
+    chip_id: str
+    unit_id: str
+    action: str
+    target_id: str | None
+
+
+@dataclass(frozen=True)
+class NightView:
+    number: int
+    turn: int
+    difficulty: str
+    players: tuple[str, ...]
+    units: tuple[NightUnitView, ...]
+    enemies: tuple[EnemyView, ...]
+    chips: tuple[ChipView, ...]
+    illegal_units: tuple[str, ...]
+    kubo_hp: int
+    kubo_hp_max: int
 
 
 class GameError(Exception):
@@ -185,6 +278,8 @@ class Snapshot:
     units: tuple[UnitView, ...] = field(default=())
     begin_block_key: str | None = None
     is_awaiting_tap: bool = False
+    night: NightView | None = None
+    score: FinalScore | None = None
 
 
 @dataclass(frozen=True)
@@ -239,6 +334,7 @@ class GameController:
         self._poses: dict[int, TrackedPose] = {}
         self._uncertain: set[int] = set()
         self._sprite_service_factory = sprite_service_factory
+        self._session: NightSession | None = None
         self._broadcast = broadcast
         self._crops: dict[str, Image] = {}
         self._subjects: dict[str, str] = {}
@@ -292,6 +388,8 @@ class GameController:
                     [u.card.unit_class for u in self._units]
                 ),
                 is_awaiting_tap=self._pending is not None,
+                night=self._night_view(),
+                score=None if self._session is None else self._session.final_score,
             )
 
     def _phase(self) -> AppPhase:
@@ -299,7 +397,216 @@ class GameController:
             return AppPhase.START
         if not self._is_calibrated:
             return AppPhase.CALIBRATE
+        if self._session is not None:
+            return AppPhase(self._session.state.value)
         return AppPhase.SUMMON
+
+    def _night_view(self) -> NightView | None:
+        session = self._session
+        night = self._night
+        if session is None or night is None or self._campaign is None:
+            return None
+        board = session.board
+        poses = {pose.id: (pose.x_cm, pose.y_cm) for pose in self._pose_list()}
+        units: list[NightUnitView] = []
+        enemies: list[EnemyView] = []
+        kubo_hp, kubo_max = 0, 0
+        if board is not None:
+            for unit in board.units:
+                current = poses.get(unit.id, unit.position)
+                move_cm = MOVE_CM[unit.move]
+                legal = unit.is_kubo or is_move_legal(unit.start, current, move_cm)
+                units.append(
+                    NightUnitView(
+                        game_id=unit.id,
+                        hp=max(0, unit.hp),
+                        hp_max=unit.hp_max,
+                        cooldown=unit.cooldown,
+                        is_down=unit.is_down,
+                        is_move_legal=legal and unit.id not in session.illegal_units,
+                        start=unit.start,
+                        move_cm=0.0 if unit.is_kubo else move_cm,
+                        range_cm=RANGE_CM[unit.range],
+                        owner=unit.owner,
+                    )
+                )
+                if unit.is_kubo:
+                    kubo_hp, kubo_max = max(0, unit.hp), unit.hp_max
+            enemies = [
+                EnemyView(
+                    id=e.id,
+                    type=e.type.value,
+                    part=None if e.part is None else e.part.value,
+                    hp=max(0, e.hp),
+                    hp_max=e.hp_max,
+                    x_cm=e.position[0],
+                    y_cm=e.position[1],
+                    target_id=e.target_id,
+                    intent_dmg=e.intent_dmg,
+                    is_stunned=e.is_stunned,
+                )
+                for e in board.enemies
+                if e.is_alive
+            ]
+        chips = tuple(
+            ChipView(
+                c.chip_id, c.intent.unit_id, c.intent.action.value, c.intent.target_id
+            )
+            for c in session.chips
+        )
+        return NightView(
+            number=night.number,
+            turn=0 if board is None else board.turn,
+            difficulty=self._campaign.difficulty.value,
+            players=session.players,
+            units=tuple(units),
+            enemies=tuple(enemies),
+            chips=chips,
+            illegal_units=session.illegal_units,
+            kubo_hp=kubo_hp,
+            kubo_hp_max=kubo_max,
+        )
+
+    def _notify(self, copy_key: str, params: dict[str, str]) -> None:
+        self._notices.append((copy_key, params))
+
+    def _session_or_error(self) -> NightSession:
+        if self._session is None:
+            raise GameError("cmd.unknown")
+        return self._session
+
+    def _run_session[T](self, action: Callable[[], T]) -> T:
+        try:
+            return action()
+        except SessionError as error:
+            raise GameError(error.copy_key, error.params) from error
+
+    def begin_night(self) -> None:
+        self._require_phase(AppPhase.SUMMON)
+        night = self._night
+        if night is None or self._campaign is None:
+            raise GameError("start.ready")
+        block = begin_night_block_key([u.card.unit_class for u in self._units])
+        if block is not None:
+            raise GameError(block)
+        session = NightSession(
+            self._store,
+            night,
+            self._units,
+            {u.unit_id: game_id_for(u.sam_object_id) for u in self._units},
+            self._campaign.difficulty,
+            (self._area.width_cm, self._area.height_cm),
+            self._notify,
+            self._clock,
+        )
+        self._run_session(session.begin)
+        self._session = session
+        self._notify("night.start", {})
+
+    def claim(
+        self,
+        player_name: str,
+        game_ids: Sequence[str],
+        clean: Callable[[str, str], str],
+    ) -> None:
+        session = self._session_or_error()
+        name = clean(player_name, "")
+        if not name:
+            raise GameError("claim.who")
+        self._run_session(lambda: session.claim(name, game_ids))
+
+    def finish_claims(self) -> None:
+        session = self._session_or_error()
+        poses = {pose.id: (pose.x_cm, pose.y_cm) for pose in self._pose_list()}
+        sizes = self._unit_sizes()
+        result = self._run_session(lambda: session.finish_claims(poses, sizes))
+        self._publish_events(result)
+
+    def _unit_sizes(self) -> dict[str, tuple[float, float]]:
+        ppc = float(self._area.px_per_cm)
+        sizes: dict[str, tuple[float, float]] = {}
+        for unit in self._units:
+            box = self._boxes.get(unit.sam_object_id)
+            if box is None:
+                continue
+            sizes[game_id_for(unit.sam_object_id)] = (
+                box.width / ppc / 2,
+                box.height / ppc / 2,
+            )
+        return sizes
+
+    def add_intent(self, game_id: str, action: Action, target_id: str | None) -> None:
+        session = self._session_or_error()
+        self._run_session(lambda: session.add_intent(game_id, action, target_id))
+
+    def cancel_chip(self, chip_id: str) -> None:
+        session = self._session_or_error()
+        self._run_session(lambda: session.cancel_chip(chip_id))
+
+    async def end_turn(self) -> None:
+        session = self._session_or_error()
+        self._run_session(session.start_end_turn)
+        try:
+            anchors = await self.reanchor_all()
+        except GameError:
+            session.cancel_end_turn()
+            raise
+        ppc = float(self._area.px_per_cm)
+        positions: dict[str, tuple[float, float]] = {}
+        hulls: dict[str, Hull] = {}
+        for unit in self._units:
+            game_id = game_id_for(unit.sam_object_id)
+            anchor = anchors.get(unit.sam_object_id)
+            if anchor is None:
+                continue
+            positions[game_id] = (anchor.x_cm, anchor.y_cm)
+            hulls[game_id] = hull_offsets_from_box(
+                anchor.box.width / ppc / 2, anchor.box.height / ppc / 2
+            )
+        result = self._run_session(lambda: session.finish_end_turn(positions, hulls))
+        self._publish_events(result)
+
+    def _publish_events(self, result: TurnResult) -> None:
+        if self._broadcast is None:
+            return
+        session = self._session
+        turn = 0 if session is None or session.board is None else session.board.turn
+        if result.events:
+            self._broadcast.publish(
+                {
+                    "type": "events",
+                    "turn": max(0, turn - 1) if result.telegraph else turn,
+                    "events": [event_json(e) for e in result.events],
+                }
+            )
+        if result.telegraph:
+            self._broadcast.publish(
+                {
+                    "type": "events",
+                    "turn": turn,
+                    "events": [event_json(e) for e in result.telegraph],
+                }
+            )
+
+    def next_night(self) -> None:
+        session = self._session_or_error()
+        if session.state not in (TurnState.SUNRISE, TurnState.DEFEAT):
+            raise GameError("cmd.unknown")
+        self._session = None
+        self._enter_summon()
+
+    def quit_night(self) -> None:
+        session = self._session_or_error()
+        if session.state not in (TurnState.SUNRISE, TurnState.DEFEAT):
+            raise GameError("cmd.unknown")
+        self._session = None
+        with self._lock:
+            self._campaign = None
+            self._night = None
+            self._units = []
+            self._boxes = {}
+            self._is_calibrated = False
+            self._calibration = None
 
     def list_campaigns(self) -> list[Campaign]:
         return self._store.list_campaigns()
@@ -1097,3 +1404,423 @@ class FramePump:
             if self.pump_once(sequence + 1):
                 sequence += 1
             self._sleep(max(0.0, self._interval - (self._clock() - started)))
+
+
+MAX_PLAYERS: Final = 4
+PLAYER_COLORS: Final = ("#F2C14E", "#3E7D4F", "#6B2D5C", "#C99A6B")
+TRANSITION_EVENT: Final = "transition"
+DOWN_STATUS: Final = "down"
+STUNNED_STATUS: Final = "stunned"
+
+
+class SessionError(Exception):
+    def __init__(self, copy_key: str, params: dict[str, str] | None = None) -> None:
+        super().__init__(copy_key)
+        self.copy_key = copy_key
+        self.params: dict[str, str] = params or {}
+
+
+@dataclass(frozen=True)
+class Chip:
+    chip_id: str
+    intent: Intent
+
+
+@dataclass(frozen=True)
+class TurnResult:
+    events: tuple[Event, ...]
+    telegraph: tuple[Event, ...]
+    is_blocked: bool
+
+
+@dataclass(frozen=True)
+class FinalScore:
+    units_alive: int
+    kubo_hp: int
+    enemies_defeated: int
+    score: int
+    bayani: tuple[str, ...]
+
+
+Notify = Callable[[str, dict[str, str]], None]
+Clock = Callable[[], float]
+
+
+def hull_offsets_from_box(half_w_cm: float, half_h_cm: float) -> Hull:
+    return (
+        (-half_w_cm, -half_h_cm),
+        (half_w_cm, -half_h_cm),
+        (half_w_cm, half_h_cm),
+        (-half_w_cm, half_h_cm),
+    )
+
+
+class NightSession:
+    def __init__(
+        self,
+        store: Store,
+        night: NightRecord,
+        units: Sequence[UnitRecord],
+        game_ids: Mapping[str, str],
+        difficulty: Difficulty,
+        play_size_cm: tuple[float, float],
+        notify: Notify,
+        clock: Clock,
+    ) -> None:
+        self._store = store
+        self._night = night
+        self._records = {record.unit_id: record for record in units}
+        self._game_ids = dict(game_ids)
+        self._unit_ids = {game_id: unit_id for unit_id, game_id in game_ids.items()}
+        self._difficulty = difficulty
+        self._play_size = play_size_cm
+        self._notify = notify
+        self._clock = clock
+        self._started = clock()
+        self._pending_log: list[tuple[int, str, str, dict[str, object], int]] = []
+        self._machine = TurnStateMachine(
+            TurnState.SUMMON, on_transition=self._log_transition
+        )
+        self._owners: dict[str, str] = {}
+        self._players: list[str] = []
+        self._chips: list[Chip] = []
+        self._illegal: tuple[str, ...] = ()
+        self._board: BoardState | None = None
+        self._final: FinalScore | None = None
+
+    @property
+    def state(self) -> TurnState:
+        return self._machine.state
+
+    @property
+    def board(self) -> BoardState | None:
+        return self._board
+
+    @property
+    def players(self) -> tuple[str, ...]:
+        return tuple(self._players)
+
+    @property
+    def chips(self) -> tuple[Chip, ...]:
+        return tuple(self._chips)
+
+    @property
+    def illegal_units(self) -> tuple[str, ...]:
+        return self._illegal
+
+    @property
+    def final_score(self) -> FinalScore | None:
+        return self._final
+
+    def owner_of(self, game_id: str) -> str | None:
+        return self._owners.get(game_id)
+
+    def _t_ms(self) -> int:
+        return max(0, round((self._clock() - self._started) * 1000))
+
+    def _turn(self) -> int:
+        return 0 if self._board is None else self._board.turn
+
+    def _log_transition(self, change: Transition) -> None:
+        payload: dict[str, object] = {
+            "from": change.source.value,
+            "event": change.event.value,
+        }
+        self._pending_log.append(
+            (
+                min(self._turn(), TURNS_PER_NIGHT),
+                change.target.value,
+                TRANSITION_EVENT,
+                payload,
+                self._t_ms(),
+            )
+        )
+
+    def _require(self, state: TurnState) -> None:
+        if self._machine.state is not state:
+            raise SessionError("cmd.unknown")
+
+    def begin(self) -> None:
+        self._require(TurnState.SUMMON)
+        self._machine.transition(TurnEvent.BEGIN_NIGHT)
+        self._flush_log()
+
+    def claim(self, player_name: str, game_ids: Sequence[str]) -> None:
+        self._require(TurnState.VOICE_CLAIM)
+        if player_name not in self._players and len(self._players) >= MAX_PLAYERS:
+            raise SessionError("cmd.unknown")
+        unit_ids = [self._unit_ids.get(game_id) for game_id in game_ids]
+        if any(unit_id is None for unit_id in unit_ids):
+            raise SessionError("cmd.unknown")
+        if player_name not in self._players:
+            self._players.append(player_name)
+        color = PLAYER_COLORS[self._players.index(player_name)]
+        player_id = self._store.find_or_add_player(
+            self._night.campaign_id, player_name, color
+        )
+        for game_id, owner in list(self._owners.items()):
+            if owner == player_name and game_id not in game_ids:
+                self._owners.pop(game_id)
+                self._store.set_unit_owner(self._unit_ids[game_id], None)
+        for game_id, unit_id in zip(game_ids, unit_ids, strict=True):
+            if unit_id is None:
+                continue
+            self._owners[game_id] = player_name
+            self._store.set_unit_owner(unit_id, player_id)
+
+    def finish_claims(
+        self, positions: Mapping[str, Point], sizes: Mapping[str, tuple[float, float]]
+    ) -> TurnResult:
+        self._require(TurnState.VOICE_CLAIM)
+        self._machine.transition(TurnEvent.CLAIMS_DONE)
+        units = [
+            self._unit_state(record, positions, sizes)
+            for record in self._records.values()
+        ]
+        units.sort(
+            key=lambda unit: self._records[self._unit_ids[unit.id]].sam_object_id
+        )
+        flags = frozenset(str(k) for k, v in self._night.flags.items() if v is True)
+        self._board = start_night(
+            units,
+            self._difficulty,
+            max(1, len(self._players)),
+            self._play_size[0],
+            self._play_size[1],
+            flags,
+        )
+        telegraph = self._next_turn()
+        self._flush_log()
+        return TurnResult(events=(), telegraph=telegraph, is_blocked=False)
+
+    def _unit_state(
+        self,
+        record: UnitRecord,
+        positions: Mapping[str, Point],
+        sizes: Mapping[str, tuple[float, float]],
+    ) -> UnitState:
+        game_id = self._game_ids[record.unit_id]
+        half_w, half_h = sizes.get(game_id, (2.0, 2.0))
+        card = record.card
+        return UnitState(
+            id=game_id,
+            unit_class=card.unit_class,
+            hp=record.hp_current,
+            hp_max=card.hp_max,
+            atk=card.atk,
+            move=card.move_class,
+            range=card.range_class,
+            power_id=card.power_id,
+            cooldown=0,
+            position=positions.get(game_id, (record.x_cm, record.y_cm)),
+            start=positions.get(game_id, (record.x_cm, record.y_cm)),
+            hull_offsets=hull_offsets_from_box(half_w, half_h),
+            owner=self._owners.get(game_id),
+        )
+
+    def _next_turn(self) -> tuple[Event, ...]:
+        board = self._board
+        if board is None:
+            return ()
+        self._board, events = begin_turn(board)
+        self._machine.transition(TurnEvent.TELEGRAPHED)
+        self._chips = []
+        self._illegal = ()
+        self._announce(events)
+        return events
+
+    def add_intent(self, game_id: str, action: Action, target_id: str | None) -> Chip:
+        self._require(TurnState.PLAYER_PHASE)
+        board = self._board
+        if board is None:
+            raise SessionError("cmd.unknown")
+        intent = Intent(unit_id=game_id, action=action, target_id=target_id)
+        error = intent_error(board, intent)
+        if error is not None:
+            raise SessionError(error, {"unit": self._name_of(game_id)})
+        chip = Chip(chip_id=str(uuid.uuid4()), intent=intent)
+        self._chips = [c for c in self._chips if c.intent.unit_id != game_id] + [chip]
+        return chip
+
+    def cancel_chip(self, chip_id: str) -> None:
+        self._require(TurnState.PLAYER_PHASE)
+        remaining = [c for c in self._chips if c.chip_id != chip_id]
+        if len(remaining) == len(self._chips):
+            raise SessionError("cmd.unknown")
+        self._chips = remaining
+
+    def start_end_turn(self) -> None:
+        self._require(TurnState.PLAYER_PHASE)
+        self._machine.transition(TurnEvent.END_TURN)
+
+    def cancel_end_turn(self) -> None:
+        self._require(TurnState.END_TURN_SNAPSHOT)
+        self._machine.force(TurnState.PLAYER_PHASE)
+
+    def finish_end_turn(
+        self, positions: Mapping[str, Point], hulls: Mapping[str, Hull] | None = None
+    ) -> TurnResult:
+        self._require(TurnState.END_TURN_SNAPSHOT)
+        board = self._board
+        if board is None:
+            raise SessionError("cmd.unknown")
+        board = with_positions(board, positions, hulls)
+        self._board = board
+        self._machine.transition(TurnEvent.SNAPSHOT_DONE)
+        if moved_kubo(board):
+            self._notify("kubo.moved", {})
+        illegal = illegal_moves(board)
+        if illegal:
+            self._illegal = illegal
+            self._machine.transition(TurnEvent.MOVES_ILLEGAL)
+            self._notify("endturn.blocked", {})
+            self._flush_log()
+            return TurnResult(events=(), telegraph=(), is_blocked=True)
+        self._illegal = ()
+        self._machine.transition(TurnEvent.MOVES_LEGAL)
+        resolved, events = resolve_turn(board, [chip.intent for chip in self._chips])
+        self._board = resolved
+        self._machine.transition(TurnEvent.PLAYER_RESOLVED)
+        self._machine.transition(TurnEvent.ENEMY_RESOLVED)
+        self._machine.transition(TurnEvent.EFFECTS_DONE)
+        self._announce(events)
+        for event in events:
+            self._pending_log.append(
+                (
+                    resolved.turn,
+                    TurnState.CHECK_END.value,
+                    event.type.value,
+                    _event_payload(event),
+                    self._t_ms(),
+                )
+            )
+        outcome = check_outcome(resolved)
+        telegraph = self._conclude(outcome)
+        return TurnResult(events=events, telegraph=telegraph, is_blocked=False)
+
+    def _conclude(self, outcome: Outcome) -> tuple[Event, ...]:
+        board = self._board
+        if board is None:
+            return ()
+        if outcome is Outcome.CONTINUE:
+            self._autosave(None)
+            return self._next_turn_and_flush()
+        result = "win" if outcome is Outcome.WIN else "lose"
+        self._machine.transition(
+            TurnEvent.SURVIVED if outcome is Outcome.WIN else TurnEvent.FELL
+        )
+        self._final = self._score(board)
+        self._notify("win" if outcome is Outcome.WIN else "lose", {})
+        self._autosave(result)
+        return ()
+
+    def _next_turn_and_flush(self) -> tuple[Event, ...]:
+        self._machine.transition(TurnEvent.NEXT_TURN)
+        telegraph = self._next_turn()
+        self._flush_log()
+        return telegraph
+
+    def _score(self, board: BoardState) -> FinalScore:
+        kubo = board.kubo
+        return FinalScore(
+            units_alive=sum(1 for u in board.units if not u.is_kubo and not u.is_down),
+            kubo_hp=0 if kubo is None else max(0, kubo.hp),
+            enemies_defeated=board.enemies_defeated,
+            score=score(board),
+            bayani=bayani(board),
+        )
+
+    def _autosave(self, result: str | None) -> None:
+        board = self._board
+        if board is None:
+            return
+        units = [
+            UnitSave(
+                unit_id=self._unit_ids[u.id],
+                hp_current=max(0, u.hp),
+                x_cm=u.position[0],
+                y_cm=u.position[1],
+                cooldown=u.cooldown,
+                status=(DOWN_STATUS,) if u.is_down else (),
+            )
+            for u in board.units
+        ]
+        enemies = [_enemy_save(e) for e in board.enemies]
+        self._store.autosave(
+            self._night.id,
+            min(board.turn, TURNS_PER_NIGHT),
+            units,
+            enemies,
+            result,
+            self._pending_log,
+        )
+        self._pending_log = []
+
+    def _flush_log(self) -> None:
+        for turn, phase, event_type, payload, t_ms in self._pending_log:
+            self._store.log_turn(self._night.id, turn, phase, event_type, payload, t_ms)
+        self._pending_log = []
+
+    def _name_of(self, game_id: str) -> str:
+        unit_id = self._unit_ids.get(game_id)
+        if unit_id is None:
+            return game_id
+        return self._records[unit_id].card.name
+
+    def _announce(self, events: Sequence[Event]) -> None:
+        board = self._board
+        for event in events:
+            if (
+                event.type is EventType.KUBO_HIT
+                and board is not None
+                and board.kubo is not None
+            ):
+                self._notify("kubo.hit", {"HP": str(max(0, board.kubo.hp))})
+            elif (
+                event.type is EventType.DOWN
+                and event.dst is not None
+                and event.dst in self._unit_ids
+            ):
+                self._notify("unit.down", {"unit": self._name_of(event.dst)})
+            elif event.type is EventType.SPLIT:
+                self._notify("mana.split", {})
+
+
+def _event_payload(event: Event) -> dict[str, object]:
+    return {
+        "src": event.src,
+        "dst": event.dst,
+        "dmg": event.dmg,
+        "edge": None if event.edge is None else event.edge.value,
+        "pos": None if event.pos is None else list(event.pos),
+    }
+
+
+def _enemy_save(enemy: EnemyState) -> EnemySave:
+    intent: dict[str, object] | None = None
+    if enemy.target_id is not None:
+        intent = {"target_id": enemy.target_id, "dmg": enemy.intent_dmg}
+    return EnemySave(
+        id=enemy.id,
+        type=enemy.type.value,
+        part=None if enemy.part is None else enemy.part.value,
+        hp=enemy.hp,
+        x_cm=enemy.position[0],
+        y_cm=enemy.position[1],
+        spawn_turn=max(1, min(enemy.spawn_turn, TURNS_PER_NIGHT)),
+        intent=intent,
+        status=(STUNNED_STATUS,) if enemy.is_stunned else (),
+    )
+
+
+def event_json(event: Event) -> dict[str, object]:
+    return {
+        "type": event.type.value,
+        "src": event.src,
+        "dst": event.dst,
+        "dmg": event.dmg,
+        "edge": None if event.edge is None else event.edge.value,
+        "pos": None
+        if event.pos is None
+        else {"x_cm": event.pos[0], "y_cm": event.pos[1]},
+    }
