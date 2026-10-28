@@ -60,6 +60,14 @@ from db.store import (
     UnitSave,
 )
 from game.state_machine import Transition, TurnEvent, TurnState, TurnStateMachine
+from gm.narrator import (
+    Narration,
+    NarrationEnemy,
+    NarrationPhase,
+    NarrationRequest,
+    NarrationService,
+    NarrationUnit,
+)
 from meta_client import CostMeter, MetaError
 from rules.geometry import Hull, Point, is_move_legal
 from rules.resolve import (
@@ -326,7 +334,9 @@ class GameController:
         broadcast: Broadcast | None = None,
         segmenter_factory: SegmenterFactory | None = None,
         tracker_factory: TrackerFactory = default_tracker,
+        narration: NarrationService | None = None,
     ) -> None:
+        self._narration = narration
         self._segmenter_factory = segmenter_factory
         self._tracker_factory = tracker_factory
         self._tracker: TrackerSet | None = None
@@ -503,6 +513,8 @@ class GameController:
         )
         self._run_session(session.begin)
         self._session = session
+        if self._narration is not None:
+            self._narration.new_night()
         self._notify("night.start", {})
 
     def claim(
@@ -523,6 +535,7 @@ class GameController:
         sizes = self._unit_sizes()
         result = self._run_session(lambda: session.finish_claims(poses, sizes))
         self._publish_events(result)
+        self._narrate(NarrationPhase.NIGHT_START, result.telegraph)
 
     def _unit_sizes(self) -> dict[str, tuple[float, float]]:
         ppc = float(self._area.px_per_cm)
@@ -571,6 +584,16 @@ class GameController:
             )
         result = self._run_session(lambda: session.finish_end_turn(positions, hulls))
         self._publish_events(result)
+        if result.is_blocked:
+            return
+        if session.state is TurnState.SUNRISE:
+            self._narrate(NarrationPhase.SUNRISE, result.events)
+        elif session.state is TurnState.DEFEAT:
+            self._narrate(NarrationPhase.DEFEAT, result.events)
+        else:
+            self._narrate(
+                NarrationPhase.RESOLUTION_THEN_TELEGRAPH, result.events + result.telegraph
+            )
 
     def _publish_events(self, result: TurnResult) -> None:
         if self._broadcast is None:
@@ -598,6 +621,7 @@ class GameController:
         session = self._session_or_error()
         if session.state not in (TurnState.SUNRISE, TurnState.DEFEAT):
             raise GameError("cmd.unknown")
+        self._stop_narration()
         self._session = None
         self._enter_summon()
 
@@ -605,6 +629,7 @@ class GameController:
         session = self._session_or_error()
         if session.state not in (TurnState.SUNRISE, TurnState.DEFEAT):
             raise GameError("cmd.unknown")
+        self._stop_narration()
         self._session = None
         with self._lock:
             self._campaign = None
@@ -616,6 +641,17 @@ class GameController:
 
     def list_campaigns(self) -> list[Campaign]:
         return self._store.list_campaigns()
+
+    def delete_campaign(self, campaign_id: str) -> None:
+        self._require_phase(AppPhase.START)
+        try:
+            is_deleted = self._store.delete_campaign(campaign_id)
+        except StoreError as error:
+            logger.exception("campaign delete failed")
+            raise GameError("delete.failed") from error
+        if not is_deleted:
+            raise GameError("cmd.unknown")
+        self._notify("delete.done", {})
 
     def devices(self) -> Devices:
         return Devices(
@@ -637,6 +673,7 @@ class GameController:
             TurnState.DEFEAT,
         ):
             raise GameError("cmd.unknown")
+        self._stop_narration()
         self._session = None
         with self._lock:
             self._campaign = campaign
@@ -814,9 +851,75 @@ class GameController:
         night = self._night
         if night is None:
             return
-        self._store.log_turn(
-            night.id, SETUP_TURN, SUMMON_PHASE, "gm_invalid", {"reason": reason}, 0
+        session = self._session
+        turn, phase = SETUP_TURN, SUMMON_PHASE
+        if session is not None and session.board is not None:
+            turn = min(session.board.turn, TURNS_PER_NIGHT)
+            phase = session.state.value
+        self._store.log_turn(night.id, turn, phase, "gm_invalid", {"reason": reason}, 0)
+
+    def _narrate(self, phase: NarrationPhase, events: Sequence[Event]) -> None:
+        narration = self._narration
+        session = self._session
+        night = self._night
+        campaign = self._campaign
+        if narration is None or session is None or night is None or campaign is None:
+            return
+        board = session.board
+        if board is None:
+            return
+        names = {game_id_for(u.sam_object_id): u.card.name for u in self._units}
+        kubo = board.kubo
+        request = NarrationRequest(
+            night=night.number,
+            turn=min(board.turn, TURNS_PER_NIGHT),
+            phase=phase.value,
+            difficulty=campaign.difficulty.value,
+            kubo_hp=0 if kubo is None else max(0, kubo.hp),
+            kubo_hp_max=0 if kubo is None else kubo.hp_max,
+            units=tuple(
+                NarrationUnit(
+                    u.id, names.get(u.id, u.id), u.unit_class.value, max(0, u.hp), u.hp_max, u.owner
+                )
+                for u in board.units
+                if not u.is_kubo
+            ),
+            enemies=tuple(
+                NarrationEnemy(e.id, e.type.value, max(0, e.hp))
+                for e in board.enemies
+                if e.is_alive
+            ),
+            events=tuple(events),
         )
+        narration.submit(request, self._is_demo_safe, self._publish_narration)
+
+    def _publish_narration(self, request: NarrationRequest, narration: Narration) -> None:
+        if self._broadcast is None:
+            return
+        self._broadcast.publish(
+            {
+                "type": "narration",
+                "night": request.night,
+                "turn": request.turn,
+                "phase": request.phase,
+                "narration_tl": narration.narration_tl,
+                "narration_en": narration.narration_en,
+                "mood": narration.mood.value,
+                "callouts": [
+                    {"entity_id": c.entity_id, "text_tl": c.text_tl} for c in narration.callouts
+                ],
+                "hint_tl": narration.hint_tl,
+                "source": narration.source.value,
+            }
+        )
+
+    async def wait_for_narration(self) -> None:
+        if self._narration is not None:
+            await self._narration.wait()
+
+    def _stop_narration(self) -> None:
+        if self._narration is not None:
+            self._narration.cancel()
 
     def drain_notices(self) -> list[tuple[str, dict[str, str]]]:
         notices = self._notices
@@ -1363,6 +1466,7 @@ class GameController:
     def close(self) -> None:
         for task in list(self._sprite_tasks):
             task.cancel()
+        self._stop_narration()
         with self._lock:
             self._close_camera()
 

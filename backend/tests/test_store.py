@@ -203,7 +203,7 @@ def test_foreign_keys_reject_orphans(store: Store) -> None:
 def test_delete_campaign_cascades_every_row(store: Store) -> None:
     campaign = store.create_campaign("C", Difficulty.NORMAL)
     _seed_night_graph(store, campaign.id)
-    assert store.delete_campaign_rows(campaign.id)
+    assert store.delete_campaign(campaign.id)
     for table in (
         "campaign",
         "object_signature",
@@ -217,7 +217,53 @@ def test_delete_campaign_cascades_every_row(store: Store) -> None:
 
 
 def test_delete_missing_campaign_is_idempotent(store: Store) -> None:
-    assert not store.delete_campaign_rows("missing")
+    assert not store.delete_campaign("8a1f1f0e-2c4b-4d5e-9f00-0123456789ab")
+
+
+def test_delete_campaign_refuses_unsafe_ids(store: Store) -> None:
+    with pytest.raises(UnsafePathError):
+        store.delete_campaign("../escape")
+
+
+def test_delete_campaign_removes_files_and_owned_sprites(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    other = store.create_campaign("D", Difficulty.NORMAL)
+    store.save_calibration(campaign.id, IDENTITY, 20.0, (60.0, 40.0), b"png")
+    night = store.start_or_resume_night(campaign.id)
+    other_night = store.start_or_resume_night(other.id)
+    unit = store.add_unit(night, card_fields(), SIGNATURE, UnitPlacement(1, 30.0, 20.0))
+    other_unit = store.add_unit(other_night, card_fields(), SIGNATURE, UnitPlacement(1, 30.0, 20.0))
+    owned = store.save_sprite("owned", b"a", "p", "v", None)
+    shared = store.save_sprite("shared", b"b", "p", "v", None)
+    store.set_unit_sprite(unit.unit_id, owned.id)
+    store.set_style_anchor_if_missing(campaign.id, shared.id)
+    store.set_unit_sprite(other_unit.unit_id, shared.id)
+    directory = store.campaign_dir(campaign.id)
+    assert directory.exists()
+    assert store.delete_campaign(campaign.id)
+    assert not directory.exists()
+    assert not owned.path.exists()
+    assert store.find_sprite("owned") is None
+    assert shared.path.exists()
+    assert store.find_sprite("shared") == shared
+    assert store.campaign_dir(other.id).exists()
+    assert [c.id for c in store.list_campaigns()] == [other.id]
+
+
+def test_delete_campaign_reports_leftover_files(
+    store: Store, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    store.save_calibration(campaign.id, IDENTITY, 20.0, (60.0, 40.0), b"png")
+    monkeypatch.setattr("db.store.shutil.rmtree", lambda *args, **kwargs: None)
+    with pytest.raises(StoreError):
+        store.delete_campaign(campaign.id)
+    assert store.list_campaigns() == []
+
+
+def test_secure_delete_is_on(store: Store) -> None:
+    with store.transaction() as conn:
+        assert conn.execute("PRAGMA secure_delete").fetchone()[0] == 1
 
 
 def test_transaction_rolls_back_on_error(store: Store) -> None:

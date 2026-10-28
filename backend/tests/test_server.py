@@ -18,6 +18,7 @@ from db.store import Store
 from game.night import FramePump, GameController
 from gm.schemas import ContentFilter
 from meta_client import CostMeter
+from rules.units import Difficulty
 from server import Services, create_app
 from state import Broadcast, LiveState
 from tests.test_meta_client import MemoryLog
@@ -255,6 +256,33 @@ def test_devices_and_campaign_lists(client: TestClient) -> None:
         assert devices["microphones"] == [{"index": 1, "name": "Mic"}]
         ws.send_text(json.dumps({"type": "campaign.list"}))
         assert receive_type(ws, "campaigns")["campaigns"] == []
+
+
+def test_campaign_delete_removes_it_from_the_list(tmp_path: Path) -> None:
+    settings = AppSettings(token=TOKEN, data_dir=tmp_path, port=8765, api_key=None)
+    seed = Store(settings.database_path)
+    campaign = seed.create_campaign("Gone", Difficulty.NORMAL)
+    seed.close()
+    app = create_app(settings, frozenset({ORIGIN}), make_factory(tmp_path))
+    with TestClient(app) as test_client, connect(test_client) as ws:
+        receive_type(ws, "state")
+        ws.send_text(json.dumps({"type": "campaign.delete", "campaign_id": campaign.id}))
+        assert receive_type(ws, "campaigns")["campaigns"] == []
+        assert receive_type(ws, "notice")["copy_key"] == "delete.done"
+        ws.send_text(json.dumps({"type": "campaign.delete", "campaign_id": campaign.id}))
+        assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
+
+
+def test_campaign_delete_is_refused_outside_start(client: TestClient) -> None:
+    with connect(client) as ws:
+        receive_type(ws, "state")
+        ws.send_text(
+            json.dumps({"type": "campaign.start", "new": {"name": "B", "difficulty": "normal"}})
+        )
+        campaign = receive_type(ws, "state")["campaign"]
+        assert isinstance(campaign, dict)
+        ws.send_text(json.dumps({"type": "campaign.delete", "campaign_id": campaign["id"]}))
+        assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
 
 
 def test_full_calibration_flow_reaches_summon(client: TestClient) -> None:

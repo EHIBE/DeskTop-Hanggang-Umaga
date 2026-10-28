@@ -19,7 +19,7 @@ from gm.schemas import (
     parse_unit_card,
     unit_card_json_schema,
 )
-from meta_client import CallSpec, MetaClient, MetaError, Usage
+from meta_client import CallSpec, MetaClient, MetaError, response_usage
 from rules.units import (
     CardDraft,
     ClampedCard,
@@ -223,17 +223,6 @@ def encode_snapshot(image: Image) -> str:
         raise SummonError(WHICH_KEY)
     return "data:image/jpeg;base64," + base64.b64encode(buffer.tobytes()).decode(
         "ascii"
-    )
-
-
-def response_usage(response: openai.types.responses.Response) -> Usage:
-    usage = response.usage
-    if usage is None:
-        raise ValueError("response has no usage")
-    return Usage(
-        input_tokens=usage.input_tokens,
-        cached_tokens=usage.input_tokens_details.cached_tokens,
-        output_tokens=usage.output_tokens,
     )
 
 

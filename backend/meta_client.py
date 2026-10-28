@@ -437,3 +437,14 @@ class MetaClient:
             is_retryable=_is_retryable_status(status) and not is_wait_too_long,
             retry_after_s=retry_after,
         )
+
+
+def response_usage(response: openai.types.responses.Response) -> Usage:
+    usage = response.usage
+    if usage is None:
+        raise ValueError("response has no usage")
+    return Usage(
+        input_tokens=usage.input_tokens,
+        cached_tokens=usage.input_tokens_details.cached_tokens,
+        output_tokens=usage.output_tokens,
+    )

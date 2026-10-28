@@ -1,5 +1,6 @@
 import json
 import math
+import shutil
 import sqlite3
 import threading
 import uuid
@@ -197,6 +198,7 @@ class Store:
         )
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA foreign_keys = ON")
+        self._conn.execute("PRAGMA secure_delete = ON")
         self._conn.execute("PRAGMA journal_mode = WAL")
         try:
             self._migrate()
@@ -292,10 +294,46 @@ class Store:
             ).fetchall()
         return [_campaign_from_row(row) for row in rows]
 
-    def delete_campaign_rows(self, campaign_id: str) -> bool:
+    def delete_campaign(self, campaign_id: str) -> bool:
+        directory = self.campaign_dir(campaign_id)
         with self.transaction() as conn:
+            sprite_rows = conn.execute(
+                "SELECT s.id, s.path FROM sprite s WHERE s.id IN ("
+                "SELECT sprite_id FROM unit WHERE campaign_id = ? AND sprite_id IS NOT NULL "
+                "UNION SELECT style_anchor_sprite_id FROM campaign "
+                "WHERE id = ? AND style_anchor_sprite_id IS NOT NULL) "
+                "AND NOT EXISTS (SELECT 1 FROM unit u WHERE u.sprite_id = s.id AND u.campaign_id <> ?) "
+                "AND NOT EXISTS (SELECT 1 FROM campaign c WHERE c.style_anchor_sprite_id = s.id AND c.id <> ?)",
+                (campaign_id, campaign_id, campaign_id, campaign_id),
+            ).fetchall()
+            sprite_paths = [self._sprite_file(str(row["path"])) for row in sprite_rows]
             cursor = conn.execute("DELETE FROM campaign WHERE id = ?", (campaign_id,))
+            conn.executemany(
+                "DELETE FROM sprite WHERE id = ?", [(str(row["id"]),) for row in sprite_rows]
+            )
+        with self._lock:
+            self._conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        self._remove_files(directory, sprite_paths)
         return cursor.rowcount > 0
+
+    def _sprite_file(self, stored: str) -> Path:
+        resolved = (self._data_root / stored).resolve()
+        if not resolved.is_relative_to(self._data_root / SPRITES_DIR_NAME):
+            raise UnsafePathError("stored sprite path escapes the sprite folder")
+        return resolved
+
+    def _remove_files(self, directory: Path, sprite_paths: Sequence[Path]) -> None:
+        leftovers: list[Path] = []
+        for sprite_path in sprite_paths:
+            sprite_path.unlink(missing_ok=True)
+            if sprite_path.exists():
+                leftovers.append(sprite_path)
+        if directory.exists():
+            shutil.rmtree(directory, ignore_errors=True)
+        if directory.exists():
+            leftovers.append(directory)
+        if leftovers:
+            raise StoreError("some campaign files could not be deleted")
 
     def record_api_usage(self, record: ApiUsageRecord) -> None:
         cost_units = to_cost_units(record.cost_usd)
@@ -739,9 +777,7 @@ class Store:
         return self._sprite_from_row(row)
 
     def _sprite_from_row(self, row: sqlite3.Row) -> SpriteRecord:
-        sprite_path = (self._data_root / str(row["path"])).resolve()
-        if not sprite_path.is_relative_to(self._data_root / SPRITES_DIR_NAME):
-            raise UnsafePathError("stored sprite path escapes the sprite folder")
+        sprite_path = self._sprite_file(str(row["path"]))
         response = row["source_response_id"]
         return SpriteRecord(
             id=str(row["id"]),

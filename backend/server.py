@@ -33,6 +33,7 @@ from game.night import (
     SpriteServiceFactory,
     UnitView,
 )
+from gm.narrator import LineBank, NarrationService, SparkNarrator
 from gm.schemas import ContentFilter
 from meta_client import CostMeter, MetaClient, create_openai_client
 from rules.resolve import Action
@@ -71,6 +72,11 @@ class NewCampaign(ClientModel):
 
 class CampaignStartExisting(ClientModel):
     type: Literal["campaign.start"]
+    campaign_id: Annotated[str, Field(min_length=36, max_length=36)]
+
+
+class CampaignDeleteMessage(ClientModel):
+    type: Literal["campaign.delete"]
     campaign_id: Annotated[str, Field(min_length=36, max_length=36)]
 
 
@@ -189,6 +195,7 @@ class DemoSafeMessage(ClientModel):
 ClientMessage = (
     CampaignListMessage
     | CampaignStartExisting
+    | CampaignDeleteMessage
     | CampaignStartNew
     | DevicesListMessage
     | CameraSelectMessage
@@ -251,6 +258,7 @@ def build_services(settings: AppSettings) -> Services:
         sprite_service_factory=build_sprite_factory(store, meta),
         segmenter_factory=build_segmenter_factory(meta),
         broadcast=broadcast,
+        narration=build_narration(meta, content, log_invalid),
     )
     pump = FramePump(controller, live)
 
@@ -282,6 +290,17 @@ def build_pipeline_factory(
         )
 
     return factory
+
+
+def build_narration(
+    meta: MetaClient, content: ContentFilter, log_invalid: Callable[[str], None]
+) -> NarrationService:
+    line_bank = LineBank()
+    if not meta.has_credentials:
+        return NarrationService(line_bank)
+    return NarrationService(
+        line_bank, lambda: SparkNarrator(meta, content, line_bank, log_invalid)
+    )
 
 
 def build_segmenter_factory(meta: MetaClient) -> SegmenterFactory:
@@ -563,6 +582,13 @@ class Connection:
         self, controller: GameController, message: ClientMessage
     ) -> JsonObject | None:
         if isinstance(message, CampaignListMessage):
+            campaigns = await asyncio.to_thread(controller.list_campaigns)
+            return {
+                "type": "campaigns",
+                "campaigns": [campaign_json(c) for c in campaigns],
+            }
+        if isinstance(message, CampaignDeleteMessage):
+            await asyncio.to_thread(controller.delete_campaign, message.campaign_id)
             campaigns = await asyncio.to_thread(controller.list_campaigns)
             return {
                 "type": "campaigns",

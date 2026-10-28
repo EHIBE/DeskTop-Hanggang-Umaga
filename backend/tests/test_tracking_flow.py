@@ -9,8 +9,9 @@ from capture.camera import VideoSource
 from capture.tracker import TrackerSet
 from db.store import Store
 from game.night import GameController, safe_distance, safe_histogram
+from gm.narrator import NarrationService
 from rules.units import CardDraft, PowerId, UnitClass
-from state import LiveState
+from state import Broadcast, LiveState
 from tests.test_night import CONTENT, ready_for_summon
 from tests.test_server import SceneSource
 from vision.sam import (
@@ -94,6 +95,8 @@ def controller_for(
     store: Store,
     segmenter: object,
     tracker_clock: FakeClock | None = None,
+    narration: NarrationService | None = None,
+    broadcast: Broadcast | None = None,
 ) -> GameController:
     def source(_: int) -> VideoSource:
         return SceneSource()
@@ -120,6 +123,8 @@ def controller_for(
         ),
         segmenter_factory=lambda _: segmenter,  # type: ignore[arg-type,return-value]
         tracker_factory=tracker_factory,
+        narration=narration,
+        broadcast=broadcast,
     )
 
 
