@@ -462,6 +462,10 @@ class GameController:
 
     async def summon(self, name: str) -> UnitView:
         self._require_phase(AppPhase.SUMMON)
+        if self._summon_lock.locked():
+            raise GameError(BUSY_KEY)
+        self._pending = None
+        self._pending_name = ""
         return await self._run_summon(name, None)
 
     async def summon_tap(self, point: tuple[int, int]) -> UnitView:
@@ -525,9 +529,10 @@ class GameController:
                 sam_object_id=outcome.sam_id, x_cm=outcome.x_cm, y_cm=outcome.y_cm
             ),
         )
+        width, height = self._area.warped_size
         for sam_id, mask in outcome.known_masks.items():
-            self._boxes[sam_id] = mask.bounds
-        self._boxes[outcome.sam_id] = outcome.mask.bounds
+            self._boxes[sam_id] = clamp_box(mask.bounds, width, height)
+        self._boxes[outcome.sam_id] = clamp_box(outcome.mask.bounds, width, height)
         self._units.append(unit)
         self._pending = None
         elapsed_ms = max(0, round((self._clock() - started) * 1000))
@@ -590,10 +595,11 @@ class GameController:
         detection = await pipeline.detect(request)
         if detection.draft is None or detection.source != "spark":
             raise GameError(OFFLINE_KEY, {"feature": SPARK_FEATURE})
-        earlier = [
-            u.card.unit_class for u in others if u.sam_object_id < unit.sam_object_id
-        ]
-        roster: list[UnitClass] = earlier if unit.sam_object_id != KUBO_SAM_ID else []
+        roster: list[UnitClass] = (
+            [u.card.unit_class for u in others]
+            if unit.sam_object_id != KUBO_SAM_ID
+            else []
+        )
         clamped = clamp_card(detection.draft, roster, self._campaign.difficulty)
         card = CardFields(
             name=unit.card.name,

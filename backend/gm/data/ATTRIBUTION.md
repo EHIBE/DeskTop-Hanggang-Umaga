@@ -19,3 +19,4 @@
 - Source: written from the editor's knowledge of the Philippine Standard Geographic Code (PSGC) structure from the Philippine Statistics Authority. The PSA site could not be fetched on 2026-10-28 (HTTP 403), so the list was not copied from a live download.
 - Content: the 82 provinces, Metro Manila with its 16 cities, and the 17 highly urbanized cities outside Metro Manila (33 highly urbanized cities in total).
 - Accessed: 2026-10-28
+- Removed 2026-10-28 after code review: Kalinga, Aurora, Quezon, Rizal, Antique and Capiz. Each is also a common word or a personal name ("kalinga" means care, "antique" and "capiz" describe objects, Aurora, Quezon and Rizal are names), so matching them blanked harmless card text. Quezon City stays on the list.

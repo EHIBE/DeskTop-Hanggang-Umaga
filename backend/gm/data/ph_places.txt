@@ -2,7 +2,6 @@ Abra
 Apayao
 Benguet
 Ifugao
-Kalinga
 Mountain Province
 Ilocos Norte
 Ilocos Sur
@@ -13,7 +12,6 @@ Cagayan
 Isabela
 Nueva Vizcaya
 Quirino
-Aurora
 Bataan
 Bulacan
 Nueva Ecija
@@ -23,8 +21,6 @@ Zambales
 Batangas
 Cavite
 Laguna
-Quezon
-Rizal
 Marinduque
 Occidental Mindoro
 Oriental Mindoro
@@ -37,8 +33,6 @@ Catanduanes
 Masbate
 Sorsogon
 Aklan
-Antique
-Capiz
 Guimaras
 Iloilo
 Negros Occidental

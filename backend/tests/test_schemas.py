@@ -289,7 +289,12 @@ def test_multi_word_and_accented_places(content_filter: ContentFilter) -> None:
 
 
 def test_place_files_have_expected_size() -> None:
-    assert len(entries("ph_places.txt")) == 116
+    assert len(entries("ph_places.txt")) == 110
+
+
+@pytest.mark.parametrize("word", ["kalinga", "antique lamp", "capiz shell", "Rizal"])
+def test_common_words_are_not_places(content_filter: ContentFilter, word: str) -> None:
+    assert not content_filter.names_place(word)
 
 
 def test_clean_player_name_passes_normal(content_filter: ContentFilter) -> None:

@@ -14,7 +14,7 @@ from rules.units import CardDraft, Difficulty, PowerId, UnitClass
 from state import FrameView, LiveState
 from tests.test_server import SCENE, SHEET, SceneSource
 from vision.sam import PixelBox, TrackerOnlySegmenter
-from vision.summon import CardText, Detection, SummonPipeline
+from vision.summon import CardText, Detection, FallbackDetector, SummonPipeline
 
 Image = npt.NDArray[np.uint8]
 CONTENT = ContentFilter.from_data_dir()
@@ -258,5 +258,90 @@ def test_summon_outside_summon_phase_is_rejected(tmp_path: Path) -> None:
     controller = spark_controller(store, [PixelBox(100, 100, 180, 180)])
     with pytest.raises(GameError):
         asyncio.run(controller.summon("Mug"))
+    controller.close()
+    store.close()
+
+
+def test_reroll_respects_caps_counting_later_units(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    boxes = [PixelBox(100 + 150 * i, 100, 160 + 150 * i, 160) for i in range(5)]
+    classes = iter(
+        [
+            UnitClass.KUBO,
+            UnitClass.FIGHTER,
+            UnitClass.CHARM,
+            UnitClass.CHARM,
+            UnitClass.CHARM,
+        ]
+    )
+    box_iter = iter(boxes)
+
+    class ClassDetector:
+        is_available = True
+
+        async def detect(
+            self, snapshot: Image, spoken_name: str, known: object
+        ) -> Detection:
+            return Detection(
+                found_new=True,
+                label=spoken_name,
+                box=next(box_iter, boxes[-1]),
+                draft=CardDraft(next(classes), 0, 0, PowerId.P06),
+                text=CardText(),
+                source="spark",
+            )
+
+    def source(_: int) -> VideoSource:
+        return SceneSource()
+
+    controller = GameController(
+        store,
+        LiveState(),
+        has_api_key=True,
+        camera_factory=source,
+        sleep=lambda _: None,
+        pipeline_factory=lambda _: SummonPipeline(
+            ClassDetector(), TrackerOnlySegmenter(), CONTENT
+        ),
+    )
+    ready_for_summon(controller)
+    asyncio.run(controller.summon("Mug"))
+    fighter = asyncio.run(controller.summon("Stapler"))
+    asyncio.run(controller.summon("Coin"))
+    asyncio.run(controller.summon("Ring"))
+    rerolled = asyncio.run(controller.reroll_unit(fighter.unit_id))
+    assert rerolled.card.unit_class is UnitClass.FIGHTER
+    charms = [
+        u for u in controller.snapshot().units if u.card.unit_class is UnitClass.CHARM
+    ]
+    assert len(charms) == 2
+    controller.close()
+    store.close()
+
+
+def test_new_summon_clears_a_stale_tap_request(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+
+    def source(_: int) -> VideoSource:
+        return SceneSource()
+
+    controller = GameController(
+        store,
+        LiveState(),
+        has_api_key=False,
+        camera_factory=source,
+        sleep=lambda _: None,
+        pipeline_factory=lambda _: SummonPipeline(
+            FallbackDetector(), TrackerOnlySegmenter(), CONTENT
+        ),
+    )
+    ready_for_summon(controller)
+    with pytest.raises(GameError):
+        asyncio.run(controller.summon("Bantay"))
+    assert controller.snapshot().is_awaiting_tap
+    with pytest.raises(GameError):
+        asyncio.run(controller.summon("Lampara"))
+    unit = asyncio.run(controller.summon_tap((600, 400)))
+    assert unit.card.name == "Lampara"
     controller.close()
     store.close()
