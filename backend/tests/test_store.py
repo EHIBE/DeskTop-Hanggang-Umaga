@@ -395,3 +395,44 @@ def test_update_card_and_flags_and_turn_log(store: Store) -> None:
         store.set_night_flags("missing", {})
     store.log_turn(night.id, 0, "SUMMON", "gm_invalid", {"why": "x"}, 5)
     assert store.turn_log_count(night.id, "gm_invalid") == 1
+
+
+def test_sprite_cache_save_find_and_link(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    night = store.start_or_resume_night(campaign.id)
+    unit = store.add_unit(night, card_fields(), SIGNATURE, UnitPlacement(1, 30.0, 20.0))
+    assert store.find_sprite("key-1") is None
+    sprite = store.save_sprite("key-1", b"\x89PNG", "gabi16-v1", "sprite-v1", "resp_1")
+    assert (
+        store.save_sprite("key-1", b"other", "gabi16-v1", "sprite-v1", None) == sprite
+    )
+    assert store.find_sprite("key-1") == sprite
+    assert store.sprite_png(sprite.id) == b"\x89PNG"
+    store.set_unit_sprite(unit.unit_id, sprite.id)
+    assert store.night_units(night.id)[0].sprite_id == sprite.id
+    with pytest.raises(NotFoundError):
+        store.set_unit_sprite("missing", sprite.id)
+    with pytest.raises(NotFoundError):
+        store.get_sprite("missing")
+
+
+def test_style_anchor_is_set_once(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    first = store.save_sprite("a", b"1", "p", "v", None)
+    second = store.save_sprite("b", b"2", "p", "v", None)
+    assert store.style_anchor(campaign.id) is None
+    store.set_style_anchor_if_missing(campaign.id, first.id)
+    store.set_style_anchor_if_missing(campaign.id, second.id)
+    assert store.style_anchor(campaign.id) == first.id
+    with pytest.raises(NotFoundError):
+        store.style_anchor("missing")
+
+
+def test_stored_sprite_path_cannot_escape(store: Store) -> None:
+    with store.transaction() as conn:
+        conn.execute(
+            "INSERT INTO sprite (id, cache_key, path, palette_version, prompt_version, created_at) "
+            "VALUES ('s', 'k', '../evil.png', 'p', 'v', 't')"
+        )
+    with pytest.raises(UnsafePathError):
+        store.find_sprite("k")

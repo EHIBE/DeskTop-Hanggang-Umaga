@@ -21,6 +21,7 @@ CAMPAIGNS_DIR_NAME: Final = "campaigns"
 BASELINE_FILE_NAME: Final = "baseline.png"
 HOMOGRAPHY_SIZE: Final = 9
 REF_CROP_DIR_NAME: Final = "crops"
+SPRITES_DIR_NAME: Final = "sprites"
 SETUP_TURN: Final = 0
 
 Clock = Callable[[], datetime]
@@ -129,6 +130,16 @@ class UnitRecord:
     x_cm: float
     y_cm: float
     sprite_id: str | None
+
+
+@dataclass(frozen=True)
+class SpriteRecord:
+    id: str
+    cache_key: str
+    path: Path
+    palette_version: str
+    prompt_version: str
+    source_response_id: str | None
 
 
 def utc_now() -> datetime:
@@ -537,6 +548,115 @@ class Store:
                 (night_id, event_type),
             ).fetchone()
         return int(row[0])
+
+    def find_sprite(self, cache_key: str) -> SpriteRecord | None:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT id, cache_key, path, palette_version, prompt_version, source_response_id "
+                "FROM sprite WHERE cache_key = ?",
+                (cache_key,),
+            ).fetchone()
+        if row is None:
+            return None
+        return self._sprite_from_row(row)
+
+    def get_sprite(self, sprite_id: str) -> SpriteRecord:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT id, cache_key, path, palette_version, prompt_version, source_response_id "
+                "FROM sprite WHERE id = ?",
+                (sprite_id,),
+            ).fetchone()
+        if row is None:
+            raise NotFoundError("sprite not found")
+        return self._sprite_from_row(row)
+
+    def _sprite_from_row(self, row: sqlite3.Row) -> SpriteRecord:
+        sprite_path = (self._data_root / str(row["path"])).resolve()
+        if not sprite_path.is_relative_to(self._data_root / SPRITES_DIR_NAME):
+            raise UnsafePathError("stored sprite path escapes the sprite folder")
+        response = row["source_response_id"]
+        return SpriteRecord(
+            id=str(row["id"]),
+            cache_key=str(row["cache_key"]),
+            path=sprite_path,
+            palette_version=str(row["palette_version"]),
+            prompt_version=str(row["prompt_version"]),
+            source_response_id=None if response is None else str(response),
+        )
+
+    def save_sprite(
+        self,
+        cache_key: str,
+        png: bytes,
+        palette_version: str,
+        prompt_version: str,
+        source_response_id: str | None,
+    ) -> SpriteRecord:
+        existing = self.find_sprite(cache_key)
+        if existing is not None:
+            return existing
+        sprite_id = self._new_id()
+        directory = self._data_root / SPRITES_DIR_NAME
+        directory.mkdir(parents=True, exist_ok=True)
+        sprite_path = directory / f"{_parse_uuid(sprite_id)}.png"
+        sprite_path.write_bytes(png)
+        try:
+            with self.transaction() as conn:
+                conn.execute(
+                    "INSERT INTO sprite (id, cache_key, path, palette_version, prompt_version, "
+                    "source_response_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        sprite_id,
+                        cache_key,
+                        sprite_path.relative_to(self._data_root).as_posix(),
+                        palette_version,
+                        prompt_version,
+                        source_response_id,
+                        self._now_iso(),
+                    ),
+                )
+        except BaseException:
+            sprite_path.unlink(missing_ok=True)
+            raise
+        return SpriteRecord(
+            sprite_id,
+            cache_key,
+            sprite_path,
+            palette_version,
+            prompt_version,
+            source_response_id,
+        )
+
+    def set_unit_sprite(self, unit_id: str, sprite_id: str) -> None:
+        with self.transaction() as conn:
+            cursor = conn.execute(
+                "UPDATE unit SET sprite_id = ? WHERE id = ?", (sprite_id, unit_id)
+            )
+        if cursor.rowcount == 0:
+            raise NotFoundError("unit not found")
+
+    def sprite_png(self, sprite_id: str) -> bytes:
+        return self.get_sprite(sprite_id).path.read_bytes()
+
+    def style_anchor(self, campaign_id: str) -> str | None:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT style_anchor_sprite_id FROM campaign WHERE id = ?",
+                (campaign_id,),
+            ).fetchone()
+        if row is None:
+            raise NotFoundError("campaign not found")
+        value = row[0]
+        return None if value is None else str(value)
+
+    def set_style_anchor_if_missing(self, campaign_id: str, sprite_id: str) -> None:
+        with self.transaction() as conn:
+            conn.execute(
+                "UPDATE campaign SET style_anchor_sprite_id = ? "
+                "WHERE id = ? AND style_anchor_sprite_id IS NULL",
+                (sprite_id, campaign_id),
+            )
 
     def set_setting(self, key: str, value: str) -> None:
         with self.transaction() as conn:
