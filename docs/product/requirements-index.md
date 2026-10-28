@@ -31,7 +31,7 @@ Update the Status column when a requirement is built (code merged) and tested (t
 |---|---|---|---|---|---|---|
 | F01 | Calibration and play area | Must | 4.50 | 2 | FR-01 to FR-04 | Planned |
 | F02 | Summon: detection, masks, cards, caps | Must | 4.20 | 5 | FR-06 to FR-10, FR-14 to FR-16 | Built (live Spark and SAM runs wait on the key) |
-| F03 | Sprite pipeline | Must | 5.25 | 4 | FR-11 to FR-13 | Planned |
+| F03 | Sprite pipeline | Must | 5.25 | 4 | FR-11 to FR-13 | Built (placeholder and enemy art wait on the key) |
 | F04 | Tracker overlay and occlusion freeze | Must | 5.25 | 4 | FR-26, FR-27 | Planned |
 | F05 | End Turn re-anchor and drift reconcile | Must | 4.50 | 3 | FR-28, FR-29 | Planned |
 | F06 | Rules engine, turn loop, HUD, campaign | Must | 4.25 | 6 | FR-05, FR-31 to FR-34, FR-37, FR-40 | Planned |
@@ -46,7 +46,7 @@ Update the Status column when a requirement is built (code merged) and tested (t
 | F15 | Replay | Should | 2.31 | 5 | FR-44 to FR-48 | Planned |
 | F16 | Returning objects, recap, progression | Could | 0.60 | 3 | FR-42, FR-43, FR-56 | Could |
 | F17 | Demo Safe Mode | Must | 9.00 | 2 | FR-50 | Planned |
-| F18 | Cost tracker and hard stop | Must (guardrail) | 0.95 | 1 | FR-51 | Planned |
+| F18 | Cost tracker and hard stop | Must (guardrail) | 0.95 | 1 | FR-51 | Tested |
 | F19 | Muse Glimmer recap | Could | 0.10 | 4 | FR-53 | Could |
 | F20 | Muse Image generated map | Could | 1.25 | 2 | FR-54 | Could |
 | F21 | Strict ownership | Could | 0.90 | 1 | FR-55 | Could |
@@ -70,9 +70,9 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | FR-08 | ★ | One SAM image call with box prompts, IDs 1 to 16 | F02 | JS-02 | backend/vision/sam.py | test_vision.py (records and prompts). Fixture test waits on a real SAM fixture | Built |
 | FR-09 | ★ | Unit card from fixed class and power lists | F02 | JS-02 | vision/summon.py, gm/schemas.py | test_schemas.py, test_summon.py | Tested |
 | FR-10 | ★ | Clamp card to class template and caps | F02 | JS-02 | backend/rules/units.py | test_units.py (100% coverage) | Tested |
-| FR-11 | ★ | Placeholder class sprite in the same frame | F03 | JS-02 | canvas/sprites.ts, assets/sprites/placeholders | manual | Planned |
-| FR-12 | ★ | Muse Image sprite, chroma key, palette lock | F03 | JS-02 | backend/vision/sprites.py | sprite pipeline tests | Planned |
-| FR-13 | | Sprite cache by key, no repeat call | F03 | JS-09 | vision/sprites.py, db/store.py | unit test | Planned |
+| FR-11 | ★ | Placeholder class sprite in the same frame | F03 | JS-02 | canvas/sprites.ts, assets/sprites/placeholders | manual. Class-initials fallback until `smoke/assets.py` runs (Manual: EHIBE) | Built |
+| FR-12 | ★ | Muse Image sprite, chroma key, palette lock | F03 | JS-02 | backend/vision/sprites.py | test_sprites.py, test_sprite_service.py. Live run and E5 Manual: EHIBE | Tested (offline) |
+| FR-13 | | Sprite cache by key, no repeat call | F03 | JS-09 | vision/sprites.py, db/store.py | test_sprite_service.py, test_store.py | Tested |
 | FR-14 | | Tap-to-select fallback for new object | F02 | JS-02 | game/night.py, screens/Summon.tsx | test_server.py, test_summon.py | Tested (backend) |
 | FR-15 | ★ | Exactly one kubo as first summon | F02 | JS-12 | rules/units.py | test_units.py | Tested |
 | FR-16 | | Cap 12 objects, 2 Charms, 2 Walls | F02 | JS-02 | rules/units.py, vision/summon.py | test_units.py, test_summon.py | Tested |
@@ -110,7 +110,7 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | FR-48 | | Export 1080p MP4, 60 s max, dawn title card | F15 | JS-08 | replay/render.py | manual | Planned |
 | FR-49 | | Settings screen | F23 | JS-14 | screens/Settings.tsx | n/a | Could |
 | FR-50 | ★ | Demo Safe Mode completes 8 turns offline | F17 | JS-10, JS-13 | backend/game/demo_safe.py | dry run | Planned |
-| FR-51 | | Cost tracker, warn $90, block at $120 | F18 | JS-13 | backend/meta_client.py, db/store.py | unit test | Planned |
+| FR-51 | | Cost tracker, warn $90, block at $120 | F18 | JS-13 | backend/meta_client.py, db/store.py, game/night.py, components/CostMeter.tsx | test_meta_client.py, test_server.py (hard stop turns Demo Safe on) | Tested |
 | FR-52 | | Delete campaign data, no files remain | F24 | JS-10 | db/store.py | unit test | Planned |
 | FR-53 | | Muse Glimmer recap | F19 | JS-09 | n/a | n/a | Could |
 | FR-54 | | Muse Image generated barrio map | F20 | JS-02 | n/a | n/a | Could |
@@ -122,7 +122,7 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | ID | Category | Target | Verified by | Status |
 |---|---|---|---|---|
 | NFR-01 | Latency | Summon to card with placeholder 8 s p90 | E6 | Planned |
-| NFR-02 | Latency | Real sprite 30 s p90, never blocks | E6 | Planned |
+| NFR-02 | Latency | Real sprite 30 s p90, never blocks | E6. Never blocks: background task (test_server.py) | Built |
 | NFR-03 | Latency | End Turn to first animation 4 s p90 | E6 | Planned |
 | NFR-04 | Latency | Rules resolution 50 ms for 12 units and 8 enemies | pytest benchmark | Planned |
 | NFR-05 | Latency | Speech end to chip, grammar path 3 s p90 | E6 | Planned |

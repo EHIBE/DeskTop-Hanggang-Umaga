@@ -28,10 +28,10 @@ Every sprite must look like its real object and like it belongs to one shared 16
 
 | Asset | Count | Path | Made by | When |
 |---|---|---|---|---|
-| Class placeholder sprites | 8 | `assets/sprites/placeholders/` | Muse Image, keyed, committed | Phase 5.1 |
+| Class placeholder sprites | 8 | `assets/sprites/placeholders/` | Muse Image, keyed, committed. Script `backend/smoke/assets.py`, not yet run (Manual: EHIBE) | Phase 5.1 |
 | Enemy sprites (2-frame bob) | 5 types (manananggal has upper and lower) | `assets/sprites/enemies/` | Muse Image, keyed | Phase 5.1 |
 | Barrio tiles | Grass, dirt path, bamboo fence, nipa huts at the edges | `assets/tiles/` | Muse Image during development | Before Phase 7 |
-| Palette | Gabi 16 | `assets/palette.json` | Hand | Phase 5 |
+| Palette | Gabi 16 | `assets/palette.json` | Hand (built 2026-10-28) | Phase 5 |
 | Pixel font plus license | 1 | `assets/fonts/` | Open-license download | Phase 7 |
 | Demo set sprites (cached) | 5 objects: mug, coin, keys, pen, eraser | sprite cache | Pipeline | Before demo |
 | App icon, logo, title card | 1 set | `app/build/`, `app/resources/` | logo-design skill | Phase 15 |

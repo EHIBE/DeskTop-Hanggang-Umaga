@@ -44,9 +44,9 @@ Every message is a JSON object with `type` plus fields. Proposed shared fields: 
 | `narration` | Proposed | `narration_tl`, `narration_en`, `mood`, `callouts`, `hint_tl`, `source` (spark or line_bank) | GM caption |
 | `chip` | Proposed | `chip_id`, `unit_id`, `action`, `target_id`, `speaker`, `status` | Order chip add, update, remove |
 | `card` | Established | `unit` (id, unit_id, sam_id, name, class, hp, hp_max, atk, move, range, power_id, power_name_tl, card_text_tl, card_text_en, x_cm, y_cm, rerolls_left). `sprite_url` arrives in M5 | New or changed unit card |
-| `sprite` | Proposed | `unit_id`, `sprite_url` | Swap placeholder for real sprite |
+| `sprite` | Established | `unit_id` (UUID), `sprite_png` (base64 48x48 PNG). `state.units[].sprite_png` carries it afterwards | Swap placeholder for real sprite. Pushed from the background job through a broadcast queue |
 | `notice` | Established | `copy_key`, `params` | Banner or prompt by copy key (never raw text) |
-| `cost` | Proposed, dev only | `spent_usd`, `warn`, `stopped` | Credit meter |
+| `cost` | Established, dev only (`DESKTOP_DEV=1`) | `spent_usd` (decimal string, 6 places), `warn`, `stopped` | Credit meter. Sent on connect and after every handled message |
 
 ## Renderer to server
 

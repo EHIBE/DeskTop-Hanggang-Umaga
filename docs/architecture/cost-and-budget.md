@@ -88,6 +88,7 @@ With F12 cut, the command fallback line mostly disappears. Recompute from api_us
 
 - Log every call to `api_usage` with tokens, images, frames, audio seconds, cost, latency, ok.
 - Check the running sum before each paid call. At $120 block and switch to Demo Safe Mode.
+- Each attempt reserves a worst-case estimate (`UNMETERED_CALL_ESTIMATE_USD` in `config.py`) while it is in flight, so parallel calls cannot all pass the check. Timeouts and 5xx answers are charged that estimate because the provider may still bill them.
 - Alert above $3 per night.
 - Tests run on fixtures, never paid calls.
 - Check credits at the start of each day (Build Guide daily routine).

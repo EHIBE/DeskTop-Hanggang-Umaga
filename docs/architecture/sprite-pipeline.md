@@ -60,6 +60,20 @@ With a style anchor, append: "Match the pixel art style of the second image."
 | Keying fails (purple object) | Other key color, then SAM cutout, then placeholder |
 | Hard stop reached | Placeholder, Demo Safe Mode |
 
+## Built (2026-10-28)
+
+| Part | Where |
+|---|---|
+| Crop, key colour, chroma key, finalize, validate, cache key, prompt | `backend/vision/sprites.py` (pure functions, 95% coverage) |
+| Muse Image call, other-key retry, SAM concept cutout, content-policy placeholder | `MuseImageGenerator` in `vision/sprites.py` |
+| Cache first, then generate, save, link unit, style anchor | `SpriteService` in `vision/sprites.py`, rows and files through `db/store.py` (`sprites/<uuid>.png` under the data root) |
+| Background job and push to the renderer | `GameController._schedule_sprite`, `sprite` WebSocket message |
+| Class placeholders and enemy art | `backend/smoke/assets.py` (Manual: EHIBE, needs the key, about $0.15) |
+
+HSV distance as built: OpenCV HSV, hue difference with wraparound scaled so 90 OpenCV units equal 255, then Euclidean with the saturation and value differences. Pixels at distance 40 or less become transparent, then the alpha erodes by 1 px. Opaque means alpha 128 or more. Object colours come from a deterministic median cut.
+
+A re-roll that changes the class starts a new sprite job and cancels the older one, and a stale result is dropped. A rename keeps the current sprite (privacy and cost audit, M5), so a later cache lookup under the new name misses and the unit keeps its existing sprite. The sprite subject is Spark's filtered `sprite_subject_en` or a fixed fallback, never the player name. A cache hit costs nothing.
+
 ## Note on keying math
 
 PRD specifies HSV distance 40. The Build Guide sample uses an RGB absolute-sum tolerance of 60 per channel. Implement the PRD rule and test both on the 20 saved outputs before choosing.

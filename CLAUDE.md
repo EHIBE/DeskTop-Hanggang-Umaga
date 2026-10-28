@@ -21,7 +21,8 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 | M2 camera and calibration | Backend built 2026-10-28. Real ruler check Manual: EHIBE |
 | M3 app shell | Built 2026-10-28. Backend spawn on a free port with a fresh token, safeStorage key, token-gated /ws (subprotocol auth), KeySetup, Start, Calibration screens. End-to-end connect verified |
 | M4 summon | Built 2026-10-28. rules/units.py, unit_card schema and filters, Spark detector with repair, SAM segmenter, signatures, tap fallback, re-roll, rename, Summon and UnitCard screens |
-| Tests | 295 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
+| M5 sprites and cost | Built 2026-10-28. Sprite pipeline, Muse Image generator, cache, style anchor, background push, dev credit meter, hard stop turns Demo Safe on. Asset script `backend/smoke/assets.py` waits on the key |
+| Tests | 352 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
 | CI, git hooks | None |
 
 ## Pending queue
@@ -32,7 +33,7 @@ Ordered. Canonical schedule: `docs/delivery/schedule.md`.
 2. Manual: EHIBE. Run the Phase 1 smoke scripts (`docs/rules-notes.md` runbook)
 3. Manual: EHIBE. Look at the window: KeySetup or Start, then Calibration with the real camera (feed at 20 FPS+, 4 corner taps, ruler check)
 4. Manual: EHIBE. Install ffmpeg on PATH before Phase 13
-5. Phase 5: sprite pipeline and cost tracker (F03, F18)
+5. Manual: EHIBE. Run `backend\.venv\Scripts\python -m smoke.assets --date <today>` from `backend` for placeholder and enemy art, then rate sprites (E5)
 6. Phase 6: tracking and re-anchor (F04, F05)
 7. Phase 7 and 8: rules engine, turn loop, HUD, enemies (F06, F07)
 8. Phase 9 and 10: GM narration, safety features (F09, F13, F14, F17, F24)
