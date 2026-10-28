@@ -51,8 +51,8 @@ The Build Guide schedule replaces the PRD timeline (ADR-0109). The date is fixed
 | 4 Summon (F02) | 5 | Spark detect, SAM masks, clamp, caps, tap fallback | 5 objects with masks and cards, card in 8 s or less. Built 2026-10-28 with the offline tap path verified in tests. Live Spark and SAM runs and the 8 s timing are Manual: EHIBE (key, camera) | Make tap-to-select the main path |
 | 5 Sprites (F03) and cost tracker (F18) | 4 | Placeholders and enemies first, pipeline, cache, api_usage | 10 objects get sprites, 8+ look right, every call logged. Pipeline, cache, background job, hard stop and dev meter built 2026-10-28. Asset run, 10 live sprites and the E5 rating are Manual: EHIBE | Pre-generate the 5 demo sprites |
 | 6 Tracking and re-anchor (F04, F05) | 7 | Trackers, EMA, freeze, re-anchor ladder | 6 objects follow, re-anchor 20 of 20. Built and tested offline 2026-10-28. Real-desk follow and 20 of 20 are Manual: EHIBE (camera, key) | Drop look-alike objects from the demo |
-| 7 Rules, loop, HUD (F06) | 6 | Rules engine, state machine, HUD, tests | Tests green, a night runs through every state | None |
-| 8 Core enemies (F07) | 2 | Aswang, Manananggal, stats for the rest, waves | Full 8-turn night with all waves and arrows | None |
+| 7 Rules, loop, HUD (F06) | 6 | Rules engine, state machine, HUD, tests | Tests green, a night runs through every state. Done 2026-10-28 (664 tests, rules 99% coverage, E7 100%) | None |
+| 8 Core enemies (F07) | 2 | Aswang, Manananggal, stats for the rest, waves | Full 8-turn night with all waves and arrows. Done offline 2026-10-28 (test_night_flow.py). On-screen night Manual: EHIBE | None |
 | 9 GM narration (F09) | 3 | System prompt, gm_turn, repair, line bank | Every turn shows a caption within 6 s or a line bank line | Line bank only |
 | 10 Safety (F13, F14, F17, F24) | 5 | Tap controls, autosave, Demo Safe Mode, delete data, Playtest 1 | Whole night by taps, kill and resume at turn 5, Wi-Fi off night completes, no files remain | Fix rule bugs only |
 | 11 Voice (F10) | 4 | Two sessions, audio loop, events, grammar, PTT | 40 of 50 test orders parsed | ENDPOINTING plus tap-to-claim |

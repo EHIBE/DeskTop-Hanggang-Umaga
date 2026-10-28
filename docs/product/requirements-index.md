@@ -34,8 +34,8 @@ Update the Status column when a requirement is built (code merged) and tested (t
 | F03 | Sprite pipeline | Must | 5.25 | 4 | FR-11 to FR-13 | Built (placeholder and enemy art wait on the key) |
 | F04 | Tracker overlay and occlusion freeze | Must | 5.25 | 4 | FR-26, FR-27 | Tested (offline) |
 | F05 | End Turn re-anchor and drift reconcile | Must | 4.50 | 3 | FR-28, FR-29 | Built (End Turn trigger in M7) |
-| F06 | Rules engine, turn loop, HUD, campaign | Must | 4.25 | 6 | FR-05, FR-31 to FR-34, FR-37, FR-40 | Planned |
-| F07 | Aswang, Manananggal, telegraph | Must | 8.50 | 2 | FR-35 | Planned |
+| F06 | Rules engine, turn loop, HUD, campaign | Must | 4.25 | 6 | FR-05, FR-31 to FR-34, FR-37, FR-40 | Tested (HUD run check Manual: EHIBE) |
+| F07 | Aswang, Manananggal, telegraph | Must | 8.50 | 2 | FR-35 | Tested |
 | F08 | Tikbalang, Duwende, Kapre effects | Should | 2.80 | 3 | FR-36 | Planned (Kapre smoke cut) |
 | F09 | GM narration and line bank | Must | 5.67 | 3 | FR-38, FR-39 | Planned |
 | F10 | Voice, grammar, captions, chips, PTT | Must | 4.20 | 4 | FR-17, FR-19, FR-20, FR-22, FR-24 | Planned |
@@ -84,22 +84,22 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | FR-22 | ★ | Order chip before resolve, "hindi" or X cancels | F10 | JS-04 | hud/OrderChips.tsx, voice/grammar.py | test_grammar.py | Planned |
 | FR-23 | | Detect overlapping speakers, "Isa-isa lang!" | F11 | JS-03 | voice/session.py | unit test | Planned |
 | FR-24 | ★ | Push-to-talk (hold Space), mode switch | F10 | JS-10 | voice/session.py, renderer | manual | Planned |
-| FR-25 | ★ | Tap menu for every voice action | F13 | JS-14 | hud/TapMenu.tsx | manual | Planned |
+| FR-25 | ★ | Tap menu for every voice action | F13 | JS-14 | hud/TapMenu.tsx | test_night_flow.py (intent validation). TapMenu.tsx | Built |
 | FR-26 | ★ | Local tracker, sprites follow at 10 Hz+, render 30 FPS+ | F04 | JS-05 | backend/capture/tracker.py, game/night.py, screens/Summon.tsx | test_tracker.py benchmark: 12 KCF trackers 31.9 ms median per update on a synthetic 1200x800 frame. Real-desk check Manual: EHIBE | Tested |
 | FR-27 | ★ | Freeze sprite on tracker loss, re-lock within 1 s | F04 | JS-07 | capture/tracker.py | test_tracker.py, test_tracking_flow.py | Tested |
 | FR-28 | ★ | Re-anchor all objects with one SAM call at End Turn | F05 | JS-05 | vision/sam.py, game/night.py (`reanchor_all`) | test_reanchor.py, test_tracking_flow.py. E2 Manual: EHIBE | Built |
 | FR-29 | ★ | Drift reconcile and identity recovery ladder | F05 | JS-07 | vision/sam.py, vision/signature.py | test_reanchor.py (every ladder step) | Tested |
 | FR-30 | | Lost detection off play area | F22 | JS-05 | n/a | n/a | Cut |
-| FR-31 | ★ | Turn state machine per PRD section 8 | F06 | JS-11 | backend/game/state_machine.py | test_state_machine.py | Planned |
-| FR-32 | ★ | Move rings, green check or red dashed X | F06 | JS-05 | canvas/rings.ts, rules/geometry.py | test_geometry.py | Planned |
-| FR-33 | ★ | Block End Turn on illegal move, show ghost | F06 | JS-05 | game/state_machine.py | test_state_machine.py | Planned |
-| FR-34 | ★ | Deterministic combat resolution | F06 | JS-06 | backend/rules/resolve.py | test_resolve.py (E7) | Planned |
-| FR-35 | ★ | Spawn waves, move enemies, intent arrows | F07 | JS-06 | rules/waves.py, rules/enemies.py, canvas/arrows.ts | test_waves.py, test_enemies.py | Planned |
+| FR-31 | ★ | Turn state machine per PRD section 8 | F06 | JS-11 | backend/game/state_machine.py | test_state_machine.py (100% coverage), test_night_flow.py | Tested |
+| FR-32 | ★ | Move rings, green check or red dashed X | F06 | JS-05 | canvas/rings.ts, rules/geometry.py | test_geometry.py. Rings drawn in canvas/rings.ts | Tested |
+| FR-33 | ★ | Block End Turn on illegal move, show ghost | F06 | JS-05 | game/state_machine.py | test_night_flow.py (illegal move returns to PLAYER_PHASE with endturn.blocked) | Tested |
+| FR-34 | ★ | Deterministic combat resolution | F06 | JS-06 | backend/rules/resolve.py | test_resolve.py, E7 50 boards x 2 identical | Tested |
+| FR-35 | ★ | Spawn waves, move enemies, intent arrows | F07 | JS-06 | rules/waves.py, rules/enemies.py, canvas/arrows.ts | test_waves.py, test_enemies.py. Arrows in canvas/arrows.ts | Tested |
 | FR-36 | | Tikbalang push, Duwende steal, Kapre smoke | F08 | JS-06 | rules/enemies.py, game/night.py | test_enemies.py | Planned (smoke cut) |
-| FR-37 | ★ | Win and lose, sunrise or defeat | F06 | JS-11 | rules/resolve.py, screens/Sunrise.tsx | test_resolve.py | Planned |
+| FR-37 | ★ | Win and lose, sunrise or defeat | F06 | JS-11 | rules/resolve.py, screens/Sunrise.tsx | test_resolve.py, test_night_flow.py. Screens Sunrise.tsx, Defeat.tsx | Tested |
 | FR-38 | ★ | GM narration, strict JSON, captions in 6 s p90 | F09 | JS-03 | backend/gm/narrator.py | test_schemas.py, E4 | Planned |
 | FR-39 | ★ | Local line bank fallback for every moment | F09 | JS-10 | gm/narrator.py, assets/lines.json | unit test | Planned |
-| FR-40 | ★ | Full HUD updates within 1 frame | F06 | JS-06 | hud/*, screens/Night.tsx | manual | Planned |
+| FR-40 | ★ | Full HUD updates within 1 frame | F06 | JS-06 | hud/*, screens/Night.tsx | manual (HUD built, Manual: EHIBE run check) | Built |
 | FR-41 | | Autosave each turn, restore after crash | F14 | JS-10 | game/night.py, db/store.py | test_state_machine.py | Planned |
 | FR-42 | | Recognize returning objects | F16 | JS-09 | vision/signature.py | n/a | Could |
 | FR-43 | | "Kagabi..." recap next night | F16 | JS-09 | gm/narrator.py | n/a | Could |
@@ -124,7 +124,7 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | NFR-01 | Latency | Summon to card with placeholder 8 s p90 | E6 | Planned |
 | NFR-02 | Latency | Real sprite 30 s p90, never blocks | E6. Never blocks: background task (test_server.py) | Built |
 | NFR-03 | Latency | End Turn to first animation 4 s p90 | E6 | Planned |
-| NFR-04 | Latency | Rules resolution 50 ms for 12 units and 8 enemies | pytest benchmark | Planned |
+| NFR-04 | Latency | Rules resolution 50 ms for 12 units and 8 enemies | test_resolve.py perf: 1.1 ms median for 12 units and 8 enemies | Tested |
 | NFR-05 | Latency | Speech end to chip, grammar path 3 s p90 | E6 | Planned |
 | NFR-06 | Latency | Speech end to chip, Spark path 6 s p90 | n/a (F12 cut) | Cut |
 | NFR-07 | Latency | Partial caption 1.5 s p90 | E6 | Planned |
@@ -151,4 +151,4 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | NFR-28 | Accessibility | Tap path for every voice action | manual | Planned |
 | NFR-29 | Portability | Windows 10 and 11 first | manual | Planned |
 | NFR-30 | Content | Profanity filter, content policy fallback | unit test (test_schemas.py, test_summon.py) | Tested (filter). Content policy fallback in M5 |
-| NFR-31 | Maintainability | Rules coverage 90%+, fixture test per model integration | coverage | Planned |
+| NFR-31 | Maintainability | Rules coverage 90%+, fixture test per model integration | coverage 99% on rules (2026-10-28). Model fixture tests wait on real fixtures | Built |

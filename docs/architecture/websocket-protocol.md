@@ -39,7 +39,7 @@ Every message is a JSON object with `type` plus fields. Proposed shared fields: 
 | `state` | Established (M3 and M4 fields, plus `units`, `begin_block_key`, `awaiting_tap`) | `phase` (START, CALIBRATE, SUMMON so far), `campaign`, `camera`, `calibrated`, `calibration_preview`, `play_w_cm`, `play_h_cm`, `demo_safe`, `has_api_key`. Night fields (`turn`, `night`, `kubo`, `units`, `enemies`, `flags`) arrive in M7 | Full snapshot on connect and after every handled message |
 | `devices` | Established | `cameras` (index, width, height), `microphones` (index, name) | Device picker (FR-01) |
 | `campaigns` | Established | `campaigns` (id, name, difficulty, nights_survived, created_at), newest first, 20 per page | Continue list (FR-05) |
-| `events` | Proposed | `events` (ordered list) | Resolution events for animations |
+| `events` | Established | `turn`, `events` (type, src, dst, dmg, edge, pos) | Resolution events, then the next turn's spawn and intent events, as two messages |
 | `caption` | Proposed | `turn_id`, `text`, `is_final`, `speaker` | Live transcript (partials replace) |
 | `narration` | Proposed | `narration_tl`, `narration_en`, `mood`, `callouts`, `hint_tl`, `source` (spark or line_bank) | GM caption |
 | `chip` | Proposed | `chip_id`, `unit_id`, `action`, `target_id`, `speaker`, `status` | Order chip add, update, remove |
@@ -63,12 +63,15 @@ Every message is a JSON object with `type` plus fields. Proposed shared fields: 
 | `summon.tap` | Established | `point` (warped pixels) | SUMMON while `awaiting_tap` |
 | `unit.reroll` | Established | `unit_id` (UUID) | SUMMON, one per unit |
 | `unit.rename` | Established | `unit_id`, `name` (1 to 40, profanity filtered) | SUMMON |
-| `night.begin` | Proposed | none | SUMMON with valid roster |
-| `claim.tap` | Proposed | `player_name`, `unit_ids` | VOICE_CLAIM |
+| `night.begin` | Established | none | SUMMON with a valid roster |
+| `claim.tap` | Established | `player_name` (1 to 24, filtered), `unit_ids` (game ids, max 12) | VOICE_CLAIM, max 4 players |
+| `claim.done` | Established | none (Done and Skip) | VOICE_CLAIM |
+| `night.next` | Established | none | SUNRISE or DEFEAT, starts a fresh summon |
+| `night.quit` | Established | none | SUNRISE or DEFEAT, back to START |
 | `consent` | Proposed | `player_id`, `agree` | Before Start Night |
-| `intent.tap` | Proposed | `unit_id`, `action`, `target_id` | PLAYER_PHASE |
-| `chip.cancel` | Proposed | `chip_id` | PLAYER_PHASE |
-| `end_turn` | Proposed | none | PLAYER_PHASE |
+| `intent.tap` | Established | `unit_id` (game id), `action` (attack, power, heal), `target_id` (game id or null). Validated by `rules.resolve.intent_error` | PLAYER_PHASE |
+| `chip.cancel` | Established | `chip_id` | PLAYER_PHASE |
+| `end_turn` | Established | none. Re-anchor, validate, resolve, autosave | PLAYER_PHASE |
 | `uncertain.tap` | Proposed | `unit_id`, `point` | VALIDATE or PLAYER_PHASE |
 | `ptt` | Proposed | `down` (bool) | PLAYER_PHASE |
 | `pause` / `resume` | Proposed | none | Any night state |

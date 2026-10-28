@@ -37,6 +37,8 @@ All thresholds are starting values. Game constants live once in `backend/rules` 
 | Max objects | 12 | FR-16 |
 | Kubo moved warning | 2 cm | Edge case 19 |
 
+Rules constants as built (2026-10-28) live in `backend/rules`: `PUSH_CM` 8, `HAMPAS_RADIUS_CM` 6, `TUSOK_BEHIND_CM` 5, `KALASAG_SHIELD` 2, `BANTAY_SHIELD` 3, `HEAL_AMOUNT` 2, `ALLY_POWER_RADIUS_CM` 10, `REFORM_TURNS` 2, `REFORM_OFFSET_CM` 5, `SPAWN_OFFSET_CM` 5, `ENEMY_RADIUS_CM` 2, `DISTANCE_TOLERANCE_CM` 1, `ISOLATION_RADIUS_CM` 10, `AURA_RADIUS_CM` 8, `KUBO_MOVED_WARN_CM` 2, `TURNS_PER_NIGHT` 8.
+
 ## Vision and tracking constants
 
 | Constant | Start value | Source |

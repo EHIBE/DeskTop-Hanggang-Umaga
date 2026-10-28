@@ -23,7 +23,8 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 | M4 summon | Built 2026-10-28. rules/units.py, unit_card schema and filters, Spark detector with repair, SAM segmenter, signatures, tap fallback, re-roll, rename, Summon and UnitCard screens |
 | M5 sprites and cost | Built 2026-10-28. Sprite pipeline, Muse Image generator, cache, style anchor, background push, dev credit meter, hard stop turns Demo Safe on. Asset script `backend/smoke/assets.py` waits on the key |
 | M6 tracking and re-anchor | Built 2026-10-28. KCF TrackerSet (31.9 ms for 12 objects), freeze on loss, between-turn recovery, re-anchor ladder, live poses on the board |
-| Tests | 390 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
+| M7 and M8 rules, turn loop, enemies | Built 2026-10-28. Rules engine (99% coverage, E7 100%, 1.1 ms resolve), 15-state machine, night session with claim, tap intents, End Turn re-anchor, autosave, Night HUD, Sunrise, Defeat |
+| Tests | 669 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
 | CI, git hooks | None |
 
 ## Pending queue
@@ -35,10 +36,9 @@ Ordered. Canonical schedule: `docs/delivery/schedule.md`.
 3. Manual: EHIBE. Look at the window: KeySetup or Start, then Calibration with the real camera (feed at 20 FPS+, 4 corner taps, ruler check)
 4. Manual: EHIBE. Install ffmpeg on PATH before Phase 13
 5. Manual: EHIBE. Run `backend\.venv\Scripts\python -m smoke.assets --date <today>` from `backend` for placeholder and enemy art, then rate sprites (E5)
-6. Phase 7 and 8: rules engine, turn loop, HUD, enemies (F06, F07)
-7. Phase 9 and 10: GM narration, safety features (F09, F13, F14, F17, F24)
-8. Phase 11 and 12: voice, voice claim, physical enemies (F10, F11, F08)
-9. Phase 13 to 15: recording, evals, freeze, replay, video, submission
+6. Phase 9 and 10: GM narration, safety features (F09, F13, F14, F17, F24)
+7. Phase 11 and 12: voice, voice claim, physical enemies (F10, F11, F08)
+8. Phase 13 to 15: recording, evals, freeze, replay, video, submission
 
 ## Constraints
 
