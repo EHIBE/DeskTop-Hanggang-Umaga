@@ -17,7 +17,9 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 | Project agents and skills | Added in `.claude/agents/` and `.claude/skills/` |
 | M0 Foundations | Done 2026-10-28. Tailwind wired, Electron hardened, `config.py`, `db/schema.sql`, `db/store.py`, `meta_client.py` (retries, breaker, Decimal cost meter) |
 | Python env | `backend/.venv` on Python 3.13.15, 48 pins in `requirements.txt` (ADR-0101) |
-| Tests | 67 passing (config, store, meta_client). ruff and mypy --strict clean |
+| M1 smoke scripts | Built 2026-10-28 (`backend/smoke`). Live runs Manual: EHIBE (key, inputs) |
+| M2 camera and calibration | Backend built 2026-10-28. Real ruler check Manual: EHIBE |
+| Tests | 122 passing. ruff and mypy --strict clean |
 | CI, git hooks | None |
 
 ## Pending queue
@@ -25,17 +27,16 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 Ordered. Canonical schedule: `docs/delivery/schedule.md`.
 
 1. Manual: EHIBE. Official Rules answers, credits, `MODEL_API_KEY` in `backend/.env`, Contributor mode off (`docs/rules-notes.md`)
-2. Phase 1: API smoke tests and fixtures (needs the key)
-3. Manual: EHIBE. Install ffmpeg on PATH before Phase 13
-6. Phase 2: camera and calibration (F01)
-7. Phase 3: app shell, backend spawn, frame stream
-8. Phase 4: summon pipeline (F02)
-9. Phase 5: sprite pipeline and cost tracker (F03, F18)
-10. Phase 6: tracking and re-anchor (F04, F05)
-11. Phase 7 and 8: rules engine, turn loop, HUD, enemies (F06, F07)
-12. Phase 9 and 10: GM narration, safety features (F09, F13, F14, F17, F24)
-13. Phase 11 and 12: voice, voice claim, physical enemies (F10, F11, F08)
-14. Phase 13 to 15: recording, evals, freeze, replay, video, submission
+2. Manual: EHIBE. Run the Phase 1 smoke scripts (`docs/rules-notes.md` runbook)
+3. Phase 3 (M3): app shell, backend spawn with free port (B11), keystore, /ws, Board canvas
+4. Manual: EHIBE. Install ffmpeg on PATH before Phase 13
+5. Phase 4: summon pipeline (F02)
+6. Phase 5: sprite pipeline and cost tracker (F03, F18)
+7. Phase 6: tracking and re-anchor (F04, F05)
+8. Phase 7 and 8: rules engine, turn loop, HUD, enemies (F06, F07)
+9. Phase 9 and 10: GM narration, safety features (F09, F13, F14, F17, F24)
+10. Phase 11 and 12: voice, voice claim, physical enemies (F10, F11, F08)
+11. Phase 13 to 15: recording, evals, freeze, replay, video, submission
 
 ## Constraints
 

@@ -32,7 +32,7 @@ An A4 sheet gives a top-down desk plane. Local trackers move sprites between tur
 3. Map to a plane with A4 = 21.0 x 29.7 cm centered at (30, 20) cm, scaled by px per cm. `cv2.getPerspectiveTransform`.
 4. Warp with `cv2.warpPerspective` to play area times px per cm.
 5. Ruler check: a 10 cm on-screen line matches a real ruler within 0.5 cm.
-6. Save the empty-desk baseline. Compare with `cv2.absdiff` on the desk border each turn. A shift over 2 cm pauses the game (`cam.moved`).
+6. Save the empty-desk baseline. Each turn, measure the shift of the forest-edge border against the baseline with `cv2.phaseCorrelate` (built 2026-10-28 in `capture/calibration.py`, chosen over `absdiff` because it returns a distance in cm). A shift over 2 cm pauses the game (`cam.moved`). Brightness change over 30% sets `calib.dark` when darker.
 
 ## Between turns (FR-26, FR-27)
 

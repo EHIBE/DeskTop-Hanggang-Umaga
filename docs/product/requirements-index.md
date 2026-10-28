@@ -60,10 +60,10 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 
 | ID | ★ | Requirement (short) | F | JS | Owning module | Test | Status |
 |---|---|---|---|---|---|---|---|
-| FR-01 | ★ | List cameras and mics, open camera at 1280x720+ | F01 | JS-01 | backend/capture/camera.py, screens/Calibration.tsx | manual | Planned |
-| FR-02 | ★ | A4 calibration, auto-detect plus 4-tap, homography, px per cm | F01 | JS-01 | backend/capture/calibration.py | ruler check | Planned |
+| FR-01 | ★ | List cameras and mics, open camera at 1280x720+ | F01 | JS-01 | backend/capture/camera.py, screens/Calibration.tsx | test_camera.py (cameras). Mic list and preview in M3 | Built (cameras) |
+| FR-02 | ★ | A4 calibration, auto-detect plus 4-tap, homography, px per cm | F01 | JS-01 | backend/capture/calibration.py | test_calibration.py (synthetic ruler within 0.5 cm). Real ruler check Manual: EHIBE | Tested (backend) |
 | FR-03 | ★ | Play area 60 x 40 cm with 5 cm forest edge | F01 | JS-01 | calibration.py, canvas/Board.tsx | manual | Planned |
-| FR-04 | | Empty-desk baseline, camera-moved detection | F01 | JS-10 | calibration.py | manual | Planned |
+| FR-04 | | Empty-desk baseline, camera-moved detection | F01 | JS-10 | calibration.py, db/store.py | test_calibration.py, test_store.py | Tested (backend) |
 | FR-05 | | New or continue campaign, difficulty | F06 | JS-09, JS-11 | backend/db/store.py, screens/Start.tsx | test_state_machine.py | Planned |
 | FR-06 | ★ | Summon one object by voice or typed name, card in 8 s p90 | F02 | JS-02 | backend/vision/summon.py | E1, fixtures | Planned |
 | FR-07 | ★ | Spark detects new object box (0 to 1000 grid, clamped) | F02 | JS-02 | vision/summon.py | E1 | Planned |
