@@ -31,6 +31,8 @@ The scaffold sets sandbox: false, exposes the full electronAPI and an empty api 
 
 Set sandbox: true, contextIsolation: true, nodeIntegration: false. Expose only a typed object with port and token. Allowlist https URLs for shell.openExternal. Remove the ping IPC test handler. Add connect-src for the backend to the CSP.
 
+Amendment 2026-10-28 (M3): KeySetup needs to save the key through main, so the preload also exposes `getKeyStatus()` and `saveKey(key)`. Both are sender-checked in main. The key passes through the renderer only while the player pastes it.
+
 ## Consequences
 
 - Closes B3 once accepted and done

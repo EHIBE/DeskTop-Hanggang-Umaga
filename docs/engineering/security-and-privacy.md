@@ -60,18 +60,18 @@ All calls in Standard mode, never Contributor mode.
 - [x] CSP keeps `default-src 'self'`, adds `connect-src` for the backend only, plus `object-src`, `base-uri`, `form-action` and `frame-src` set to none
 - [x] Remove the scaffold `ping` handler
 - [x] Permission requests and checks denied by default. Navigation, redirects and webviews blocked
-- [ ] Free port at spawn instead of fixed 8765 (B11, M3)
+- [x] Free port and fresh token at every backend start (B11 closed in M3)
 - [ ] Electron fuses (B12, needs approval)
 - [x] Disable auto-update publish (example.com placeholder)
 
 ## Local server checklist
 
-- [ ] uvicorn `--host 127.0.0.1`
-- [ ] Token on every HTTP route and WS connect, `hmac.compare_digest`, close 1008 on mismatch
-- [ ] WS Origin check
-- [ ] No CORS middleware, or app origin only
-- [ ] FastAPI docs, redoc and openapi URLs off outside dev
-- [ ] Pydantic `extra="forbid"` on every message
+- [x] uvicorn `--host 127.0.0.1` and `--no-access-log`
+- [x] Token on every HTTP route (`X-Desktop-Token`) and WS connect (subprotocol), `hmac.compare_digest`, close 1008 on mismatch
+- [x] WS Origin check against `DESKTOP_ALLOWED_ORIGINS`
+- [x] No CORS middleware
+- [x] FastAPI docs, redoc and openapi URLs off
+- [x] Pydantic `extra="forbid"` and strict types on every message, 16 KiB cap
 - [ ] State-machine check on every action
 - [ ] Minimal error detail to the renderer
 

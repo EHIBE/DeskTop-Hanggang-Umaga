@@ -19,7 +19,8 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 | Python env | `backend/.venv` on Python 3.13.15, 48 pins in `requirements.txt` (ADR-0101) |
 | M1 smoke scripts | Built 2026-10-28 (`backend/smoke`). Live runs Manual: EHIBE (key, inputs) |
 | M2 camera and calibration | Backend built 2026-10-28. Real ruler check Manual: EHIBE |
-| Tests | 122 passing. ruff and mypy --strict clean |
+| M3 app shell | Built 2026-10-28. Backend spawn on a free port with a fresh token, safeStorage key, token-gated /ws (subprotocol auth), KeySetup, Start, Calibration screens. End-to-end connect verified |
+| Tests | 152 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
 | CI, git hooks | None |
 
 ## Pending queue
@@ -28,7 +29,7 @@ Ordered. Canonical schedule: `docs/delivery/schedule.md`.
 
 1. Manual: EHIBE. Official Rules answers, credits, `MODEL_API_KEY` in `backend/.env`, Contributor mode off (`docs/rules-notes.md`)
 2. Manual: EHIBE. Run the Phase 1 smoke scripts (`docs/rules-notes.md` runbook)
-3. Phase 3 (M3): app shell, backend spawn with free port (B11), keystore, /ws, Board canvas
+3. Manual: EHIBE. Look at the window: KeySetup or Start, then Calibration with the real camera (feed at 20 FPS+, 4 corner taps, ruler check)
 4. Manual: EHIBE. Install ffmpeg on PATH before Phase 13
 5. Phase 4: summon pipeline (F02)
 6. Phase 5: sprite pipeline and cost tracker (F03, F18)
@@ -60,11 +61,10 @@ Each has a Proposed ADR in `docs/decisions/`.
 
 | ID | Issue | ADR |
 |---|---|---|
-B1 to B10 resolved 2026-10-28 (ADR-0101 to ADR-0110 accepted, B1, B2, B3, B6 code paths, B7 and B8 fixed in M0).
+B11 (fixed port) closed in M3. B1 to B10 resolved 2026-10-28 (ADR-0101 to ADR-0110 accepted, B1, B2, B3, B6 code paths, B7 and B8 fixed in M0).
 
 | ID | Open issue | Owner |
 |---|---|---|
-| B11 | Backend port fixed at 8765. A local squatter could receive the token. Pick a free port at spawn | M3 |
 | B12 | No Electron fuses (RunAsNode, ASAR integrity). Needs `@electron/fuses`, a new dependency | Approval: EHIBE |
 | B13 | `@electron-toolkit/preload` unused since ADR-0103. Removal is a dependency change | Approval: EHIBE |
 | B14 | Python 3.11 not installed, venv uses 3.13. ffmpeg not on PATH | ADR-0101, Manual: EHIBE |

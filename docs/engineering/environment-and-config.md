@@ -29,7 +29,8 @@ Secrets and per-launch values arrive as environment variables from Electron main
 | `MODEL_API_KEY` | Electron main from safeStorage (dev: `backend/.env`) | Meta API key | Yes, empty |
 | `DESKTOP_TOKEN` | Electron main, random per launch | Local auth token. Backend refuses to start without one of 32 or more characters (ADR-0012) | Yes, empty |
 | `DESKTOP_DATA_DIR` | Electron main (`app.getPath('userData')`) | Runtime data root. Unset means `%APPDATA%\DeskTop` | Yes, empty |
-| `DESKTOP_PORT` | Electron main | Backend port, default 8765. Blank means default | Yes, 8765 |
+| `DESKTOP_PORT` | Electron main (free loopback port per start) | Backend port, default 8765 for manual runs. Blank means default | Yes, 8765 |
+| `DESKTOP_ALLOWED_ORIGINS` | Electron main | Comma list of WebSocket origins the backend accepts | No (set by main) |
 
 All four names are Established and listed in `backend/.env.example` with placeholders.
 

@@ -60,11 +60,11 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 
 | ID | ★ | Requirement (short) | F | JS | Owning module | Test | Status |
 |---|---|---|---|---|---|---|---|
-| FR-01 | ★ | List cameras and mics, open camera at 1280x720+ | F01 | JS-01 | backend/capture/camera.py, screens/Calibration.tsx | test_camera.py (cameras). Mic list and preview in M3 | Built (cameras) |
+| FR-01 | ★ | List cameras and mics, open camera at 1280x720+ | F01 | JS-01 | backend/capture/camera.py, screens/Calibration.tsx | test_camera.py, test_night.py, test_server.py. Live 3 s preview check Manual: EHIBE | Tested |
 | FR-02 | ★ | A4 calibration, auto-detect plus 4-tap, homography, px per cm | F01 | JS-01 | backend/capture/calibration.py | test_calibration.py (synthetic ruler within 0.5 cm). Real ruler check Manual: EHIBE | Tested (backend) |
-| FR-03 | ★ | Play area 60 x 40 cm with 5 cm forest edge | F01 | JS-01 | calibration.py, canvas/Board.tsx | manual | Planned |
+| FR-03 | ★ | Play area 60 x 40 cm with 5 cm forest edge | F01 | JS-01 | calibration.py, screens/Calibration.tsx | test_calibration.py, run check pending EHIBE | Built |
 | FR-04 | | Empty-desk baseline, camera-moved detection | F01 | JS-10 | calibration.py, db/store.py | test_calibration.py, test_store.py | Tested (backend) |
-| FR-05 | | New or continue campaign, difficulty | F06 | JS-09, JS-11 | backend/db/store.py, screens/Start.tsx | test_state_machine.py | Planned |
+| FR-05 | | New or continue campaign, difficulty | F06 | JS-09, JS-11 | backend/db/store.py, game/night.py, screens/Start.tsx | test_server.py, test_night.py | Tested |
 | FR-06 | ★ | Summon one object by voice or typed name, card in 8 s p90 | F02 | JS-02 | backend/vision/summon.py | E1, fixtures | Planned |
 | FR-07 | ★ | Spark detects new object box (0 to 1000 grid, clamped) | F02 | JS-02 | vision/summon.py | E1 | Planned |
 | FR-08 | ★ | One SAM image call with box prompts, IDs 1 to 16 | F02 | JS-02 | backend/vision/sam.py | fixture test | Planned |
@@ -144,8 +144,8 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | NFR-21 | Privacy | Local-first data boundary | security review | Planned |
 | NFR-22 | Privacy | Proxy expires 86,400 s, deleted after processing, delete campaign | unit test | Planned |
 | NFR-23 | Privacy | Standard mode only | config review | Planned |
-| NFR-24 | Security | Key in safeStorage, backend only | security review | Planned |
-| NFR-25 | Security | 127.0.0.1 only, per-launch token on every request | unit test | Planned |
+| NFR-24 | Security | Key in safeStorage, backend only | security review (M3) | Built |
+| NFR-25 | Security | 127.0.0.1 only, per-launch token on every request | unit test (test_server.py) | Tested |
 | NFR-26 | Accessibility | Pixel font 16 px min at 1080p, captions always on | manual | Planned |
 | NFR-27 | Accessibility | Shape plus color on rings and arrows | manual | Planned |
 | NFR-28 | Accessibility | Tap path for every voice action | manual | Planned |

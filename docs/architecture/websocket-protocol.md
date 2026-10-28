@@ -17,12 +17,14 @@ The renderer and backend talk over one WebSocket at `ws://127.0.0.1:8765/ws`. On
 
 | Fact | Value |
 |---|---|
-| URL | `ws://127.0.0.1:8765/ws?token=<DESKTOP_TOKEN>` |
-| Auth | Token compared with `hmac.compare_digest`. Wrong or missing: close 1008 |
-| Origin | Checked against the app origin |
+| URL | `ws://127.0.0.1:<port>/ws`. Port is free-picked by Electron main on each backend start |
+| Auth | Token sent as WebSocket subprotocols `["desktop", <DESKTOP_TOKEN>]` and compared with `hmac.compare_digest`. The server accepts with subprotocol `desktop`. Wrong or missing: close 1008 (HTTP 403 at handshake). The token is never in the URL, because uvicorn logs URLs |
+| Origin | Must be in `DESKTOP_ALLOWED_ORIGINS` (dev server origin, or `file://` and `null` in a packaged build) |
+| HTTP auth | `X-Desktop-Token` header on every route, 401 when missing or wrong |
 | Encoding | JSON text frames with a `type` field |
 | Frame rate | About 25 per second |
-| Established | `frame` |
+| Established | Server: `state`, `devices`, `campaigns`, `frame`, `notice`. Renderer: `campaign.list`, `campaign.start`, `devices.list`, `camera.select`, `calibrate.corners`, `calibrate.done`, `calibrate.restart`, `demo_safe` (2026-10-28). Types in `app/src/renderer/src/lib/types.ts`, Pydantic models in `backend/server.py` |
+| Size limit | 16 KiB per renderer message. Larger or invalid messages get `notice` `cmd.unknown` |
 | HTTP | `GET /health` returns `{"ok": true}` |
 
 ## Envelope
@@ -33,23 +35,30 @@ Every message is a JSON object with `type` plus fields. Proposed shared fields: 
 
 | Type | Status | Fields | Purpose |
 |---|---|---|---|
-| `frame` | Established | `jpg` (base64 JPEG, 960 px wide, quality 70), `poses` | Desk feed and sprite positions |
-| `state` | Proposed | `phase`, `turn`, `night`, `kubo`, `units`, `enemies`, `flags`, `demo_safe` | Full game snapshot on connect and each phase change |
+| `frame` | Established | `view` (raw or warped), `width` and `height` (source pixels, the JPEG is downscaled to 960 px wide, quality 70), `jpg`, `poses` | Desk feed and sprite positions |
+| `state` | Established (M3 fields) | `phase` (START, CALIBRATE, SUMMON so far), `campaign`, `camera`, `calibrated`, `calibration_preview`, `play_w_cm`, `play_h_cm`, `demo_safe`, `has_api_key`. Night fields (`turn`, `night`, `kubo`, `units`, `enemies`, `flags`) arrive in M7 | Full snapshot on connect and after every handled message |
+| `devices` | Established | `cameras` (index, width, height), `microphones` (index, name) | Device picker (FR-01) |
+| `campaigns` | Established | `campaigns` (id, name, difficulty, nights_survived, created_at), newest first, 20 per page | Continue list (FR-05) |
 | `events` | Proposed | `events` (ordered list) | Resolution events for animations |
 | `caption` | Proposed | `turn_id`, `text`, `is_final`, `speaker` | Live transcript (partials replace) |
 | `narration` | Proposed | `narration_tl`, `narration_en`, `mood`, `callouts`, `hint_tl`, `source` (spark or line_bank) | GM caption |
 | `chip` | Proposed | `chip_id`, `unit_id`, `action`, `target_id`, `speaker`, `status` | Order chip add, update, remove |
 | `card` | Proposed | `unit` (card fields), `sprite_url` or placeholder class | New unit card |
 | `sprite` | Proposed | `unit_id`, `sprite_url` | Swap placeholder for real sprite |
-| `notice` | Proposed | `copy_key`, `params` | Banner or prompt by copy key (never raw text) |
+| `notice` | Established | `copy_key`, `params` | Banner or prompt by copy key (never raw text) |
 | `cost` | Proposed, dev only | `spent_usd`, `warn`, `stopped` | Credit meter |
 
 ## Renderer to server
 
 | Type | Status | Fields | Valid in |
 |---|---|---|---|
-| `calibrate.corners` | Proposed | `corners` (4 points), `play_w_cm`, `play_h_cm` | CALIBRATE |
-| `campaign.start` | Proposed | `campaign_id` or `new` with `name`, `difficulty` | Start |
+| `calibrate.corners` | Established | `corners` (4 points TL, TR, BR, BL in raw camera pixels), `play_w_cm`, `play_h_cm` (30 to 120) | CALIBRATE with a camera open |
+| `calibrate.done` | Established | none. Saves the empty-desk baseline and the calibration row | CALIBRATE with corners set |
+| `calibrate.restart` | Established | none | Any phase with a campaign |
+| `campaign.start` | Established | `campaign_id` (UUID) or `new` with `name` (1 to 40), `difficulty` | Start |
+| `campaign.list` | Established | none | Any |
+| `devices.list` | Established | none | Any |
+| `camera.select` | Established | `index` (0 to 5). On Continue, compares the stored baseline and skips calibration when the camera has not moved | Any phase with a campaign |
 | `summon.name` | Proposed | `name` (typed) | SUMMON |
 | `summon.tap` | Proposed | `point` | SUMMON (unclear object) |
 | `night.begin` | Proposed | none | SUMMON with valid roster |
@@ -61,7 +70,7 @@ Every message is a JSON object with `type` plus fields. Proposed shared fields: 
 | `uncertain.tap` | Proposed | `unit_id`, `point` | VALIDATE or PLAYER_PHASE |
 | `ptt` | Proposed | `down` (bool) | PLAYER_PHASE |
 | `pause` / `resume` | Proposed | none | Any night state |
-| `demo_safe` | Proposed | `on` (bool) | Start |
+| `demo_safe` | Established | `on` (bool). Persisted in `settings` | Any |
 | `replay.request` | Proposed | none | SUNRISE with consent |
 | `campaign.delete` | Proposed | `campaign_id` | Campaign menu |
 
