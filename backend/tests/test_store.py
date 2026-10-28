@@ -11,12 +11,14 @@ from db.store import (
     SCHEMA_VERSION,
     ApiUsageRecord,
     CardFields,
+    EnemySave,
     NotFoundError,
     SchemaVersionError,
     SignatureFields,
     Store,
     StoreError,
     UnitPlacement,
+    UnitSave,
     UnsafePathError,
 )
 from rules.units import Difficulty, MoveClass, PowerId, RangeClass, UnitClass
@@ -462,3 +464,46 @@ def test_players_and_owners(store: Store) -> None:
         store.set_unit_owner("missing", None)
     with pytest.raises(sqlite3.IntegrityError):
         store.find_or_add_player(campaign.id, "Bea", "yellow")
+
+
+def test_autosave_is_one_transaction(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    night = store.start_or_resume_night(campaign.id)
+    unit = store.add_unit(night, card_fields(), SIGNATURE, UnitPlacement(1, 30.0, 20.0))
+    enemy = EnemySave(
+        "e_aswang_1",
+        "aswang",
+        None,
+        3,
+        30.0,
+        2.5,
+        1,
+        {"target_id": "u_kubo", "dmg": 2},
+        (),
+    )
+    store.autosave(
+        night.id,
+        1,
+        [UnitSave(unit.unit_id, 7, 31.0, 21.0, 1, ())],
+        [enemy],
+        None,
+        [(1, "CHECK_END", "attack", {"dmg": 2}, 50)],
+    )
+    saved = store.night_units(night.id)[0]
+    assert (saved.hp_current, saved.x_cm) == (7, 31.0)
+    assert store.turn_log_count(night.id, "attack") == 1
+    bad_enemy = EnemySave("e_x_1", "dragon", None, 3, 0.0, 0.0, 1, None, ())
+    with pytest.raises(sqlite3.IntegrityError):
+        store.autosave(
+            night.id,
+            2,
+            [UnitSave(unit.unit_id, 1, 0.0, 0.0, 0, ())],
+            [bad_enemy],
+            None,
+            [],
+        )
+    after = store.night_units(night.id)[0]
+    assert after.hp_current == 7
+    assert store.turn_log_count(night.id, "attack") == 1
+    store.autosave(night.id, 8, [], [], "win", [])
+    assert store.start_or_resume_night(campaign.id).number == 2

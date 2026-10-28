@@ -142,6 +142,29 @@ class SpriteRecord:
     source_response_id: str | None
 
 
+@dataclass(frozen=True)
+class UnitSave:
+    unit_id: str
+    hp_current: int
+    x_cm: float
+    y_cm: float
+    cooldown: int
+    status: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class EnemySave:
+    id: str
+    type: str
+    part: str | None
+    hp: int
+    x_cm: float
+    y_cm: float
+    spawn_turn: int
+    intent: dict[str, object] | None
+    status: tuple[str, ...]
+
+
 def utc_now() -> datetime:
     return datetime.now(UTC)
 
@@ -578,6 +601,79 @@ class Store:
                 (night_id,),
             ).fetchall()
         return {str(row["id"]): str(row["display_name"]) for row in rows}
+
+    def autosave(
+        self,
+        night_id: str,
+        turns_completed: int,
+        units: Sequence[UnitSave],
+        enemies: Sequence[EnemySave],
+        result: str | None,
+        events: Sequence[tuple[int, str, str, dict[str, object], int]],
+    ) -> None:
+        with self.transaction() as conn:
+            conn.executemany(
+                "UPDATE night_unit SET hp_current = ?, x_cm = ?, y_cm = ?, cooldown = ?, "
+                "status_json = ? WHERE night_id = ? AND unit_id = ?",
+                [
+                    (
+                        u.hp_current,
+                        u.x_cm,
+                        u.y_cm,
+                        u.cooldown,
+                        json.dumps(list(u.status)),
+                        night_id,
+                        u.unit_id,
+                    )
+                    for u in units
+                ],
+            )
+            conn.execute("DELETE FROM enemy WHERE night_id = ?", (night_id,))
+            conn.executemany(
+                "INSERT INTO enemy (id, night_id, type, part, hp, x_cm, y_cm, spawn_turn, "
+                "status_json, intent_json, alive) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [
+                    (
+                        f"{night_id}:{e.id}",
+                        night_id,
+                        e.type,
+                        e.part,
+                        max(0, e.hp),
+                        e.x_cm,
+                        e.y_cm,
+                        e.spawn_turn,
+                        json.dumps(list(e.status)),
+                        None if e.intent is None else json.dumps(e.intent),
+                        int(e.hp > 0),
+                    )
+                    for e in enemies
+                ],
+            )
+            conn.executemany(
+                "INSERT INTO turn_log (night_id, turn, phase, event_type, payload_json, t_ms, "
+                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [
+                    (
+                        night_id,
+                        turn,
+                        phase,
+                        event_type,
+                        json.dumps(payload),
+                        t_ms,
+                        self._now_iso(),
+                    )
+                    for turn, phase, event_type, payload, t_ms in events
+                ],
+            )
+            conn.execute(
+                "UPDATE night SET turns_completed = ?, result = ?, ended_at = ? WHERE id = ?",
+                (
+                    turns_completed,
+                    result,
+                    None if result is None else self._now_iso(),
+                    night_id,
+                ),
+            )
 
     def log_turn(
         self,
