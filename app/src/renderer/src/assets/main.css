@@ -150,3 +150,24 @@ canvas {
     background: var(--color-gabi-ember);
   }
 }
+
+.kubo-hit {
+  animation: kubo-hit 600ms steps(1) 1;
+}
+
+@keyframes kubo-hit {
+  0% {
+    border-color: var(--color-gabi-sindak);
+    background: var(--color-gabi-sindak);
+  }
+  50% {
+    border-color: var(--color-gabi-ink);
+    background: var(--color-gabi-ink);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kubo-hit {
+    animation: none;
+  }
+}

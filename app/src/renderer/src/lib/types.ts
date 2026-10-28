@@ -1,6 +1,108 @@
 export type Difficulty = 'madali' | 'normal' | 'mahirap'
 
-export type AppPhase = 'START' | 'CALIBRATE' | 'SUMMON'
+export type AppPhase =
+  | 'START'
+  | 'CALIBRATE'
+  | 'SUMMON'
+  | 'VOICE_CLAIM'
+  | 'SPAWN_TELEGRAPH'
+  | 'PLAYER_PHASE'
+  | 'END_TURN_SNAPSHOT'
+  | 'VALIDATE'
+  | 'RESOLVE_PLAYER'
+  | 'RESOLVE_ENEMY'
+  | 'PHYSICAL_EFFECTS'
+  | 'CHECK_END'
+  | 'SUNRISE'
+  | 'DEFEAT'
+  | 'PAUSED'
+
+export type EnemyType = 'aswang' | 'tikbalang' | 'kapre' | 'manananggal' | 'duwende'
+
+export type IntentAction = 'attack' | 'power' | 'heal'
+
+export type EventType =
+  | 'attack'
+  | 'dodge'
+  | 'spawn'
+  | 'intent'
+  | 'heal'
+  | 'power'
+  | 'shield'
+  | 'down'
+  | 'push'
+  | 'steal'
+  | 'return'
+  | 'escape'
+  | 'split'
+  | 'reform'
+  | 'kubo_hit'
+  | 'defeat_enemy'
+  | 'win'
+  | 'lose'
+
+export type GameEvent = Readonly<{
+  type: EventType
+  src: string | null
+  dst: string | null
+  dmg: number | null
+  edge: string | null
+  pos: Readonly<{ x_cm: number; y_cm: number }> | null
+}>
+
+export type EnemySummary = Readonly<{
+  id: string
+  type: EnemyType
+  part: 'upper' | 'lower' | null
+  hp: number
+  hp_max: number
+  x_cm: number
+  y_cm: number
+  intent: Readonly<{ target_id: string; dmg: number }> | null
+  stunned: boolean
+}>
+
+export type NightUnit = Readonly<{
+  id: string
+  hp: number
+  hp_max: number
+  cooldown: number
+  is_down: boolean
+  is_move_legal: boolean
+  start_x_cm: number
+  start_y_cm: number
+  move_cm: number
+  range_cm: number
+  owner: string | null
+}>
+
+export type Chip = Readonly<{
+  chip_id: string
+  unit_id: string
+  action: IntentAction
+  target_id: string | null
+}>
+
+export type NightSummary = Readonly<{
+  number: number
+  turn: number
+  difficulty: Difficulty
+  players: readonly string[]
+  units: readonly NightUnit[]
+  enemies: readonly EnemySummary[]
+  chips: readonly Chip[]
+  illegal_units: readonly string[]
+  kubo_hp: number
+  kubo_hp_max: number
+}>
+
+export type ScoreSummary = Readonly<{
+  units_alive: number
+  kubo_hp: number
+  enemies_defeated: number
+  score: number
+  bayani: readonly string[]
+}>
 
 export type FrameView = 'raw' | 'warped'
 
@@ -80,6 +182,8 @@ export type StateMessage = Readonly<{
   units: readonly UnitSummary[]
   begin_block_key: string | null
   awaiting_tap: boolean
+  night: NightSummary | null
+  score: ScoreSummary | null
 }>
 
 export type DevicesMessage = Readonly<{
@@ -127,6 +231,13 @@ export type CostMessage = Readonly<{
   stopped: boolean
 }>
 
+export type EventsMessage = Readonly<{
+  type: 'events'
+  seq: number
+  turn: number
+  events: readonly GameEvent[]
+}>
+
 export type CardMessage = Readonly<{ type: 'card'; seq: number; unit: UnitSummary }>
 
 export type ServerMessage =
@@ -138,6 +249,7 @@ export type ServerMessage =
   | CardMessage
   | SpriteMessage
   | CostMessage
+  | EventsMessage
 
 export type CampaignStartMessage =
   | Readonly<{ type: 'campaign.start'; campaign_id: string }>
@@ -160,6 +272,19 @@ export type ClientMessage =
   | Readonly<{ type: 'summon.tap'; point: Point }>
   | Readonly<{ type: 'unit.reroll'; unit_id: string }>
   | Readonly<{ type: 'unit.rename'; unit_id: string; name: string }>
+  | Readonly<{ type: 'night.begin' }>
+  | Readonly<{ type: 'claim.tap'; player_name: string; unit_ids: readonly string[] }>
+  | Readonly<{ type: 'claim.done' }>
+  | Readonly<{
+      type: 'intent.tap'
+      unit_id: string
+      action: IntentAction
+      target_id: string | null
+    }>
+  | Readonly<{ type: 'chip.cancel'; chip_id: string }>
+  | Readonly<{ type: 'end_turn' }>
+  | Readonly<{ type: 'night.next' }>
+  | Readonly<{ type: 'night.quit' }>
   | Readonly<{ type: 'demo_safe'; on: boolean }>
 
 export type DesktopConfig = Readonly<{ port: number; token: string }>

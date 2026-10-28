@@ -8,6 +8,8 @@ export const palette = {
   lantern: '#F2C14E',
   ember: '#E07A2E',
   sindak: '#B33A3A',
+  nipa: '#8C5A3C',
+  buhangin: '#C99A6B',
   kawayan: '#3E7D4F',
   dahon: '#7FB069'
 } as const

@@ -4,11 +4,27 @@ import Bilingual from './components/Bilingual'
 import Stage from './components/Stage'
 import { isCopyKey, t, type CopyKey } from './lib/copy'
 import { useGameSocket } from './lib/socket'
-import type { CopyParams, CostMessage, KeyStatus, StateMessage } from './lib/types'
+import type { AppPhase, CopyParams, CostMessage, KeyStatus, StateMessage } from './lib/types'
 import Calibration from './screens/Calibration'
 import KeySetup from './screens/KeySetup'
 import Start from './screens/Start'
+import Defeat from './screens/Defeat'
+import Night from './screens/Night'
 import Summon from './screens/Summon'
+import Sunrise from './screens/Sunrise'
+import VoiceClaim from './screens/VoiceClaim'
+
+const NIGHT_PHASES: ReadonlySet<AppPhase> = new Set([
+  'SPAWN_TELEGRAPH',
+  'PLAYER_PHASE',
+  'END_TURN_SNAPSHOT',
+  'VALIDATE',
+  'RESOLVE_PLAYER',
+  'RESOLVE_ENEMY',
+  'PHYSICAL_EFFECTS',
+  'CHECK_END',
+  'PAUSED'
+])
 
 type ActiveNotice = Readonly<{ id: number; key: CopyKey; params: CopyParams }>
 
@@ -41,7 +57,11 @@ function App(): React.JSX.Element {
         setState(message)
       } else if (message.type === 'cost') {
         setCost(message)
-      } else if (message.type === 'notice' && isCopyKey(message.copy_key)) {
+      } else if (
+        message.type === 'notice' &&
+        message.copy_key !== 'endturn.blocked' &&
+        isCopyKey(message.copy_key)
+      ) {
         setNotice({ id: message.seq, key: message.copy_key, params: message.params })
       }
     })
@@ -85,17 +105,30 @@ function App(): React.JSX.Element {
     screen = <Start state={state} send={send} subscribe={subscribe} cost={cost} />
   } else if (state.phase === 'CALIBRATE') {
     screen = <Calibration state={state} send={send} subscribe={subscribe} />
+  } else if (state.phase === 'VOICE_CLAIM') {
+    screen = <VoiceClaim state={state} send={send} />
+  } else if (NIGHT_PHASES.has(state.phase)) {
+    screen = <Night state={state} send={send} subscribe={subscribe} />
+  } else if (state.phase === 'SUNRISE') {
+    screen = <Sunrise state={state} send={send} />
+  } else if (state.phase === 'DEFEAT') {
+    screen = <Defeat state={state} send={send} />
   } else {
     screen = <Summon state={state} send={send} subscribe={subscribe} />
   }
+  const inNight = ready && NIGHT_PHASES.has(state.phase)
 
   return (
     <Stage>
       {screen}
       {ready && (cost !== null || state.demo_safe) && (
-        <div className="absolute right-4 top-4 flex items-center gap-4">
+        <div
+          className={`absolute right-4 flex items-center gap-4 ${inNight ? 'bottom-[120px]' : 'top-4'}`}
+        >
           {cost !== null && <CostMeter cost={cost} variant="chip" />}
-          {state.demo_safe && <div className="panel px-4 py-2">{t('start.demo_safe').tl}</div>}
+          {state.demo_safe && !inNight && (
+            <div className="panel px-4 py-2">{t('start.demo_safe').tl}</div>
+          )}
         </div>
       )}
       {notice && (
@@ -103,7 +136,9 @@ function App(): React.JSX.Element {
           key={notice.id}
           role="status"
           aria-live="polite"
-          className="banner absolute left-1/2 top-4 w-[1200px] -translate-x-1/2 p-4"
+          className={`banner absolute left-1/2 w-[1200px] -translate-x-1/2 p-4 ${
+            inNight ? 'top-[104px]' : 'top-4'
+          }`}
         >
           <Bilingual copyKey={notice.key} params={notice.params} />
         </div>

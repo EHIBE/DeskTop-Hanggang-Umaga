@@ -162,6 +162,56 @@ English text for these is a proposal for playtester review.
 | power.P11 | Habol | +2 damage against a duwende in melee. | M4, Proposed, playtester review |
 | power.P12 | Asin | 3 damage to a manananggal lower half. | M4, Proposed, playtester review |
 | cost.label | Nagastos na credits | Credits spent | M5, Proposed, playtester review |
+| hud.turn | GABI [n] / 8 | NIGHT [n] / 8 | M7 to M8, Proposed, playtester review |
+| phase.spawn | Dumarating sila | They are coming | M7 to M8, Proposed, playtester review |
+| phase.player | Galaw at Utos | Move and give orders | M7 to M8, Proposed, playtester review |
+| phase.check | Sinusuri | Checking | M7 to M8, Proposed, playtester review |
+| phase.battle | Labanan | Battle | M7 to M8, Proposed, playtester review |
+| phase.paused | Naka-pause | Paused | M7 to M8, Proposed, playtester review |
+| hud.kubo | Kubo | Kubo | M7 to M8, Proposed, playtester review |
+| hud.hp | HP | HP | M7 to M8, Proposed, playtester review |
+| hud.cd | CD | Cooldown | M7 to M8, Proposed, playtester review |
+| hud.down | Bagsak | Down | M7 to M8, Proposed, playtester review |
+| hud.stunned | Nakatigil | Stunned | M7 to M8, Proposed, playtester review |
+| hud.orders | Mga Utos | Orders | M7 to M8, Proposed, playtester review |
+| hud.no_orders | Wala pang utos. I-tap ang kakampi o magsalita. | No orders yet. Tap an ally or speak. | M7 to M8, Proposed, playtester review |
+| hud.end_turn | TAPOS / END TURN | End turn | M7 to M8, Proposed, playtester review |
+| hud.recalibrate | I-calibrate ulit | Recalibrate | M7 to M8, Proposed, playtester review |
+| hud.chip_cancel | Kanselahin ang utos | Cancel order | M7 to M8, Proposed, playtester review |
+| hud.board | Mesa ng laban | Battle board | M7 to M8, Proposed, playtester review |
+| act.attack | atake | attack | M7 to M8, Proposed, playtester review |
+| act.heal | gamot | heal | M7 to M8, Proposed, playtester review |
+| chip.text | [unit] → [action] sa [target] | [unit] → [action] on [target] | M7 to M8, Proposed, playtester review |
+| chip.self | [unit] → [action] | [unit] → [action] | M7 to M8, Proposed, playtester review |
+| tap.attack | Atake | Attack | M7 to M8, Proposed, playtester review |
+| tap.heal | Gamot | Heal | M7 to M8, Proposed, playtester review |
+| tap.cancel | Kansela | Cancel | M7 to M8, Proposed, playtester review |
+| tap.pick_action | Utos para kay [unit]: | Order for [unit]: | M7 to M8, Proposed, playtester review |
+| tap.pick_target | I-tap ang target ni [unit]. | Tap a target for [unit]. | M7 to M8, Proposed, playtester review |
+| enemy.aswang | Aswang | Aswang | M7 to M8, Proposed, playtester review |
+| enemy.tikbalang | Tikbalang | Tikbalang | M7 to M8, Proposed, playtester review |
+| enemy.kapre | Kapre | Kapre | M7 to M8, Proposed, playtester review |
+| enemy.manananggal | Manananggal | Manananggal | M7 to M8, Proposed, playtester review |
+| enemy.duwende | Duwende | Duwende | M7 to M8, Proposed, playtester review |
+| enemy.upper | Itaas | Upper | M7 to M8, Proposed, playtester review |
+| enemy.lower | Ibaba | Lower | M7 to M8, Proposed, playtester review |
+| claim.players | Mga manlalaro | Players | M7 to M8, Proposed, playtester review |
+| claim.name_label | Manlalaro [n] | Player [n] | M7 to M8, Proposed, playtester review |
+| claim.done | Tapos na | Done | M7 to M8, Proposed, playtester review |
+| claim.skip | Laktawan | Skip | M7 to M8, Proposed, playtester review |
+| claim.tap_unit | I-tap ang piyesa, tapos ang pangalan. | Tap a piece, then a name. | M7 to M8, Proposed, playtester review |
+| claim.duplicate | Magkaiba dapat ang mga pangalan. | Names must be different. | M7 to M8, Proposed, playtester review |
+| score.alive | Buhay na kakampi | Allies alive | M7 to M8, Proposed, playtester review |
+| score.kubo | HP ng kubo | Kubo HP | M7 to M8, Proposed, playtester review |
+| score.defeated | Natalong kalaban | Enemies defeated | M7 to M8, Proposed, playtester review |
+| score.total | Kabuuan | Total | M7 to M8, Proposed, playtester review |
+| score.bayani | Bayani ng Gabi | Hero of the Night | M7 to M8, Proposed, playtester review |
+| score.bayani_none | Wala ngayong gabi | None tonight | M7 to M8, Proposed, playtester review |
+| sunrise.title | SUMIKAT NA | SUNRISE | M7 to M8, Proposed, playtester review |
+| sunrise.next | Susunod na Gabi | Next Night | M7 to M8, Proposed, playtester review |
+| sunrise.quit | Umalis | Quit | M7 to M8, Proposed, playtester review |
+| defeat.title | NASIRA ANG KUBO | THE KUBO FELL | M7 to M8, Proposed, playtester review |
+| defeat.retry | Subukan Ulit | Try Again | M7 to M8, Proposed, playtester review |
 
 ## GM line bank (local fallback and Spark style reference)
 

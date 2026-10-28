@@ -202,7 +202,12 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
   )
 
   const begin = (): void => {
-    setBeginNote(blocked ? blockKey : 'night.start')
+    if (blocked) {
+      setBeginNote(blockKey)
+      return
+    }
+    setBeginNote(null)
+    send({ type: 'night.begin' })
   }
 
   return (
