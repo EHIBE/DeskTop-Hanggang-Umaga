@@ -1,7 +1,9 @@
+import json
+import math
 import sqlite3
 import threading
 import uuid
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -14,6 +16,9 @@ SCHEMA_VERSION: Final = 1
 SCHEMA_PATH: Final = Path(__file__).with_name("schema.sql")
 COST_SCALE: Final = 100_000_000
 CAMPAIGN_PAGE_MAX: Final = 50
+CAMPAIGNS_DIR_NAME: Final = "campaigns"
+BASELINE_FILE_NAME: Final = "baseline.png"
+HOMOGRAPHY_SIZE: Final = 9
 
 Clock = Callable[[], datetime]
 IdFactory = Callable[[], str]
@@ -28,6 +33,10 @@ class SchemaVersionError(StoreError):
 
 
 class NotFoundError(StoreError):
+    pass
+
+
+class UnsafePathError(StoreError):
     pass
 
 
@@ -62,6 +71,18 @@ class ApiUsageRecord:
     audio_seconds: int | None = None
 
 
+@dataclass(frozen=True)
+class CalibrationRecord:
+    id: str
+    campaign_id: str
+    homography: tuple[float, ...]
+    px_per_cm: float
+    play_w_cm: float
+    play_h_cm: float
+    baseline_path: Path
+    created_at: str
+
+
 def utc_now() -> datetime:
     return datetime.now(UTC)
 
@@ -88,6 +109,7 @@ class Store:
         self._new_id = new_id
         self._lock = threading.RLock()
         path.parent.mkdir(parents=True, exist_ok=True)
+        self._data_root = path.parent.resolve()
         self._conn = sqlite3.connect(
             path, isolation_level=None, check_same_thread=False
         )
@@ -229,6 +251,85 @@ class Store:
             return None
         return str(row[0])
 
+    @property
+    def data_root(self) -> Path:
+        return self._data_root
+
+    def campaign_dir(self, campaign_id: str) -> Path:
+        if str(_parse_uuid(campaign_id)) != campaign_id:
+            raise UnsafePathError("campaign id must be a canonical UUID")
+        target = (self._data_root / CAMPAIGNS_DIR_NAME / campaign_id).resolve()
+        if not target.is_relative_to(self._data_root / CAMPAIGNS_DIR_NAME):
+            raise UnsafePathError("campaign path escapes the data root")
+        return target
+
+    def save_calibration(
+        self,
+        campaign_id: str,
+        homography: Sequence[float],
+        px_per_cm: float,
+        play_size_cm: tuple[float, float],
+        baseline_png: bytes,
+    ) -> CalibrationRecord:
+        values = tuple(float(value) for value in homography)
+        if len(values) != HOMOGRAPHY_SIZE or not all(math.isfinite(v) for v in values):
+            raise StoreError("homography must be 9 finite numbers")
+        self.get_campaign(campaign_id)
+        directory = self.campaign_dir(campaign_id)
+        directory.mkdir(parents=True, exist_ok=True)
+        baseline = directory / BASELINE_FILE_NAME
+        baseline.write_bytes(baseline_png)
+        record = CalibrationRecord(
+            id=self._new_id(),
+            campaign_id=campaign_id,
+            homography=values,
+            px_per_cm=px_per_cm,
+            play_w_cm=play_size_cm[0],
+            play_h_cm=play_size_cm[1],
+            baseline_path=baseline,
+            created_at=self._now_iso(),
+        )
+        with self.transaction() as conn:
+            conn.execute(
+                "INSERT INTO calibration (id, campaign_id, homography_json, px_per_cm, "
+                "play_w_cm, play_h_cm, baseline_path, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    record.id,
+                    campaign_id,
+                    json.dumps(list(values)),
+                    px_per_cm,
+                    record.play_w_cm,
+                    record.play_h_cm,
+                    baseline.relative_to(self._data_root).as_posix(),
+                    record.created_at,
+                ),
+            )
+        return record
+
+    def latest_calibration(self, campaign_id: str) -> CalibrationRecord | None:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT id, campaign_id, homography_json, px_per_cm, play_w_cm, play_h_cm, "
+                "baseline_path, created_at FROM calibration WHERE campaign_id = ? "
+                "ORDER BY created_at DESC, id DESC LIMIT 1",
+                (campaign_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        baseline = (self._data_root / str(row["baseline_path"])).resolve()
+        if not baseline.is_relative_to(self._data_root):
+            raise UnsafePathError("stored baseline path escapes the data root")
+        return CalibrationRecord(
+            id=str(row["id"]),
+            campaign_id=str(row["campaign_id"]),
+            homography=tuple(float(v) for v in json.loads(str(row["homography_json"]))),
+            px_per_cm=float(row["px_per_cm"]),
+            play_w_cm=float(row["play_w_cm"]),
+            play_h_cm=float(row["play_h_cm"]),
+            baseline_path=baseline,
+            created_at=str(row["created_at"]),
+        )
+
     def set_setting(self, key: str, value: str) -> None:
         with self.transaction() as conn:
             conn.execute(
@@ -236,6 +337,13 @@ class Store:
                 "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
                 (key, value),
             )
+
+
+def _parse_uuid(raw: str) -> uuid.UUID:
+    try:
+        return uuid.UUID(raw)
+    except ValueError as error:
+        raise UnsafePathError("campaign id must be a UUID") from error
 
 
 def _campaign_from_row(row: sqlite3.Row) -> Campaign:

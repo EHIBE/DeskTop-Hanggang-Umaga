@@ -15,6 +15,7 @@ from db.store import (
     SchemaVersionError,
     Store,
     StoreError,
+    UnsafePathError,
 )
 
 BASE_TIME = datetime(2026, 10, 28, 3, 0, tzinfo=UTC)
@@ -262,3 +263,62 @@ def test_settings_upsert(store: Store) -> None:
     store.set_setting("camera", "0")
     store.set_setting("camera", "1")
     assert store.get_setting("camera") == "1"
+
+
+IDENTITY = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+
+
+def test_save_and_load_latest_calibration(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    assert store.latest_calibration(campaign.id) is None
+    store.save_calibration(campaign.id, IDENTITY, 20.0, (60.0, 40.0), b"first")
+    second = store.save_calibration(campaign.id, IDENTITY, 20.0, (50.0, 40.0), b"png")
+    loaded = store.latest_calibration(campaign.id)
+    assert loaded == second
+    assert loaded.play_w_cm == 50.0
+    assert loaded.baseline_path.read_bytes() == b"png"
+    assert loaded.baseline_path.is_relative_to(store.data_root)
+
+
+@pytest.mark.parametrize(
+    "homography", [(1.0, 2.0), (float("inf"),) + IDENTITY[1:], (float("nan"),) * 9]
+)
+def test_calibration_rejects_bad_homography(
+    store: Store, homography: tuple[float, ...]
+) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    with pytest.raises(StoreError):
+        store.save_calibration(campaign.id, homography, 20.0, (60.0, 40.0), b"x")
+
+
+def test_calibration_needs_an_existing_campaign(store: Store) -> None:
+    with pytest.raises(NotFoundError):
+        store.save_calibration(
+            "6f1d2a1e-7c1b-4c2e-9a3b-0a1b2c3d4e5f", IDENTITY, 20.0, (60.0, 40.0), b"x"
+        )
+
+
+@pytest.mark.parametrize(
+    "campaign_id", ["../evil", "not-a-uuid", "6F1D2A1E-7C1B-4C2E-9A3B-0A1B2C3D4E5F", ""]
+)
+def test_campaign_dir_rejects_unsafe_ids(store: Store, campaign_id: str) -> None:
+    with pytest.raises(UnsafePathError):
+        store.campaign_dir(campaign_id)
+
+
+def test_campaign_dir_stays_under_data_root(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    assert store.campaign_dir(campaign.id).is_relative_to(store.data_root)
+
+
+def test_stored_baseline_path_cannot_escape(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    with store.transaction() as conn:
+        conn.execute(
+            "INSERT INTO calibration (id, campaign_id, homography_json, px_per_cm, play_w_cm, "
+            "play_h_cm, baseline_path, created_at) VALUES ('x', ?, '[]', 20, 60, 40, "
+            "'../../outside.png', '9999')",
+            (campaign.id,),
+        )
+    with pytest.raises(UnsafePathError):
+        store.latest_calibration(campaign.id)
