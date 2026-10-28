@@ -10,13 +10,16 @@ import pytest
 from db.store import (
     SCHEMA_VERSION,
     ApiUsageRecord,
+    CardFields,
     NotFoundError,
     SchemaVersionError,
+    SignatureFields,
     Store,
     StoreError,
+    UnitPlacement,
     UnsafePathError,
 )
-from rules.units import Difficulty
+from rules.units import Difficulty, MoveClass, PowerId, RangeClass, UnitClass
 
 BASE_TIME = datetime(2026, 10, 28, 3, 0, tzinfo=UTC)
 
@@ -322,3 +325,73 @@ def test_stored_baseline_path_cannot_escape(store: Store) -> None:
         )
     with pytest.raises(UnsafePathError):
         store.latest_calibration(campaign.id)
+
+
+def card_fields(name: str = "Kubo", unit_class: str = "kubo") -> CardFields:
+    return CardFields(
+        name=name,
+        unit_class=UnitClass(unit_class),
+        hp_max=10,
+        atk=0,
+        move_class=MoveClass.NONE,
+        range_class=RangeClass.NONE,
+        power_id=PowerId.NONE,
+        power_name_tl="",
+        card_text_tl="Bahay",
+        card_text_en="House",
+    )
+
+
+SIGNATURE = SignatureFields(
+    label="mug", histogram=(0.5, 0.5), area_cm2=40.0, aspect=1.0, ref_crop_png=b"png"
+)
+
+
+def test_night_is_resumed_until_it_ends(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    first = store.start_or_resume_night(campaign.id)
+    assert first.number == 1
+    assert store.start_or_resume_night(campaign.id) == first
+    with store.transaction() as conn:
+        conn.execute("UPDATE night SET result = 'win' WHERE id = ?", (first.id,))
+    assert store.start_or_resume_night(campaign.id).number == 2
+
+
+def test_add_and_list_units(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    night = store.start_or_resume_night(campaign.id)
+    kubo = store.add_unit(night, card_fields(), SIGNATURE, UnitPlacement(1, 30.0, 20.0))
+    assert (
+        store.campaign_dir(campaign.id) / "crops" / f"{kubo.signature_id}.png"
+    ).read_bytes() == b"png"
+    units = store.night_units(night.id)
+    assert units == [kubo]
+    assert units[0].hp_current == 10
+
+
+def test_duplicate_slot_rolls_back_the_crop(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    night = store.start_or_resume_night(campaign.id)
+    store.add_unit(night, card_fields(), SIGNATURE, UnitPlacement(1, 30.0, 20.0))
+    with pytest.raises(sqlite3.IntegrityError):
+        store.add_unit(
+            night, card_fields("Pen", "reach"), SIGNATURE, UnitPlacement(1, 10.0, 10.0)
+        )
+    assert len(list((store.campaign_dir(campaign.id) / "crops").iterdir())) == 1
+    assert len(store.night_units(night.id)) == 1
+
+
+def test_update_card_and_flags_and_turn_log(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    night = store.start_or_resume_night(campaign.id)
+    unit = store.add_unit(night, card_fields(), SIGNATURE, UnitPlacement(1, 30.0, 20.0))
+    store.update_unit_card(night.id, unit.unit_id, card_fields("Bahay ni Lola"))
+    assert store.night_units(night.id)[0].card.name == "Bahay ni Lola"
+    with pytest.raises(NotFoundError):
+        store.update_unit_card(night.id, "missing", card_fields())
+    store.set_night_flags(night.id, {"rerolls": [unit.unit_id]})
+    assert store.start_or_resume_night(campaign.id).flags == {"rerolls": [unit.unit_id]}
+    with pytest.raises(NotFoundError):
+        store.set_night_flags("missing", {})
+    store.log_turn(night.id, 0, "SUMMON", "gm_invalid", {"why": "x"}, 5)
+    assert store.turn_log_count(night.id, "gm_invalid") == 1
