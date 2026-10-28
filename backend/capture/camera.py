@@ -1,6 +1,6 @@
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Final, Protocol
 
@@ -192,3 +192,29 @@ class Camera:
             frame = Frame(image=image, captured_at=self._clock(), sequence=sequence)
             with self._lock:
                 self._latest = frame
+
+
+@dataclass(frozen=True)
+class MicrophoneInfo:
+    index: int
+    name: str
+
+
+DeviceQuery = Callable[[], Sequence[Mapping[str, object]]]
+
+
+def query_sound_devices() -> Sequence[Mapping[str, object]]:
+    import sounddevice  # type: ignore[import-untyped]
+
+    devices: Sequence[Mapping[str, object]] = sounddevice.query_devices()
+    return devices
+
+
+def list_microphones(query: DeviceQuery = query_sound_devices) -> list[MicrophoneInfo]:
+    found: list[MicrophoneInfo] = []
+    for index, device in enumerate(query()):
+        channels = device.get("max_input_channels", 0)
+        if not isinstance(channels, int) or channels <= 0:
+            continue
+        found.append(MicrophoneInfo(index=index, name=str(device.get("name", ""))[:80]))
+    return found
