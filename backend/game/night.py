@@ -61,7 +61,13 @@ from rules.units import (
 )
 from state import Broadcast, EncodedFrame, FrameView, LiveState
 from vision.sam import PixelBox, clamp_box
-from vision.sprites import SpriteError, SpriteJob, SpriteService, prepare_crop
+from vision.sprites import (
+    FALLBACK_SUBJECT,
+    SpriteError,
+    SpriteJob,
+    SpriteService,
+    prepare_crop,
+)
 from vision.summon import (
     Detection,
     KnownObject,
@@ -189,6 +195,8 @@ class GameController:
         self._subjects: dict[str, str] = {}
         self._sprites: dict[str, str] = {}
         self._sprite_tasks: set[asyncio.Task[None]] = set()
+        self._sprite_jobs: dict[str, asyncio.Task[None]] = {}
+        self._sprite_versions: dict[str, int] = {}
         self._store = store
         self._meter = meter
         self._notices: list[tuple[str, dict[str, str]]] = []
@@ -616,12 +624,25 @@ class GameController:
 
     async def reroll_unit(self, unit_id: str) -> UnitView:
         self._require_phase(AppPhase.SUMMON)
+        if self._summon_lock.locked():
+            raise GameError(BUSY_KEY)
+        async with self._summon_lock:
+            return await self._reroll(unit_id)
+
+    async def _reroll(self, unit_id: str) -> UnitView:
         night = self._night
         if night is None or self._campaign is None:
             raise GameError("start.ready")
         unit = self._find_unit(unit_id)
         if self._unit_view(unit).rerolls_left <= 0:
             raise GameError("cmd.unknown")
+        flags = dict(night.flags)
+        flags[REROLLS_FLAG] = [*self._rerolled(), unit.unit_id]
+        self._store.set_night_flags(night.id, flags)
+        night = NightRecord(
+            night.id, night.campaign_id, night.number, night.started_at, flags
+        )
+        self._night = night
         snapshot = await asyncio.to_thread(self.wait_for_frame)
         calibration = self._calibration
         if snapshot is None or calibration is None:
@@ -659,13 +680,7 @@ class GameController:
             card_text_tl=detection.text.card_text_tl,
             card_text_en=detection.text.card_text_en,
         )
-        flags = dict(night.flags)
-        flags[REROLLS_FLAG] = [*self._rerolled(), unit.unit_id]
-        self._store.set_night_flags(night.id, flags)
-        self._night = NightRecord(
-            night.id, night.campaign_id, night.number, night.started_at, flags
-        )
-        return self._replace_card(self._night, unit, card)
+        return self._replace_card(night, unit, card)
 
     def _sprite_b64(self, unit: UnitRecord) -> str | None:
         if unit.unit_id in self._sprites:
@@ -674,7 +689,7 @@ class GameController:
             return None
         try:
             png = self._store.sprite_png(unit.sprite_id)
-        except (OSError, ValueError):
+        except (OSError, ValueError, StoreError):
             logger.warning("stored sprite could not be read")
             return None
         encoded = base64.b64encode(png).decode("ascii")
@@ -689,7 +704,9 @@ class GameController:
         except SpriteError:
             logger.warning("sprite crop could not be prepared")
             return
-        self._subjects[unit.unit_id] = outcome.text.sprite_subject_en or outcome.label
+        self._subjects[unit.unit_id] = (
+            outcome.text.sprite_subject_en or FALLBACK_SUBJECT
+        )
 
     def _schedule_sprite(self, unit: UnitRecord) -> None:
         crop = self._crops.get(unit.unit_id)
@@ -705,11 +722,17 @@ class GameController:
             subject=self._subjects.get(unit.unit_id, unit.card.name),
             crop_rgb=crop,
         )
-        task = asyncio.get_running_loop().create_task(self._make_sprite(job))
+        version = self._sprite_versions.get(unit.unit_id, 0) + 1
+        self._sprite_versions[unit.unit_id] = version
+        previous = self._sprite_jobs.get(unit.unit_id)
+        if previous is not None:
+            previous.cancel()
+        task = asyncio.get_running_loop().create_task(self._make_sprite(job, version))
+        self._sprite_jobs[unit.unit_id] = task
         self._sprite_tasks.add(task)
         task.add_done_callback(self._sprite_tasks.discard)
 
-    async def _make_sprite(self, job: SpriteJob) -> None:
+    async def _make_sprite(self, job: SpriteJob, version: int) -> None:
         factory = self._sprite_service_factory
         if factory is None:
             return
@@ -724,6 +747,13 @@ class GameController:
             )
         except (StoreError, OSError, SpriteError):
             logger.exception("sprite job failed, keeping the placeholder")
+            return
+        if self._sprite_versions.get(job.unit_id) != version:
+            return
+        try:
+            self._store.set_unit_sprite(job.unit_id, sprite_id)
+        except StoreError:
+            logger.exception("sprite could not be linked to its unit")
             return
         self._sprites[job.unit_id] = encoded
         self._units = [
@@ -754,8 +784,9 @@ class GameController:
             sprite_id=unit.sprite_id,
         )
         self._units = [updated if u.unit_id == unit.unit_id else u for u in self._units]
-        self._sprites.pop(unit.unit_id, None)
-        self._schedule_sprite(updated)
+        if card.unit_class is not unit.card.unit_class:
+            self._sprites.pop(unit.unit_id, None)
+            self._schedule_sprite(updated)
         return self._unit_view(updated)
 
     def set_demo_safe(self, is_on: bool) -> None:

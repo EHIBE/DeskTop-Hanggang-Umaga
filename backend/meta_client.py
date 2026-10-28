@@ -2,7 +2,8 @@ import asyncio
 import logging
 import random
 import time
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -127,6 +128,7 @@ class CostMeter:
         self._warn_usd = warn_usd
         self._stop_usd = stop_usd
         self._spent = log.total_api_cost()
+        self._reserved = Decimal(0)
         self._is_forced_stop = False
 
     @property
@@ -146,6 +148,21 @@ class CostMeter:
             return
         logger.warning("paid call blocked by cost hard stop")
         raise BudgetExceededError("cost hard stop reached")
+
+    @property
+    def reserved_usd(self) -> Decimal:
+        return self._reserved
+
+    @contextmanager
+    def reservation(self, estimate_usd: Decimal) -> Iterator[None]:
+        if self.is_stopped or self._spent + self._reserved >= self._stop_usd:
+            logger.warning("paid call blocked by cost hard stop")
+            raise BudgetExceededError("cost hard stop reached")
+        self._reserved += estimate_usd
+        try:
+            yield
+        finally:
+            self._reserved -= estimate_usd
 
     def force_stop(self) -> None:
         if not self._is_forced_stop:
@@ -299,12 +316,12 @@ class MetaClient:
             raise BreakerOpenError(f"{spec.model.value} breaker open")
         max_attempts = 1 + (MAX_RETRIES if spec.is_idempotent else 0)
         for attempt in range(max_attempts):
-            self._meter.ensure_can_spend()
             started = self._clock()
             try:
-                result = await asyncio.wait_for(
-                    operation(), timeout=self._timeouts[spec.kind]
-                )
+                with self._meter.reservation(UNMETERED_CALL_ESTIMATE_USD[spec.kind]):
+                    result = await asyncio.wait_for(
+                        operation(), timeout=self._timeouts[spec.kind]
+                    )
             except (
                 TimeoutError,
                 openai.APIConnectionError,

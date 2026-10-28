@@ -265,6 +265,8 @@ def finalize_sprite(keyed_rgba: Image) -> Image:
     canvas[~opaque] = 0
     canvas[opaque, 3] = 255
     pixels = canvas[opaque][:, :3]
+    if pixels.size == 0:
+        return np.zeros((size, size, 4), dtype=np.uint8)
     object_colors = _median_cut(pixels, MAX_OBJECT_COLORS)
     palette = np.array(list(GABI_16) + object_colors, dtype=np.int32)
     diff = pixels.astype(np.int32)[:, None, :] - palette[None, :, :]
@@ -448,8 +450,12 @@ class MuseImageGenerator:
             except (MetaError, SpriteError):
                 logger.warning("sprite generation failed, keeping the placeholder")
                 return None
-            image = decode_png(raw)
-            sprite, check = process_generated(image, attempt_key)
+            try:
+                image = decode_png(raw)
+                sprite, check = process_generated(image, attempt_key)
+            except SpriteError:
+                logger.warning("generated sprite could not be processed")
+                continue
             if check.is_valid:
                 return GeneratedSprite(png=encode_png(sprite), response_id=response_id)
             last_image, last_response = image, response_id
@@ -528,7 +534,6 @@ class SpriteService:
         key = cache_key(job.signature_id, job.unit_name, job.unit_class)
         cached = self._store.find_sprite(key)
         if cached is not None:
-            self._store.set_unit_sprite(job.unit_id, cached.id)
             return cached.id
         if not self._generator.is_available:
             return None
@@ -540,6 +545,5 @@ class SpriteService:
         sprite = self._store.save_sprite(
             key, generated.png, PALETTE_VERSION, PROMPT_VERSION, generated.response_id
         )
-        self._store.set_unit_sprite(job.unit_id, sprite.id)
         self._store.set_style_anchor_if_missing(job.campaign_id, sprite.id)
         return sprite.id

@@ -14,6 +14,7 @@ from rules.units import CardDraft, Difficulty, PowerId, UnitClass
 from state import FrameView, LiveState
 from tests.test_server import SCENE, SHEET, SceneSource
 from vision.sam import PixelBox, TrackerOnlySegmenter
+from vision.sprites import GeneratedSprite, SpriteJob, SpriteService
 from vision.summon import CardText, Detection, FallbackDetector, SummonPipeline
 
 Image = npt.NDArray[np.uint8]
@@ -343,5 +344,78 @@ def test_new_summon_clears_a_stale_tap_request(tmp_path: Path) -> None:
         asyncio.run(controller.summon("Lampara"))
     unit = asyncio.run(controller.summon_tap((600, 400)))
     assert unit.card.name == "Lampara"
+    controller.close()
+    store.close()
+
+
+def test_stale_sprite_job_does_not_overwrite_a_newer_one(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    release = asyncio.Event()
+
+    class SlowFirstPenGenerator:
+        is_available = True
+
+        def __init__(self) -> None:
+            self.has_blocked = False
+
+        async def generate(
+            self, job: SpriteJob, style_anchor_png: bytes | None
+        ) -> GeneratedSprite:
+            if job.unit_name == "Pen" and not self.has_blocked:
+                self.has_blocked = True
+                await release.wait()
+                return GeneratedSprite(png=b"stale", response_id=None)
+            return GeneratedSprite(
+                png=f"{job.unit_name}-{job.unit_class}".encode(), response_id=None
+            )
+
+    generator = SlowFirstPenGenerator()
+    classes = iter([UnitClass.KUBO, UnitClass.REACH, UnitClass.FIGHTER])
+    boxes = iter([PixelBox(100, 100, 180, 180), PixelBox(400, 300, 460, 360)])
+
+    class ChangingDetector:
+        is_available = True
+
+        async def detect(
+            self, snapshot: Image, spoken_name: str, known: object
+        ) -> Detection:
+            return Detection(
+                found_new=True,
+                label=spoken_name,
+                box=next(boxes, PixelBox(700, 300, 760, 360)),
+                draft=CardDraft(next(classes), 0, 0, PowerId.P03),
+                text=CardText(),
+                source="spark",
+            )
+
+    def source(_: int) -> VideoSource:
+        return SceneSource()
+
+    controller = GameController(
+        store,
+        LiveState(),
+        has_api_key=True,
+        camera_factory=source,
+        sleep=lambda _: None,
+        pipeline_factory=lambda _: SummonPipeline(
+            ChangingDetector(), TrackerOnlySegmenter(), CONTENT
+        ),
+        sprite_service_factory=lambda _: SpriteService(store, generator),
+    )
+
+    async def scenario() -> str:
+        ready_for_summon(controller)
+        await controller.summon("Mug")
+        pen = await controller.summon("Pen")
+        await asyncio.sleep(0)
+        await controller.reroll_unit(pen.unit_id)
+        release.set()
+        await controller.wait_for_sprites()
+        return pen.unit_id
+
+    pen_id = asyncio.run(scenario())
+    view = next(u for u in controller.snapshot().units if u.unit_id == pen_id)
+    assert view.sprite_png is not None
+    assert view.sprite_png != "c3RhbGU="
     controller.close()
     store.close()
