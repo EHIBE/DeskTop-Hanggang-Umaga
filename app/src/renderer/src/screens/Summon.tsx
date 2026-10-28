@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import SpriteView from '../canvas/SpriteView'
+import { drawSprite, useUnitImages } from '../canvas/sprites'
 import Board, { type BoardMapping } from '../canvas/Board'
 import Bilingual from '../components/Bilingual'
 import { isCopyKey, t, type CopyKey } from '../lib/copy'
@@ -32,6 +34,7 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
     ],
     [state.units]
   )
+  const images = useUnitImages(state.units)
   const hasKubo = ordered.length > 0 && ordered[0].class === 'kubo'
   const full = state.units.length >= MAX_UNITS
   const blocked = state.begin_block_key !== null
@@ -99,9 +102,23 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
       ctx.textBaseline = 'middle'
       ordered.forEach((unit, index) => {
         const [x, y] = mapping.toCanvas(unit.x_cm * pxPerCm, unit.y_cm * pxPerCm)
+        const image = images.get(unit.unit_id)
+        const badgeFill = unit.class === 'kubo' ? palette.lantern : palette.moon
+        if (image) {
+          const box = drawSprite(ctx, image, x, y, 2)
+          const badge = 28
+          ctx.fillStyle = badgeFill
+          ctx.fillRect(box.left, box.top, badge, badge)
+          ctx.strokeStyle = palette.ink
+          ctx.lineWidth = 2
+          ctx.strokeRect(box.left, box.top, badge, badge)
+          ctx.fillStyle = palette.ink
+          ctx.fillText(String(index + 1), box.left + badge / 2, box.top + badge / 2 + 1)
+          return
+        }
         const left = Math.round(x - MARKER / 2)
         const top = Math.round(y - MARKER / 2)
-        ctx.fillStyle = unit.class === 'kubo' ? palette.lantern : palette.moon
+        ctx.fillStyle = badgeFill
         ctx.fillRect(left, top, MARKER, MARKER)
         ctx.strokeStyle = palette.ink
         ctx.lineWidth = 2
@@ -110,7 +127,7 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
         ctx.fillText(String(index + 1), left + MARKER / 2, top + MARKER / 2 + 1)
       })
     },
-    [ordered, state.play_w_cm]
+    [ordered, images, state.play_w_cm]
   )
 
   const begin = (): void => {
@@ -168,12 +185,21 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
             <button
               key={unit.unit_id}
               type="button"
-              className={`btn flex w-full justify-between gap-2 text-left ${
+              className={`btn flex w-full items-center justify-between gap-2 text-left ${
                 unit.class === 'kubo' ? 'border-gabi-lantern' : ''
               }`}
               onClick={() => setCardUnit(unit)}
             >
-              <span className="min-w-0 break-words">
+              <SpriteView
+                unit={unit}
+                scale={2}
+                fallback={
+                  <span className="text-gabi-lantern">
+                    {t(`class.${unit.class}`).tl.slice(0, 2).toUpperCase()}
+                  </span>
+                }
+              />
+              <span className="min-w-0 flex-1 break-words">
                 {index + 1}. {unit.name}
               </span>
               <span className="shrink-0">

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
+import CostMeter from './components/CostMeter'
 import Bilingual from './components/Bilingual'
 import Stage from './components/Stage'
 import { isCopyKey, t, type CopyKey } from './lib/copy'
 import { useGameSocket } from './lib/socket'
-import type { CopyParams, KeyStatus, StateMessage } from './lib/types'
+import type { CopyParams, CostMessage, KeyStatus, StateMessage } from './lib/types'
 import Calibration from './screens/Calibration'
 import KeySetup from './screens/KeySetup'
 import Start from './screens/Start'
@@ -31,12 +32,15 @@ function App(): React.JSX.Element {
   const [state, setState] = useState<StateMessage | null>(null)
   const [keyStatus, setKeyStatus] = useState<KeyStatus | null>(null)
   const [offlineChosen, setOfflineChosen] = useState(false)
+  const [cost, setCost] = useState<CostMessage | null>(null)
   const [notice, setNotice] = useState<ActiveNotice | null>(null)
 
   useEffect(() => {
     return subscribe((message) => {
       if (message.type === 'state') {
         setState(message)
+      } else if (message.type === 'cost') {
+        setCost(message)
       } else if (message.type === 'notice' && isCopyKey(message.copy_key)) {
         setNotice({ id: message.seq, key: message.copy_key, params: message.params })
       }
@@ -78,7 +82,7 @@ function App(): React.JSX.Element {
       />
     )
   } else if (state.phase === 'START') {
-    screen = <Start state={state} send={send} subscribe={subscribe} />
+    screen = <Start state={state} send={send} subscribe={subscribe} cost={cost} />
   } else if (state.phase === 'CALIBRATE') {
     screen = <Calibration state={state} send={send} subscribe={subscribe} />
   } else {
@@ -88,8 +92,11 @@ function App(): React.JSX.Element {
   return (
     <Stage>
       {screen}
-      {ready && state.demo_safe && (
-        <div className="panel absolute right-4 top-4 px-4 py-2">{t('start.demo_safe').tl}</div>
+      {ready && (cost !== null || state.demo_safe) && (
+        <div className="absolute right-4 top-4 flex items-center gap-4">
+          {cost !== null && <CostMeter cost={cost} variant="chip" />}
+          {state.demo_safe && <div className="panel px-4 py-2">{t('start.demo_safe').tl}</div>}
+        </div>
       )}
       {notice && (
         <div

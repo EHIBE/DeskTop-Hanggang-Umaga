@@ -161,6 +161,7 @@ English text for these is a proposal for playtester review.
 | power.P10 | Sigaw | Allies within 10 cm get +1 ATK this turn. | M4, Proposed, playtester review |
 | power.P11 | Habol | +2 damage against a duwende in melee. | M4, Proposed, playtester review |
 | power.P12 | Asin | 3 damage to a manananggal lower half. | M4, Proposed, playtester review |
+| cost.label | Nagastos na credits | Credits spent | M5, Proposed, playtester review |
 
 ## GM line bank (local fallback and Spark style reference)
 

@@ -60,6 +60,7 @@ export type UnitSummary = Readonly<{
   x_cm: number
   y_cm: number
   rerolls_left: number
+  sprite_png: string | null
 }>
 
 export type Pose = Readonly<{ id: string; x_cm: number; y_cm: number; uncertain: boolean }>
@@ -111,10 +112,32 @@ export type NoticeMessage = Readonly<{
   params: CopyParams
 }>
 
+export type SpriteMessage = Readonly<{
+  type: 'sprite'
+  seq: number
+  unit_id: string
+  sprite_png: string
+}>
+
+export type CostMessage = Readonly<{
+  type: 'cost'
+  seq: number
+  spent_usd: string
+  warn: boolean
+  stopped: boolean
+}>
+
 export type CardMessage = Readonly<{ type: 'card'; seq: number; unit: UnitSummary }>
 
 export type ServerMessage =
-  StateMessage | DevicesMessage | CampaignsMessage | FrameMessage | NoticeMessage | CardMessage
+  | StateMessage
+  | DevicesMessage
+  | CampaignsMessage
+  | FrameMessage
+  | NoticeMessage
+  | CardMessage
+  | SpriteMessage
+  | CostMessage
 
 export type CampaignStartMessage =
   | Readonly<{ type: 'campaign.start'; campaign_id: string }>

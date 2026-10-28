@@ -124,6 +124,7 @@ const entries = {
     tl: 'Offline muna ang [feature]. Gamitin ang tap controls.',
     en: '[feature] is offline. Use tap controls.'
   },
+  'cost.label': { tl: 'Nagastos na credits', en: 'Credits spent' },
   'credits.low': {
     tl: 'Paubos na ang credits. Naka-Demo Safe Mode na.',
     en: 'Credits are running low. Demo Safe Mode is on.'

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import SpriteView from '../canvas/SpriteView'
 import { isCopyKey, t, type CopyKey } from '../lib/copy'
 import type { ClientMessage, UnitSummary } from '../lib/types'
 
@@ -63,19 +64,12 @@ function UnitCard({ unit, send, onClose }: UnitCardProps): React.JSX.Element {
             style={{ width: SPRITE * SPRITE_SCALE, height: SPRITE * SPRITE_SCALE }}
             aria-hidden="true"
           >
-            <div
-              className="flex items-center justify-center text-gabi-lantern"
-              style={{
-                width: SPRITE,
-                height: SPRITE,
-                transform: `scale(${SPRITE_SCALE})`,
-                transformOrigin: 'top left',
-                imageRendering: 'pixelated'
-              }}
-            >
-              {initials(unit)}
-            </div>
-            <div className="lantern absolute bottom-2 right-2" />
+            <SpriteView
+              unit={unit}
+              scale={SPRITE_SCALE}
+              fallback={<span className="text-gabi-lantern">{initials(unit)}</span>}
+            />
+            {unit.sprite_png === null && <div className="lantern absolute bottom-2 right-2" />}
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-4">
             {renaming ? (

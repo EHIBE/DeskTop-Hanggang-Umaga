@@ -1,13 +1,21 @@
 import { useEffect, useState } from 'react'
+import CostMeter from '../components/CostMeter'
 import Bilingual from '../components/Bilingual'
 import { t, type CopyKey } from '../lib/copy'
 import type { MessageHandler } from '../lib/socket'
-import type { CampaignSummary, ClientMessage, Difficulty, StateMessage } from '../lib/types'
+import type {
+  CampaignSummary,
+  ClientMessage,
+  CostMessage,
+  Difficulty,
+  StateMessage
+} from '../lib/types'
 
 type StartProps = Readonly<{
   state: StateMessage
   send: (message: ClientMessage) => boolean
   subscribe: (handler: MessageHandler) => () => void
+  cost: CostMessage | null
 }>
 
 const DIFFICULTIES: readonly Difficulty[] = ['madali', 'normal', 'mahirap']
@@ -16,7 +24,7 @@ function difficultyKey(difficulty: Difficulty): CopyKey {
   return `diff.${difficulty}`
 }
 
-function Start({ state, send, subscribe }: StartProps): React.JSX.Element {
+function Start({ state, send, subscribe, cost }: StartProps): React.JSX.Element {
   const [campaigns, setCampaigns] = useState<readonly CampaignSummary[]>([])
   const [name, setName] = useState('')
   const [difficulty, setDifficulty] = useState<Difficulty>('normal')
@@ -104,6 +112,7 @@ function Start({ state, send, subscribe }: StartProps): React.JSX.Element {
           )}
         </section>
       </div>
+      {cost !== null && <CostMeter cost={cost} variant="bar" />}
       <button
         type="button"
         role="switch"
