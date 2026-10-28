@@ -191,6 +191,30 @@ const entries = {
   'start.empty': { tl: 'Wala pang na-save na kampanya.', en: 'No saved campaigns yet.' },
   'start.begin': { tl: 'Start Night', en: 'Start Night' },
   'start.nights': { tl: 'Gabing nalampasan: [n]', en: 'Nights survived: [n]' },
+  'start.delete': { tl: 'Burahin', en: 'Delete' },
+  'delete.confirm': { tl: 'Sigurado? Burahin na', en: 'Sure? Delete now' },
+  'delete.done': { tl: 'Nabura na ang kampanya.', en: 'Campaign deleted.' },
+  'delete.failed': {
+    tl: 'Hindi nabura ang kampanya. Subukan ulit.',
+    en: 'Could not delete the campaign. Try again.'
+  },
+  'start.demo_safe_sam': { tl: 'SAM re-anchor sa Demo Safe', en: 'SAM re-anchor in Demo Safe' },
+  'summon.resume_banner': {
+    tl: 'May naka-save na gabi. Itutuloy ito sa turn [turn].',
+    en: 'A saved night is waiting. It will continue at turn [turn].'
+  },
+  'summon.resume_button': { tl: 'Ituloy ang Gabi (turn [turn])', en: 'Resume Night (turn [turn])' },
+  'night.pause': { tl: 'Pause', en: 'Pause' },
+  'night.resume': { tl: 'Ituloy', en: 'Resume' },
+  'night.continue_anyway': { tl: 'Ituloy pa rin', en: 'Continue anyway' },
+  'night.cam_hint': {
+    tl: 'Maaaring mali ang mga posisyon kapag itinuloy nang hindi nag-calibrate.',
+    en: 'Positions may be off if you continue without recalibrating.'
+  },
+  'claim.countdown': {
+    tl: 'Magsasara ang pag-claim sa [seconds] segundo',
+    en: 'Claims close in [seconds] seconds'
+  },
   'diff.madali': { tl: 'Madali', en: 'Easy' },
   'diff.normal': { tl: 'Normal', en: 'Normal' },
   'diff.mahirap': { tl: 'Mahirap', en: 'Hard' },

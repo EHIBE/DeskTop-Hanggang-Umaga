@@ -50,6 +50,8 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
   const [hitCount, setHitCount] = useState(0)
   const [blockedHeard, setBlockedHeard] = useState(false)
   const [pulse, setPulse] = useState(0)
+  const [camMoved, setCamMoved] = useState(false)
+  const pausedRef = useRef(false)
   const floatersRef = useRef<readonly Floater[]>([])
   const knownRef = useRef(new Map<string, Spot>())
   const latestRef = useRef(state)
@@ -85,6 +87,11 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
         setPulse((value) => value + 1)
       } else if (message.type === 'notice' && message.copy_key === 'endturn.blocked') {
         setBlockedHeard(true)
+      } else if (message.type === 'notice' && message.copy_key === 'cam.moved') {
+        setCamMoved(true)
+      } else if (message.type === 'state') {
+        if (pausedRef.current && message.phase !== 'PAUSED') setCamMoved(false)
+        pausedRef.current = message.phase === 'PAUSED'
       }
     })
   }, [subscribe])
@@ -381,17 +388,41 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
             <div className="absolute inset-0 flex items-center justify-center bg-gabi-ink/80">
               <div
                 role="alertdialog"
-                aria-label={t('cam.moved').en}
+                aria-label={t('phase.paused').en}
                 className="banner flex w-[720px] flex-col items-center gap-6 p-8 text-center"
               >
-                <Bilingual copyKey="cam.moved" />
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() => send({ type: 'calibrate.restart' })}
-                >
-                  {t('hud.recalibrate').tl}
-                </button>
+                <Bilingual copyKey="phase.paused" />
+                {camMoved && (
+                  <>
+                    <Bilingual copyKey="cam.moved" />
+                    <Bilingual copyKey="night.cam_hint" />
+                  </>
+                )}
+                <div className="flex flex-wrap justify-center gap-4">
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => send({ type: 'night.resume', force: false })}
+                  >
+                    {t('night.resume').tl}
+                  </button>
+                  {camMoved && (
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => send({ type: 'night.resume', force: true })}
+                    >
+                      {t('night.continue_anyway').tl}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => send({ type: 'calibrate.restart' })}
+                  >
+                    {t('hud.recalibrate').tl}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -417,6 +448,14 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
       </div>
       <Narration narration={nightNarration} className="mx-4 mb-2" />
       <footer className="flex min-h-[104px] shrink-0 items-center gap-6 border-t-2 border-gabi-dusk bg-gabi-night px-8 py-2">
+        <button
+          type="button"
+          className="btn mr-12 shrink-0"
+          disabled={!playerPhase}
+          onClick={() => send({ type: 'night.pause' })}
+        >
+          {t('night.pause').tl}
+        </button>
         <OrderChips
           chips={night.chips}
           units={state.units}

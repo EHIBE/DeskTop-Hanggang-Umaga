@@ -178,6 +178,8 @@ export type StateMessage = Readonly<{
   play_w_cm: number
   play_h_cm: number
   demo_safe: boolean
+  demo_safe_sam: boolean
+  resume_turn: number | null
   has_api_key: boolean
   units: readonly UnitSummary[]
   begin_block_key: string | null
@@ -306,6 +308,10 @@ export type ClientMessage =
   | Readonly<{ type: 'night.next' }>
   | Readonly<{ type: 'night.quit' }>
   | Readonly<{ type: 'demo_safe'; on: boolean }>
+  | Readonly<{ type: 'demo_safe.sam'; on: boolean }>
+  | Readonly<{ type: 'campaign.delete'; campaign_id: string }>
+  | Readonly<{ type: 'night.pause' }>
+  | Readonly<{ type: 'night.resume'; force: boolean }>
 
 export type DesktopConfig = Readonly<{ port: number; token: string }>
 

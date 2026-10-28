@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import CostMeter from '../components/CostMeter'
 import Bilingual from '../components/Bilingual'
 import { t, type CopyKey } from '../lib/copy'
@@ -18,6 +18,8 @@ type StartProps = Readonly<{
   cost: CostMessage | null
 }>
 
+const CONFIRM_MS = 4000
+
 const DIFFICULTIES: readonly Difficulty[] = ['madali', 'normal', 'mahirap']
 
 function difficultyKey(difficulty: Difficulty): CopyKey {
@@ -28,6 +30,26 @@ function Start({ state, send, subscribe, cost }: StartProps): React.JSX.Element 
   const [campaigns, setCampaigns] = useState<readonly CampaignSummary[]>([])
   const [name, setName] = useState('')
   const [difficulty, setDifficulty] = useState<Difficulty>('normal')
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimer.current !== null) clearTimeout(confirmTimer.current)
+    }
+  }, [])
+
+  const armDelete = (id: string): void => {
+    if (confirmTimer.current !== null) clearTimeout(confirmTimer.current)
+    setConfirmId(id)
+    confirmTimer.current = setTimeout(() => setConfirmId(null), CONFIRM_MS)
+  }
+
+  const deleteCampaign = (id: string): void => {
+    if (confirmTimer.current !== null) clearTimeout(confirmTimer.current)
+    setConfirmId(null)
+    send({ type: 'campaign.delete', campaign_id: id })
+  }
 
   useEffect(() => {
     const off = subscribe((message) => {
@@ -93,10 +115,10 @@ function Start({ state, send, subscribe, cost }: StartProps): React.JSX.Element 
           ) : (
             <ul className="flex flex-col gap-4">
               {campaigns.map((campaign) => (
-                <li key={campaign.id}>
+                <li key={campaign.id} className="flex items-stretch gap-8">
                   <button
                     type="button"
-                    className="btn w-full text-left"
+                    className="btn min-w-0 flex-1 text-left"
                     onClick={() => send({ type: 'campaign.start', campaign_id: campaign.id })}
                   >
                     <span className="block">{campaign.name}</span>
@@ -106,6 +128,22 @@ function Start({ state, send, subscribe, cost }: StartProps): React.JSX.Element 
                       {t('start.nights', { n: campaign.nights_survived }).tl}
                     </span>
                   </button>
+                  <button
+                    type="button"
+                    className={`btn w-[200px] shrink-0 border-dashed border-gabi-sindak ${
+                      confirmId === campaign.id ? 'bg-gabi-sindak' : ''
+                    }`}
+                    aria-label={`${t('start.delete').en}: ${campaign.name}`}
+                    onClick={() =>
+                      confirmId === campaign.id
+                        ? deleteCampaign(campaign.id)
+                        : armDelete(campaign.id)
+                    }
+                  >
+                    {confirmId === campaign.id
+                      ? `! ${t('delete.confirm').tl}`
+                      : `X ${t('start.delete').tl}`}
+                  </button>
                 </li>
               ))}
             </ul>
@@ -113,16 +151,30 @@ function Start({ state, send, subscribe, cost }: StartProps): React.JSX.Element 
         </section>
       </div>
       {cost !== null && <CostMeter cost={cost} variant="bar" />}
-      <button
-        type="button"
-        role="switch"
-        aria-checked={state.demo_safe}
-        className="btn"
-        onClick={() => send({ type: 'demo_safe', on: !state.demo_safe })}
-      >
-        {state.demo_safe ? '[x] ' : '[ ] '}
-        {t('start.demo_safe').tl}
-      </button>
+      <div className="flex items-center gap-4">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={state.demo_safe}
+          className="btn"
+          onClick={() => send({ type: 'demo_safe', on: !state.demo_safe })}
+        >
+          {state.demo_safe ? '[x] ' : '[ ] '}
+          {t('start.demo_safe').tl}
+        </button>
+        {state.demo_safe && (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={state.demo_safe_sam}
+            className="btn"
+            onClick={() => send({ type: 'demo_safe.sam', on: !state.demo_safe_sam })}
+          >
+            {state.demo_safe_sam ? '[x] ' : '[ ] '}
+            {t('start.demo_safe_sam').tl}
+          </button>
+        )}
+      </div>
     </main>
   )
 }

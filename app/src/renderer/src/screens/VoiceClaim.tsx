@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import SpriteView from '../canvas/SpriteView'
 import Bilingual from '../components/Bilingual'
 import { t } from '../lib/copy'
@@ -9,6 +9,7 @@ type VoiceClaimProps = Readonly<{
   send: (message: ClientMessage) => boolean
 }>
 
+const CLAIM_SECONDS = 60
 const SLOTS = 4
 const NAME_MAX = 24
 const LETTERS = ['A', 'B', 'C', 'D'] as const
@@ -34,6 +35,12 @@ function VoiceClaim({ state, send }: VoiceClaimProps): React.JSX.Element {
   const [names, setNames] = useState<readonly string[]>(() => initialNames(state))
   const [claims, setClaims] = useState<Claims>(() => initialClaims(state))
   const [selected, setSelected] = useState<string | null>(null)
+  const [secondsLeft, setSecondsLeft] = useState(CLAIM_SECONDS)
+
+  useEffect(() => {
+    const timer = setInterval(() => setSecondsLeft((value) => Math.max(0, value - 1)), 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   const trimmed = names.map((name) => name.trim())
   const duplicate = trimmed.map(
@@ -80,6 +87,10 @@ function VoiceClaim({ state, send }: VoiceClaimProps): React.JSX.Element {
     <main className="flex h-full w-full gap-8 p-8">
       <section className="panel flex min-w-0 flex-1 flex-col gap-6 p-6">
         <Bilingual copyKey="claim.prompt" />
+        <p role="timer" className={secondsLeft <= 10 ? 'text-gabi-lantern' : 'caption-en'}>
+          {secondsLeft <= 10 ? '! ' : ''}
+          {t('claim.countdown', { seconds: secondsLeft }).tl}
+        </p>
         <h2 className="text-[24px] leading-[32px]">{t('summon.roster').tl}</h2>
         <ul className="flex flex-col gap-3 overflow-y-auto">
           {ordered.map((unit) => {

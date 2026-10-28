@@ -50,7 +50,8 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
   const images = useUnitImages(state.units)
   const hasKubo = ordered.length > 0 && ordered[0].class === 'kubo'
   const full = state.units.length >= MAX_UNITS
-  const blocked = state.begin_block_key !== null
+  const resuming = state.resume_turn !== null
+  const blocked = !resuming && state.begin_block_key !== null
   const blockKey: CopyKey =
     state.begin_block_key !== null && isCopyKey(state.begin_block_key)
       ? state.begin_block_key
@@ -78,7 +79,7 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
   }, [busy])
 
   const trimmed = name.trim()
-  const canSend = trimmed !== '' && !busy && !state.awaiting_tap && !full
+  const canSend = !resuming && trimmed !== '' && !busy && !state.awaiting_tap && !full
 
   const submit = (): void => {
     if (!canSend) return
@@ -87,10 +88,10 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
 
   const handleTap = useCallback(
     (point: Point, mapping: BoardMapping): void => {
-      if (!state.awaiting_tap || mapping.view !== 'warped') return
+      if (resuming || !state.awaiting_tap || mapping.view !== 'warped') return
       if (send({ type: 'summon.tap', point })) setBusy(true)
     },
-    [state.awaiting_tap, send]
+    [resuming, state.awaiting_tap, send]
   )
 
   const overlay = useCallback(
@@ -213,6 +214,11 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
   return (
     <main className="relative flex h-full w-full gap-8 p-8">
       <aside className="panel flex w-[512px] shrink-0 flex-col gap-6 overflow-y-auto p-6">
+        {state.resume_turn !== null && (
+          <div role="status" className="banner p-3">
+            <Bilingual copyKey="summon.resume_banner" params={{ turn: state.resume_turn }} />
+          </div>
+        )}
         <Bilingual copyKey={state.awaiting_tap ? 'summon.which' : 'summon.prompt'} />
         <form
           className="flex flex-col gap-4"
@@ -230,7 +236,7 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
               className="field min-w-0 flex-1"
               value={name}
               maxLength={NAME_MAX}
-              disabled={busy || state.awaiting_tap}
+              disabled={resuming || busy || state.awaiting_tap}
               onChange={(event) => setName(event.target.value)}
             />
             <button type="submit" className="btn btn-primary" disabled={!canSend}>
@@ -296,19 +302,28 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
             aria-disabled={blocked}
             onClick={begin}
           >
-            {t('summon.begin').tl}
+            {state.resume_turn !== null
+              ? t('summon.resume_button', { turn: state.resume_turn }).tl
+              : t('summon.begin').tl}
           </button>
         </div>
       </aside>
       <div className="panel min-w-0 flex-1 p-2">
         <Board
           subscribe={subscribe}
-          onTap={state.awaiting_tap ? handleTap : undefined}
+          onTap={state.awaiting_tap && !resuming ? handleTap : undefined}
           overlay={overlay}
           label={t(state.awaiting_tap ? 'summon.which' : 'summon.prompt').en}
         />
       </div>
-      {shownCard && <UnitCard unit={shownCard} send={send} onClose={() => setCardUnit(null)} />}
+      {shownCard && (
+        <UnitCard
+          unit={shownCard}
+          send={send}
+          locked={resuming}
+          onClose={() => setCardUnit(null)}
+        />
+      )}
     </main>
   )
 }

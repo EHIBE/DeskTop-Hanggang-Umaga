@@ -6,6 +6,7 @@ import type { ClientMessage, UnitSummary } from '../lib/types'
 type UnitCardProps = Readonly<{
   unit: UnitSummary
   send: (message: ClientMessage) => boolean
+  locked?: boolean
   onClose: () => void
 }>
 
@@ -21,7 +22,7 @@ function initials(unit: UnitSummary): string {
   return t(classKey(unit)).tl.slice(0, 2).toUpperCase()
 }
 
-function UnitCard({ unit, send, onClose }: UnitCardProps): React.JSX.Element {
+function UnitCard({ unit, send, locked = false, onClose }: UnitCardProps): React.JSX.Element {
   const [renaming, setRenaming] = useState(false)
   const [draft, setDraft] = useState(unit.name)
 
@@ -122,7 +123,7 @@ function UnitCard({ unit, send, onClose }: UnitCardProps): React.JSX.Element {
           <button
             type="button"
             className="btn"
-            disabled={unit.rerolls_left <= 0}
+            disabled={locked || unit.rerolls_left <= 0}
             onClick={() => send({ type: 'unit.reroll', unit_id: unit.unit_id })}
           >
             {t('summon.reroll').tl} ({unit.rerolls_left})
