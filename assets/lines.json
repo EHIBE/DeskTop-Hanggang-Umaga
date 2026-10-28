@@ -5,7 +5,7 @@
       {"tl": "Lumulubog na ang araw. Hanggang umaga, kapit lang!", "en": "The sun is setting. Hold on until morning!", "mood": "kalmado"}
     ],
     "tabi_tabi": [
-      {"tl": "Narinig ka ng mga duwende. Mukhang mabait sila ngayong gabi.", "en": "The duwende heard you. They seem kind tonight.", "mood": "kalmado"}
+      {"tl": "Tabi-tabi po! Narinig tayo ng mga duwende, mukhang mabait sila ngayong gabi.", "en": "Excuse us, spirits! The duwende heard us, and they seem kind tonight.", "mood": "kalmado"}
     ],
     "spawn_aswang": [
       {"tl": "May aswang na paparating mula sa hilaga. Bantayan ang nag-iisa!", "en": "An aswang is coming from the north. Watch whoever is alone!", "mood": "takot"}
@@ -44,7 +44,7 @@
       {"tl": "Tinamaan ang kubo! [HP] na lang.", "en": "The kubo was hit! [HP] left.", "mood": "takot"}
     ],
     "unit_down": [
-      {"tl": "Bagsak si [unit]. Bawi tayo.", "en": "[unit] is down. Let's get it back.", "mood": "takot"}
+      {"tl": "Bagsak si [unit]. Bawi tayo.", "en": "[unit] is down. Let's bounce back.", "mood": "takot"}
     ],
     "last_turn": [
       {"tl": "Huling dilim na. Konting tiis na lang!", "en": "Last stretch of dark. Just a little longer!", "mood": "kaba"}
@@ -57,7 +57,7 @@
     ],
     "quiet": [
       {"tl": "Tahimik ang gabi. Hinga muna, tapos handa ulit.", "en": "The night is quiet. Breathe, then get ready again.", "mood": "kalmado"},
-      {"tl": "Humihihip ang hangin sa bukid. Abangan ang susunod.", "en": "The wind stirs over the fields. Watch for what comes next.", "mood": "kalmado"},
+      {"tl": "Umiihip ang hangin sa bukid. Abangan ang susunod.", "en": "The wind stirs over the fields. Watch for what comes next.", "mood": "kalmado"},
       {"tl": "Walang gumagalaw sa dilim. Sa ngayon.", "en": "Nothing moves in the dark. For now.", "mood": "kalmado"}
     ]
   }
