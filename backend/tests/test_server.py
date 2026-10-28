@@ -368,7 +368,11 @@ def test_demo_safe_toggle_persists_in_state(client: TestClient) -> None:
     with connect(client) as ws:
         receive_type(ws, "state")
         ws.send_text(json.dumps({"type": "demo_safe", "on": True}))
-        assert receive_type(ws, "state")["demo_safe"] is True
+        state = receive_type(ws, "state")
+        assert state["demo_safe"] is True
+        assert state["demo_safe_sam"] is True
+        ws.send_text(json.dumps({"type": "demo_safe.sam", "on": False}))
+        assert receive_type(ws, "state")["demo_safe_sam"] is False
 
 
 def test_busy_camera_gets_notice(tmp_path: Path) -> None:

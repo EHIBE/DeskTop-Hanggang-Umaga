@@ -192,6 +192,11 @@ class DemoSafeMessage(ClientModel):
     on: bool
 
 
+class DemoSafeSamMessage(ClientModel):
+    type: Literal["demo_safe.sam"]
+    on: bool
+
+
 ClientMessage = (
     CampaignListMessage
     | CampaignStartExisting
@@ -215,6 +220,7 @@ ClientMessage = (
     | NightNextMessage
     | NightQuitMessage
     | DemoSafeMessage
+    | DemoSafeSamMessage
 )
 CLIENT_MESSAGE: Final = TypeAdapter[ClientMessage](ClientMessage)
 
@@ -457,6 +463,7 @@ def state_json(snapshot: Snapshot) -> JsonObject:
         "play_w_cm": snapshot.play_w_cm,
         "play_h_cm": snapshot.play_h_cm,
         "demo_safe": snapshot.is_demo_safe,
+        "demo_safe_sam": snapshot.is_demo_safe_sam,
         "has_api_key": snapshot.has_api_key,
         "units": [unit_json(unit) for unit in snapshot.units],
         "begin_block_key": snapshot.begin_block_key,
@@ -671,6 +678,9 @@ class Connection:
             return None
         if isinstance(message, NightQuitMessage):
             controller.quit_night()
+            return None
+        if isinstance(message, DemoSafeSamMessage):
+            await asyncio.to_thread(controller.set_demo_safe_sam, message.on)
             return None
         await asyncio.to_thread(controller.set_demo_safe, message.on)
         return None

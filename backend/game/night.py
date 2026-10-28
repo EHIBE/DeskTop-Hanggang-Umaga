@@ -60,6 +60,7 @@ from db.store import (
     UnitRecord,
     UnitSave,
 )
+from game.demo_safe import DemoSafeMode
 from game.state_machine import Transition, TurnEvent, TurnState, TurnStateMachine
 from gm.narrator import (
     Narration,
@@ -139,7 +140,6 @@ Image = npt.NDArray[np.uint8]
 
 FIRST_FRAME_TIMEOUT_S: Final = 3.0
 FIRST_FRAME_POLL_S: Final = 0.05
-DEMO_SAFE_SETTING: Final = "demo_safe"
 CAMERA_SETTING: Final = "camera_index"
 REROLLS_FLAG: Final = "rerolls"
 SETUP_TURN: Final = 0
@@ -284,6 +284,7 @@ class Snapshot:
     play_w_cm: float
     play_h_cm: float
     is_demo_safe: bool
+    is_demo_safe_sam: bool
     has_api_key: bool
     units: tuple[UnitView, ...] = field(default=())
     begin_block_key: str | None = None
@@ -383,7 +384,7 @@ class GameController:
         self._calibration: Calibration | None = None
         self._is_calibrated = False
         self._is_stored_calibration = False
-        self._is_demo_safe = store.get_setting(DEMO_SAFE_SETTING) == "1"
+        self._demo_safe = DemoSafeMode.load(store)
 
     def snapshot(self) -> Snapshot:
         with self._lock:
@@ -395,7 +396,8 @@ class GameController:
                 is_previewing=self._calibration is not None and not self._is_calibrated,
                 play_w_cm=self._area.width_cm,
                 play_h_cm=self._area.height_cm,
-                is_demo_safe=self._is_demo_safe,
+                is_demo_safe=self._demo_safe.is_on,
+                is_demo_safe_sam=self._demo_safe.is_sam_reanchor_on,
                 has_api_key=self._has_api_key,
                 units=tuple(self._unit_view(unit) for unit in self._units),
                 begin_block_key=begin_night_block_key(
@@ -919,7 +921,7 @@ class GameController:
             ),
             events=tuple(events),
         )
-        narration.submit(request, self._is_demo_safe, self._publish_narration)
+        narration.submit(request, not self._demo_safe.allows_spark, self._publish_narration)
 
     def _publish_narration(self, request: NarrationRequest, narration: Narration) -> None:
         if self._broadcast is None:
@@ -958,7 +960,7 @@ class GameController:
         meter = self._meter
         if meter is None:
             return
-        if meter.is_stopped and not self._is_demo_safe:
+        if meter.is_stopped and not self._demo_safe.is_on:
             logger.warning("cost hard stop reached, switching to Demo Safe Mode")
             self.set_demo_safe(True)
             self._notices.append(("credits.low", {}))
@@ -971,7 +973,7 @@ class GameController:
         self.enforce_budget()
         if self._pipeline_factory is None:
             raise GameError(OFFLINE_KEY, {"feature": SPARK_FEATURE})
-        return self._pipeline_factory(self._is_demo_safe)
+        return self._pipeline_factory(not self._demo_safe.allows_spark)
 
     def wait_for_still_frame(self) -> Image | None:
         camera = self._camera
@@ -1269,7 +1271,7 @@ class GameController:
         if factory is None:
             return
         self.enforce_budget()
-        service = factory(self._is_demo_safe)
+        service = factory(not self._demo_safe.allows_image)
         try:
             sprite_id = await service.ensure_sprite(job)
             if sprite_id is None:
@@ -1323,8 +1325,13 @@ class GameController:
 
     def set_demo_safe(self, is_on: bool) -> None:
         with self._lock:
-            self._is_demo_safe = is_on
-            self._store.set_setting(DEMO_SAFE_SETTING, "1" if is_on else "0")
+            self._demo_safe = self._demo_safe.with_on(is_on)
+            self._demo_safe.save(self._store)
+
+    def set_demo_safe_sam(self, is_on: bool) -> None:
+        with self._lock:
+            self._demo_safe = self._demo_safe.with_sam_reanchor(is_on)
+            self._demo_safe.save(self._store)
 
     def _require_phase(self, phase: AppPhase) -> None:
         if self._phase() is not phase:
@@ -1379,11 +1386,11 @@ class GameController:
             )
         return tuple(poses)
 
-    def _segmenter(self, allow_in_demo_safe: bool) -> Segmenter | None:
+    def _segmenter(self, is_allowed: bool) -> Segmenter | None:
         self.enforce_budget()
         if self._segmenter_factory is None:
             return None
-        if self._is_demo_safe and not allow_in_demo_safe:
+        if not is_allowed:
             return None
         segmenter = self._segmenter_factory(False)
         return segmenter if segmenter.is_available else None
@@ -1396,7 +1403,7 @@ class GameController:
         candidates = tracker.recovery_candidates()
         if not candidates:
             return 0
-        segmenter = self._segmenter(allow_in_demo_safe=False)
+        segmenter = self._segmenter(self._demo_safe.allows_sam_recovery)
         frame = await asyncio.to_thread(self.wait_for_frame)
         if segmenter is None or frame is None:
             return 0
@@ -1451,7 +1458,7 @@ class GameController:
             )
             for unit in self._units
         ]
-        segmenter = self._segmenter(allow_in_demo_safe=True)
+        segmenter = self._segmenter(self._demo_safe.allows_sam_reanchor)
         anchors = await reanchor(
             segmenter or TrackerOnlySegmenter(),
             frame,
