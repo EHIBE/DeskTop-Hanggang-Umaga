@@ -166,21 +166,46 @@ def test_ptt_mode_and_retry(tmp_path: Path) -> None:
     store.close()
 
 
-def test_voice_down_notifies_and_orders_wait_for_player_phase(tmp_path: Path) -> None:
+def test_pause_stops_voice_and_stale_callbacks_are_ignored(tmp_path: Path) -> None:
     store, controller, voices, _ = setup(tmp_path)
 
     async def play() -> None:
         start(controller)
-        voice = voices.made[0]
+        first = voices.made[0]
         controller.pause_night()
-        voice.say("Stapler, atake ang aswang!")
+        assert first.is_stopped
+        assert controller.snapshot().voice.status == "off"
+        first.say("Stapler, atake ang aswang!")
+        first.on_status(VoiceStatus.LISTENING)
+        assert controller.snapshot().voice.status == "off"
+        controller.resume_night(is_forced=False)
+        await asyncio.sleep(0)
+        second = voices.made[1]
+        assert controller.snapshot().voice.status == "listening"
+        first.say("Stapler, atake ang aswang!")
         assert controller.snapshot().night.chips == ()  # type: ignore[union-attr]
-        voice.on_status(VoiceStatus.DOWN)
+        second.on_status(VoiceStatus.OFF)
         assert controller.snapshot().voice.status == "down"
         assert "net.down" in notices(controller)
         controller.close()
         await controller.wait_for_voice()
 
     asyncio.run(play())
-    assert controller.snapshot().phase is AppPhase.PAUSED
+    store.close()
+
+
+def test_demo_safe_off_restarts_voice(tmp_path: Path) -> None:
+    store, controller, voices, _ = setup(tmp_path)
+
+    async def play() -> None:
+        start(controller)
+        controller.set_demo_safe(True)
+        assert voices.made[0].is_stopped
+        controller.set_demo_safe(False)
+        assert len(voices.made) == 2
+        controller.set_ptt(False)
+        controller.close()
+        await controller.wait_for_voice()
+
+    asyncio.run(play())
     store.close()

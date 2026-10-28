@@ -66,7 +66,8 @@ function VoiceControls({ voice, send }: VoiceControlsProps): React.JSX.Element {
       setDown(true)
     }
     const onKeyUp = (event: KeyboardEvent): void => {
-      if (event.code !== 'Space' || isTextTarget(event.target)) return
+      if (event.code !== 'Space') return
+      if (!heldRef.current && isTextTarget(event.target)) return
       event.preventDefault()
       setDown(false)
     }
@@ -82,7 +83,7 @@ function VoiceControls({ voice, send }: VoiceControlsProps): React.JSX.Element {
     }
   }, [ptt, setDown])
 
-  const showRetry = status === 'down' || status === 'listening'
+  const showRetry = status !== 'connecting'
   const active = held || (ptt && voice.ptt_down)
   const statusText = t(STATUS_KEY[status])
 

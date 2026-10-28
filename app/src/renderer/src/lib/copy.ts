@@ -208,11 +208,11 @@ const entries = {
   'night.resume': { tl: 'Ituloy', en: 'Resume' },
   'night.continue_anyway': { tl: 'Ituloy pa rin', en: 'Continue anyway' },
   'night.cam_hint': {
-    tl: 'Maaaring mali ang mga posisyon kapag itinuloy nang hindi nag-calibrate.',
+    tl: 'Baka mali ang posisyon kung hindi muna mag-calibrate.',
     en: 'Positions may be off if you continue without recalibrating.'
   },
   'claim.countdown': {
-    tl: 'Magsasara ang pag-claim sa [seconds] segundo',
+    tl: 'Sasara ang claim sa [seconds] segundo',
     en: 'Claims close in [seconds] seconds'
   },
   'diff.madali': { tl: 'Madali', en: 'Easy' },
@@ -339,19 +339,22 @@ const entries = {
   'narration.mood.umaga': { tl: 'Umaga', en: 'Morning' },
   'narration.hint': { tl: 'Payo', en: 'Hint' },
   'voice.region': { tl: 'Boses', en: 'Voice' },
-  'voice.status.off': { tl: 'Patay ang mic', en: 'Mic off' },
+  'voice.status.off': { tl: 'Naka-off ang mic', en: 'Mic off' },
   'voice.status.connecting': { tl: 'Kumokonekta ang mic', en: 'Connecting mic' },
   'voice.status.listening': { tl: 'Nakikinig', en: 'Listening' },
-  'voice.status.down': { tl: 'Walang boses', en: 'Voice down' },
+  'voice.status.down': { tl: 'Hindi gumagana ang mic', en: 'Voice down' },
   'voice.mode.open': { tl: 'Bukas na mic', en: 'Open mic' },
   'voice.mode.ptt': { tl: 'Pindot para magsalita', en: 'Push to talk' },
   'voice.mode.label': { tl: 'Paraan ng mic', en: 'Mic mode' },
   'voice.problems': { tl: 'Problema sa boses', en: 'Voice problems' },
   'voice.down_banner': {
-    tl: 'Walang boses ngayon. Gumagana pa rin ang pag-tap.',
+    tl: 'Hindi gumagana ang boses ngayon. Pwede pa ring mag-tap.',
     en: 'Voice is down. Tap controls still work.'
   },
-  'voice.ptt_hold': { tl: 'Pindutin at magsalita (Space)', en: 'Hold to talk (Space)' },
+  'voice.ptt_hold': {
+    tl: 'Pindutin at hawakan para magsalita (Space)',
+    en: 'Hold to talk (Space)'
+  },
   'voice.ptt_held': { tl: 'Nakikinig... (Space)', en: 'Listening... (Space)' },
   'voice.chip_mic': { tl: 'Mic', en: 'Mic' },
   'voice.caption_label': { tl: 'Live na caption', en: 'Live caption' }

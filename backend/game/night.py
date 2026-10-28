@@ -662,6 +662,7 @@ class GameController:
             if self._is_camera_moved(frame):
                 session.cancel_end_turn()
                 self._run_session(session.pause)
+                self._stop_voice()
                 self._notify("cam.moved", {})
                 return
             anchors = await self.reanchor_all(frame)
@@ -734,6 +735,7 @@ class GameController:
     def pause_night(self) -> None:
         session = self._session_or_error()
         self._run_session(session.pause)
+        self._stop_voice()
 
     def resume_night(self, is_forced: bool) -> None:
         session = self._session_or_error()
@@ -745,6 +747,7 @@ class GameController:
                 raise GameError("cam.moved")
             self._baseline = frame
         self._run_session(session.resume)
+        self._start_voice()
 
     def next_night(self) -> None:
         session = self._session_or_error()
@@ -1082,13 +1085,29 @@ class GameController:
         except RuntimeError:
             return
         names = [u.card.name for u in self._units]
-        voice = factory(
-            [*VOICE_KEYWORDS, *names],
-            self._publish_caption,
-            self._on_voice_final,
-            self._on_voice_overlap,
-            self._on_voice_status,
-        )
+        owner: list[VoiceSession] = []
+
+        def is_current() -> bool:
+            return bool(owner) and self._voice is owner[0]
+
+        def on_caption(caption: Caption) -> None:
+            if is_current():
+                self._publish_caption(caption)
+
+        def on_final(caption: Caption) -> None:
+            if is_current():
+                self._on_voice_final(caption)
+
+        def on_overlap() -> None:
+            if is_current():
+                self._on_voice_overlap()
+
+        def on_status(status: VoiceStatus) -> None:
+            if is_current():
+                self._on_voice_status(status)
+
+        voice = factory([*VOICE_KEYWORDS, *names], on_caption, on_final, on_overlap, on_status)
+        owner.append(voice)
         voice.set_mode(self._voice_mode)
         self._voice = voice
         self._track_voice_task(loop.create_task(voice.run()))
@@ -1122,6 +1141,8 @@ class GameController:
 
     def set_ptt(self, is_down: bool) -> None:
         if self._voice_mode is not VoiceMode.PTT:
+            if not is_down:
+                return
             raise GameError("cmd.unknown")
         self._is_ptt_down = is_down
         if self._voice is not None:
@@ -1154,6 +1175,8 @@ class GameController:
     def _on_voice_status(self, status: VoiceStatus) -> None:
         if self._voice is None:
             return
+        if status is VoiceStatus.OFF:
+            status = VoiceStatus.DOWN
         self._voice_status = status
         if status is VoiceStatus.DOWN:
             self._notify("net.down", {})
@@ -1605,6 +1628,8 @@ class GameController:
             self._demo_safe.save(self._store)
         if is_on:
             self._stop_narration()
+        elif self._session is not None and self._session.state in ACTIVE_NIGHT_STATES:
+            self._start_voice()
 
     def set_demo_safe_sam(self, is_on: bool) -> None:
         with self._lock:
@@ -1850,8 +1875,16 @@ STUNNED_STATUS: Final = "stunned"
 REFORM_STATUS_PREFIX: Final = "reform_"
 STATE_CHANGED: Final = "state.changed"
 VOICE_KEYWORDS: Final = (
-    "tapos",
+    "tapos na",
     "hindi",
+    "wag",
+    "atake",
+    "banatan",
+    "tira",
+    "gamutin",
+    "gamot",
+    "pagalingin",
+    "protektahan",
     "kubo",
     "anting-anting",
     "albularyo",
