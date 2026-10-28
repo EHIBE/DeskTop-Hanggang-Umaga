@@ -14,6 +14,11 @@ MAX_ALIAS_TOKENS: Final = 3
 MIN_ALIAS_CHARS: Final = 3
 MAX_INSTANCE_DIGITS: Final = 2
 
+ENEMY_FUZZY_CUTOFF: Final = 80
+ENEMY_PREFIX_MIN_LEN: Final = 4
+SHORT_ALIAS_CHARS: Final = 4
+SHORT_ALIAS_CUTOFF: Final = 85
+
 ATTACK_WORDS: Final = (
     "atake",
     "saksakin",
@@ -22,14 +27,47 @@ ATTACK_WORDS: Final = (
     "banatan",
     "attack",
     "hit",
+    "tirahin",
+    "saksak",
+    "atakihin",
+    "sugurin",
+    "palo",
+    "paluin",
+    "hampas",
 )
-POWER_WORDS: Final = ("gamitin", "protektahan", "bantayan", "power", "use")
-HEAL_WORDS: Final = ("gamutin", "pagalingin", "heal")
-END_WORDS: Final = ("tapos", "done")
-CANCEL_WORDS: Final = ("hindi", "cancel", "mali", "wag")
+POWER_WORDS: Final = (
+    "gamitin",
+    "protektahan",
+    "bantayan",
+    "power",
+    "use",
+    "protekta",
+    "bantay",
+    "kalasag",
+)
+HEAL_WORDS: Final = ("gamutin", "pagalingin", "heal", "gamot", "pagaling", "ayusin")
+END_WORDS: Final = ("tapos", "done", "end", "next")
+CANCEL_WORDS: Final = (
+    "hindi",
+    "cancel",
+    "mali",
+    "wag",
+    "huwag",
+    "ayaw",
+    "kansela",
+    "stop",
+)
+CANCEL_FOLLOWERS: Final = frozenset(("yan", "yon", "iyan", "iyon", "na", "po"))
 ENEMY_TYPES: Final = ("aswang", "tikbalang", "kapre", "manananggal", "duwende")
+ENEMY_ALIASES: Final = {
+    "tigbalang": "tikbalang",
+    "duende": "duwende",
+    "dwende": "duwende",
+}
+GENERIC_ENEMY_WORDS: Final = ("kalaban", "kaaway")
 NUMBER_WORDS: Final = {
     "isa": 1,
+    "uno": 1,
     "una": 1,
     "dalawa": 2,
     "dos": 2,
@@ -39,10 +77,19 @@ NUMBER_WORDS: Final = {
     "kwatro": 4,
     "lima": 5,
     "singko": 5,
+    "anim": 6,
+    "pito": 7,
+    "walo": 8,
 }
 CLASS_ALIASES: Final = {
     "charm": ("anting anting", "charm"),
-    "healer": ("albularyo", "healer"),
+    "healer": ("albularyo", "manggagamot", "healer"),
+    "fighter": ("mandirigma", "fighter"),
+    "reach": ("sibat", "reach"),
+    "ranged": ("pana", "archer", "ranged"),
+    "scout": ("scout",),
+    "wall": ("pader", "wall"),
+    "kubo": ("kubo", "bahay"),
 }
 
 _NON_WORD: Final = re.compile(r"[^a-z0-9]+")
@@ -88,7 +135,7 @@ class Command:
 
 @dataclass(frozen=True)
 class _EnemyMention:
-    enemy_type: str
+    enemy_type: str | None
     number: int | None
     index: int
 
@@ -114,24 +161,57 @@ def normalize(text: str) -> str:
     return " ".join(_NON_WORD.sub(" ", stripped.casefold()).split())
 
 
-def _has_cancel(tokens: list[str]) -> bool:
-    for token in tokens:
-        if token in CANCEL_WORDS:
-            return True
-        if len(token) >= TRIGGER_FUZZY_MIN_LEN and any(
-            len(word) >= TRIGGER_FUZZY_MIN_LEN
-            and fuzz.ratio(word, token) >= TRIGGER_FUZZY_CUTOFF
-            for word in CANCEL_WORDS
+def _canonical(token: str) -> str:
+    if token.startswith("i") and token[1:] in _ACTION_KINDS:
+        return token[1:]
+    return token
+
+
+def _merge_prefix(tokens: list[str]) -> list[str]:
+    merged: list[str] = []
+    for index, token in enumerate(tokens):
+        if (
+            token == "i"
+            and index + 1 < len(tokens)
+            and _canonical(tokens[index + 1]) in _ACTION_KINDS
         ):
-            return True
-    return False
+            continue
+        merged.append(_canonical(token))
+    return merged
+
+
+def _is_cancel_word(token: str) -> bool:
+    if token in CANCEL_WORDS:
+        return True
+    return len(token) >= TRIGGER_FUZZY_MIN_LEN and any(
+        len(word) >= TRIGGER_FUZZY_MIN_LEN
+        and fuzz.ratio(word, token) >= TRIGGER_FUZZY_CUTOFF
+        for word in CANCEL_WORDS
+    )
+
+
+def _cancel_state(tokens: list[str]) -> str:
+    if not _is_cancel_word(tokens[0]):
+        return "none"
+    if tokens[0] == "hindi" and len(tokens) > 1 and tokens[1] == "pa":
+        return "none"
+    if len(tokens) == 1:
+        return "cancel"
+    second = tokens[1]
+    if second in CANCEL_FOLLOWERS or second in _TRIGGER_TOKENS:
+        return "cancel"
+    if all(_is_cancel_word(token) for token in tokens):
+        return "cancel"
+    return "soft"
 
 
 def _has_end(tokens: list[str]) -> bool:
-    if any(token in END_WORDS for token in tokens):
+    if tokens == ["tapos"]:
+        return True
+    if any(token in ("done", "end", "next") for token in tokens):
         return True
     return any(
-        tokens[i] == "end" and tokens[i + 1] == "turn" for i in range(len(tokens) - 1)
+        tokens[i] == "tapos" and tokens[i + 1] == "na" for i in range(len(tokens) - 1)
     )
 
 
@@ -141,30 +221,53 @@ def _parse_instance(token: str) -> int | None:
     return NUMBER_WORDS.get(token)
 
 
+def _match_enemy_type(token: str, names: dict[str, str]) -> str | None:
+    exact = names.get(token)
+    if exact is not None:
+        return exact
+    best: tuple[float, str] | None = None
+    for name, enemy_type in names.items():
+        score = 0.0
+        if len(token) >= ENEMY_PREFIX_MIN_LEN and name.startswith(token):
+            score = 90.0
+        elif len(token) >= len(name) - 1:
+            ratio = fuzz.ratio(name, token)
+            if ratio >= ENEMY_FUZZY_CUTOFF:
+                score = ratio
+        if score and (best is None or score > best[0]):
+            best = (score, enemy_type)
+    return best[1] if best is not None else None
+
+
 def _find_enemy_mentions(
     tokens: list[str], enemy_types: tuple[str, ...]
 ) -> list[_EnemyMention]:
     mentions: list[_EnemyMention] = []
     used: set[int] = set()
+    names = {enemy_type: enemy_type for enemy_type in enemy_types}
+    for alias, enemy_type in ENEMY_ALIASES.items():
+        if enemy_type in names:
+            names[alias] = enemy_type
     for i, token in enumerate(tokens):
         if i in used or token in _TRIGGER_TOKENS or token.isdigit():
             continue
-        best: tuple[float, str] | None = None
-        for enemy_type in enemy_types:
-            if len(token) < len(enemy_type) - 2:
-                continue
-            score = fuzz.partial_ratio(enemy_type, token)
-            if score >= FUZZY_CUTOFF and (best is None or score > best[0]):
-                best = (score, enemy_type)
-        if best is None:
+        if token in GENERIC_ENEMY_WORDS:
+            used.add(i)
+            mentions.append(_EnemyMention(None, None, i))
+            continue
+        matched = _match_enemy_type(token, names)
+        if matched is None:
             continue
         number: int | None = None
         if i + 1 < len(tokens):
             number = _parse_instance(tokens[i + 1])
+            repeated = i + 2 < len(tokens) and tokens[i + 2] == tokens[i + 1]
+            if number is not None and repeated:
+                number = None
             if number is not None:
                 used.add(i + 1)
         used.add(i)
-        mentions.append(_EnemyMention(best[1], number, i))
+        mentions.append(_EnemyMention(matched, number, i))
     return mentions
 
 
@@ -207,8 +310,13 @@ def _find_unit_mentions(
                         continue
                     if len(window) > 1.5 * len(alias) + 2:
                         continue
-                    score = fuzz.partial_ratio(alias, window)
-                    if score >= FUZZY_CUTOFF:
+                    if len(alias) <= SHORT_ALIAS_CHARS:
+                        score = fuzz.ratio(alias, window)
+                        cutoff = SHORT_ALIAS_CUTOFF
+                    else:
+                        score = fuzz.partial_ratio(alias, window)
+                        cutoff = FUZZY_CUTOFF
+                    if score >= cutoff:
                         candidates.append((-score, priority, start, width, unit_index))
     candidates.sort()
     taken: set[int] = set()
@@ -258,6 +366,8 @@ def _nearest(unit: GrammarUnit, enemies: list[GrammarEnemy]) -> str | None:
 def _resolve_enemy(
     mention: _EnemyMention, actor: GrammarUnit, enemies: tuple[GrammarEnemy, ...]
 ) -> str | None:
+    if mention.enemy_type is None:
+        return _nearest(actor, list(enemies))
     of_type = [e for e in enemies if e.type.casefold() == mention.enemy_type]
     if mention.number is not None:
         wanted = f"e_{mention.enemy_type}_{mention.number}"
@@ -296,12 +406,20 @@ def _resolve_target(
 def parse_command(text: str, context: GrammarContext) -> Command | None:
     if not isinstance(text, str):
         return None
-    tokens = normalize(text).split()
+    tokens = _merge_prefix(normalize(text).split())
     if not tokens:
         return None
-    if _has_cancel(tokens):
+    cancel = _cancel_state(tokens)
+    if cancel == "cancel":
         return Command(CommandKind.CANCEL, None, None)
+    command = _parse_order(tokens, context)
+    is_soft_cancel = cancel == "soft"
+    if is_soft_cancel and (command is None or command.kind is CommandKind.END_TURN):
+        return Command(CommandKind.CANCEL, None, None)
+    return command
 
+
+def _parse_order(tokens: list[str], context: GrammarContext) -> Command | None:
     enemy_types = tuple(
         dict.fromkeys((*ENEMY_TYPES, *(e.type.casefold() for e in context.enemies)))
     )

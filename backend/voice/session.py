@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import math
+import sqlite3
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from dataclasses import dataclass
@@ -13,7 +14,7 @@ import websockets
 from websockets.asyncio.client import ClientConnection
 
 from config import META_REALTIME_URL, MetaModel
-from db.store import ApiUsageRecord
+from db.store import ApiUsageRecord, StoreError
 from meta_client import BudgetExceededError, CostMeter, price_voice_seconds
 
 logger = logging.getLogger(__name__)
@@ -32,8 +33,20 @@ OPEN_TIMEOUT_S: Final = 30
 MAX_TEXT_CHARS: Final = 2_000
 MAX_ID_CHARS: Final = 128
 MAX_OPEN_TURNS: Final = 32
+MIC_FRAME_TIMEOUT_S: Final = 2.0
 TEXT_KEYS: Final = ("text", "transcript")
 SPEAKER_KEYS: Final = ("speaker", "speakerLabel", "label")
+RECOVERABLE_ERRORS: Final = (
+    ArithmeticError,
+    AttributeError,
+    LookupError,
+    OSError,
+    RuntimeError,
+    TypeError,
+    ValueError,
+    sqlite3.Error,
+    StoreError,
+)
 
 
 class VoiceStatus(StrEnum):
@@ -89,15 +102,29 @@ class SoundDeviceMicrophone:
         self._device = device_index
         self._queue: asyncio.Queue[bytes] = asyncio.Queue()
         self._is_closed = False
+        self._stream: Any = None
 
     def __aiter__(self) -> AsyncIterator[bytes]:
         return self._generate()
 
     async def close(self) -> None:
         self._is_closed = True
+        self._release_stream()
         self._queue.put_nowait(b"")
 
+    def _release_stream(self) -> None:
+        stream, self._stream = self._stream, None
+        if stream is None:
+            return
+        for action in (stream.stop, stream.close):
+            try:
+                action()
+            except (sounddevice.PortAudioError, ValueError, OSError):
+                logger.warning("microphone stream release failed")
+
     async def _generate(self) -> AsyncIterator[bytes]:
+        if self._is_closed:
+            return
         loop = asyncio.get_running_loop()
         queue = self._queue
 
@@ -107,7 +134,7 @@ class SoundDeviceMicrophone:
             loop.call_soon_threadsafe(queue.put_nowait, bytes(indata))
 
         try:
-            stream = sounddevice.RawInputStream(
+            self._stream = sounddevice.RawInputStream(
                 samplerate=SAMPLE_RATE,
                 channels=1,
                 dtype="int16",
@@ -115,8 +142,9 @@ class SoundDeviceMicrophone:
                 device=self._device,
                 callback=on_audio,
             )
-            stream.start()
+            self._stream.start()
         except (sounddevice.PortAudioError, ValueError, OSError):
+            self._release_stream()
             raise MicrophoneError("microphone unavailable") from None
         try:
             while not self._is_closed:
@@ -124,8 +152,7 @@ class SoundDeviceMicrophone:
                 if frame:
                     yield frame
         finally:
-            stream.stop()
-            stream.close()
+            self._release_stream()
 
 
 def _close_code(error: websockets.exceptions.ConnectionClosed) -> int | None:
@@ -224,6 +251,7 @@ class VoiceSession:
         meter: CostMeter,
         clock: Callable[[], float],
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        mic_timeout_s: float = MIC_FRAME_TIMEOUT_S,
     ) -> None:
         self._api_key = api_key
         self._keywords = tuple(keywords)
@@ -236,6 +264,7 @@ class VoiceSession:
         self._meter = meter
         self._clock = clock
         self._sleep = sleep
+        self._mic_timeout_s = mic_timeout_s
         self._status = VoiceStatus.OFF
         self._mode = VoiceMode.OPEN
         self._is_ptt_down = False
@@ -268,7 +297,14 @@ class VoiceSession:
         if status is self._status:
             return
         self._status = status
-        self._on_status(status)
+        self._notify(self._on_status, status)
+
+    @staticmethod
+    def _notify(callback: Callable[..., None], *args: object) -> None:
+        try:
+            callback(*args)
+        except RECOVERABLE_ERRORS as error:
+            logger.warning("voice callback failed %s", type(error).__name__)
 
     async def run(self) -> None:
         try:
@@ -296,7 +332,7 @@ class VoiceSession:
             if self._is_hard_stopped:
                 self._set_status(VoiceStatus.DOWN)
                 return
-            if self._stop.is_set() or code == CLOSE_NORMAL:
+            if self._stop.is_set():
                 return
             logger.warning("voice connection ended code=%s", code)
             if code == CLOSE_POLICY:
@@ -311,16 +347,43 @@ class VoiceSession:
             if failures >= MAX_FAILURES:
                 self._set_status(VoiceStatus.DOWN)
                 return
-            await self._sleep(BACKOFF_S[failures - 1])
+            await self._sleep_or_stop(BACKOFF_S[failures - 1])
+
+    async def _sleep_or_stop(self, delay: float) -> None:
+        sleeper = asyncio.ensure_future(self._sleep(delay))
+        stopper = asyncio.ensure_future(self._stop.wait())
+        try:
+            await asyncio.wait({sleeper, stopper}, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            sleeper.cancel()
+            stopper.cancel()
+            await asyncio.gather(sleeper, stopper, return_exceptions=True)
 
     async def _connect_and_stream(self) -> int | None:
         url = f"{META_REALTIME_URL}?sessionId=desktop-{uuid.uuid4()}"
+        connect_task = asyncio.ensure_future(self._connector.connect(url))
+        stopper = asyncio.ensure_future(self._stop.wait())
         try:
-            conn = await self._connector.connect(url)
+            await asyncio.wait(
+                {connect_task, stopper}, return_when=asyncio.FIRST_COMPLETED
+            )
+            finished = connect_task.done()
+        finally:
+            stopper.cancel()
+            if not connect_task.done():
+                connect_task.cancel()
+            await asyncio.gather(stopper, connect_task, return_exceptions=True)
+        if not finished:
+            return CLOSE_NORMAL
+        try:
+            conn = connect_task.result()
         except ConnectionClosedError as error:
             return error.code
         except (OSError, TimeoutError):
             return None
+        if self._stop.is_set():
+            await self._close_quietly(conn)
+            return CLOSE_NORMAL
         try:
             await conn.send(
                 build_handshake(self._api_key, self._keywords, self._with_extras)
@@ -337,7 +400,11 @@ class VoiceSession:
         return await self._drive(conn)
 
     async def _drive(self, conn: Connection) -> int | None:
-        mic = self._microphone_factory()
+        try:
+            mic = self._microphone_factory()
+        except RECOVERABLE_ERRORS:
+            await self._close_quietly(conn)
+            raise MicrophoneError("microphone unavailable") from None
         self._mark = self._clock()
         sender = asyncio.create_task(self._send_audio(conn, mic))
         receiver = asyncio.create_task(self._receive(conn))
@@ -375,37 +442,45 @@ class VoiceSession:
         raise error
 
     async def _finish(self, conn: Connection, mic: Microphone) -> None:
-        if self._stop.is_set():
+        try:
+            if self._stop.is_set():
+                try:
+                    await conn.send(json.dumps({"type": "endStream"}))
+                except (ConnectionClosedError, OSError):
+                    pass
+            await self._close_quietly(conn)
+        finally:
             try:
-                await conn.send(json.dumps({"type": "endStream"}))
-            except (ConnectionClosedError, OSError):
-                pass
-        await self._close_quietly(conn)
-        await mic.close()
-        elapsed = self._clock() - self._mark
-        if elapsed > 0:
-            self._record_seconds(math.ceil(elapsed))
-            self._mark = self._clock()
-        if self._meter.is_stopped:
-            self._is_hard_stopped = True
+                await mic.close()
+            except RECOVERABLE_ERRORS as error:
+                logger.warning("microphone close failed %s", type(error).__name__)
+            elapsed = self._clock() - self._mark
+            if elapsed > 0:
+                self._record_seconds(math.ceil(elapsed))
+                self._mark = self._clock()
+            if self._meter.is_stopped:
+                self._is_hard_stopped = True
 
     @staticmethod
     async def _close_quietly(conn: Connection) -> None:
         try:
             await conn.close()
-        except (ConnectionClosedError, OSError):
-            pass
+        except RECOVERABLE_ERRORS as error:
+            logger.warning("voice close failed %s", type(error).__name__)
 
     def _record_seconds(self, seconds: int) -> None:
-        self._meter.record(
-            ApiUsageRecord(
-                model=MetaModel.VOICE.value,
-                kind="voice",
-                cost_usd=price_voice_seconds(seconds),
-                ok=True,
-                audio_seconds=seconds,
+        try:
+            self._meter.record(
+                ApiUsageRecord(
+                    model=MetaModel.VOICE.value,
+                    kind="voice",
+                    cost_usd=price_voice_seconds(seconds),
+                    ok=True,
+                    audio_seconds=seconds,
+                )
             )
-        )
+        except RECOVERABLE_ERRORS as error:
+            logger.warning("voice cost record failed %s", type(error).__name__)
 
     def _tick_cost(self) -> None:
         now = self._clock()
@@ -422,7 +497,14 @@ class VoiceSession:
         return frame
 
     async def _send_audio(self, conn: Connection, mic: Microphone) -> None:
-        async for frame in mic:
+        frames = mic.__aiter__()
+        while True:
+            try:
+                frame = await asyncio.wait_for(anext(frames), self._mic_timeout_s)
+            except StopAsyncIteration:
+                break
+            except TimeoutError:
+                raise MicrophoneError("microphone stalled") from None
             await conn.send(self._next_payload(frame))
             self._tick_cost()
             if self._stop.is_set():
@@ -468,7 +550,7 @@ class VoiceSession:
             return
         if self._open:
             if not self._tainted & self._open.keys():
-                self._on_overlap()
+                self._notify(self._on_overlap)
             self._tainted.update(self._open)
             self._tainted.add(turn)
         if len(self._open) >= MAX_OPEN_TURNS:
@@ -480,7 +562,7 @@ class VoiceSession:
         text = _text_field(event)
         if turn is None or text is None:
             return
-        self._on_caption(Caption(turn, text, False, self._open.get(turn)))
+        self._notify(self._on_caption, Caption(turn, text, False, self._open.get(turn)))
 
     def _on_speaker(self, event: dict[str, object]) -> None:
         turn = self._current_turn(event)
@@ -491,13 +573,15 @@ class VoiceSession:
 
     def _on_speech_complete(self, event: dict[str, object]) -> None:
         turn = self._current_turn(event)
-        text = _text_field(event)
-        if turn is None or not text:
+        if turn is None:
             return
+        text = _text_field(event)
         label = self._open.pop(turn, None) or _first_id(event, SPEAKER_KEYS)
-        if turn in self._tainted:
-            self._tainted.discard(turn)
+        was_tainted = turn in self._tainted
+        self._tainted.discard(turn)
+        if not text or was_tainted:
+            self._notify(self._on_caption, Caption(turn, "", True, label))
             return
         caption = Caption(turn, text, True, label)
-        self._on_caption(caption)
-        self._on_final(caption)
+        self._notify(self._on_caption, caption)
+        self._notify(self._on_final, caption)

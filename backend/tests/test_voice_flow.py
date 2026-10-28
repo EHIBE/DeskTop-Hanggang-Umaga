@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from db.store import Store
-from game.night import AppPhase, GameController, GameError
+from game.night import GameController, GameError
 from state import Broadcast
 from tests.test_night import CONTENT
 from tests.test_tracking_flow import ConfidentSegmenter, controller_for, summon_three

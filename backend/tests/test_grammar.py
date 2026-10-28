@@ -81,9 +81,70 @@ def test_doc_examples() -> None:
     assert parse("Hindi, mali") == Command(CommandKind.CANCEL, None, None)
 
 
-def test_cancel_wins_over_everything() -> None:
+def test_cancel_in_the_middle_does_not_cancel_the_order() -> None:
     assert parse("Spearman saksakin aswang, hindi tapos") == Command(
+        CommandKind.ATTACK, "u_spear", "e_aswang_1"
+    )
+
+
+@pytest.mark.parametrize(
+    "text", ["hindi tapos", "hindi yan", "mali yan", "wag na", "huwag na"]
+)
+def test_leading_cancel_phrases(text: str) -> None:
+    assert parse(text) == Command(CommandKind.CANCEL, None, None)
+
+
+def test_leading_cancel_word_before_an_action_cancels() -> None:
+    assert parse("wag na atake Spearman") == Command(CommandKind.CANCEL, None, None)
+    assert parse("huwag saksakin si Spearman") == Command(
         CommandKind.CANCEL, None, None
+    )
+
+
+@pytest.mark.parametrize("word", ["huwag", "ayaw", "kansela", "stop"])
+def test_extended_cancel_words(word: str) -> None:
+    assert word in CANCEL_WORDS
+
+
+def test_leading_hindi_with_a_clear_order_keeps_the_order() -> None:
+    assert parse("hindi ko alam, atake si Spearman sa aswang") == Command(
+        CommandKind.ATTACK, "u_spear", "e_aswang_1"
+    )
+    assert parse("mali, Spearman atake aswang") == Command(
+        CommandKind.ATTACK, "u_spear", "e_aswang_1"
+    )
+
+
+def test_hindi_pa_is_not_a_cancel() -> None:
+    assert parse("hindi pa ako tapos") is None
+    assert parse("hindi pa") is None
+
+
+def test_lone_tapos_connector_is_not_end_turn() -> None:
+    assert parse("tapos ano gagawin natin") is None
+    assert parse("tapos si Spearman") is None
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "tapos",
+        "tapos na",
+        "tapos na ako",
+        "sige tapos na",
+        "done",
+        "end turn",
+        "end",
+        "next",
+    ],
+)
+def test_end_turn_phrases(text: str) -> None:
+    assert parse(text) == Command(CommandKind.END_TURN, None, None)
+
+
+def test_tapos_connector_between_orders_keeps_the_first_order() -> None:
+    assert parse("atake si Spearman, tapos gamot si Albularyo") == Command(
+        CommandKind.ATTACK, "u_spear", "e_kapre_1"
     )
 
 
@@ -134,6 +195,160 @@ def test_number_words_map_to_suffix(word: str, number: int) -> None:
     assert parse(f"Spearman tira kapre {word}", context) == Command(
         CommandKind.ATTACK, "u_spear", f"e_kapre_{number}"
     )
+
+
+@pytest.mark.parametrize(
+    ("word", "number"), [("uno", 1), ("anim", 6), ("pito", 7), ("walo", 8)]
+)
+def test_higher_number_words(word: str, number: int) -> None:
+    enemies = tuple(
+        GrammarEnemy(f"e_kapre_{n}", "kapre", float(n * 10), 0.0) for n in range(1, 9)
+    )
+    context = GrammarContext(units=(SPEARMAN,), enemies=enemies)
+    assert parse(f"Spearman tira kapre {word}", context) == Command(
+        CommandKind.ATTACK, "u_spear", f"e_kapre_{number}"
+    )
+
+
+def test_reduplicated_isa_isa_is_not_an_instance_number() -> None:
+    enemies = (
+        GrammarEnemy("e_aswang_1", "aswang", 10.0, 0.0),
+        GrammarEnemy("e_aswang_2", "aswang", 10.0, 9.0),
+    )
+    context = GrammarContext(units=(SPEARMAN,), enemies=enemies)
+    expected = Command(CommandKind.ATTACK, "u_spear", "e_aswang_2")
+    assert parse("Spearman atake aswang isa isa", context) == expected
+    assert parse("Spearman atake aswang isa-isa", context) == expected
+    assert parse("Spearman atake aswang isa", context) == Command(
+        CommandKind.ATTACK, "u_spear", "e_aswang_1"
+    )
+
+
+ENEMY_FAR_KAPRE = GrammarContext(
+    units=(SPEARMAN,),
+    enemies=(
+        GrammarEnemy("e_aswang_1", "aswang", 12.0, 12.0),
+        GrammarEnemy("e_kapre_1", "kapre", 90.0, 90.0),
+        GrammarEnemy("e_tikbalang_1", "tikbalang", 80.0, 80.0),
+        GrammarEnemy("e_duwende_1", "duwende", 70.0, 70.0),
+    ),
+)
+
+
+@pytest.mark.parametrize("fragment", ["pre", "kap", "apr", "ape"])
+def test_short_fragments_do_not_match_an_enemy(fragment: str) -> None:
+    assert parse(f"Spearman atake {fragment}", ENEMY_FAR_KAPRE) == Command(
+        CommandKind.ATTACK, "u_spear", "e_aswang_1"
+    )
+
+
+@pytest.mark.parametrize("spelling", ["kapre", "kapr", "kapri", "kaprre"])
+def test_kapre_spellings_match(spelling: str) -> None:
+    assert parse(f"Spearman atake {spelling}", ENEMY_FAR_KAPRE) == Command(
+        CommandKind.ATTACK, "u_spear", "e_kapre_1"
+    )
+
+
+@pytest.mark.parametrize(
+    ("spelling", "target"),
+    [
+        ("tigbalang", "e_tikbalang_1"),
+        ("tikbalang", "e_tikbalang_1"),
+        ("duende", "e_duwende_1"),
+        ("dwende", "e_duwende_1"),
+        ("duwende", "e_duwende_1"),
+    ],
+)
+def test_enemy_alias_spellings(spelling: str, target: str) -> None:
+    assert parse(f"Spearman atake {spelling}", ENEMY_FAR_KAPRE) == Command(
+        CommandKind.ATTACK, "u_spear", target
+    )
+
+
+@pytest.mark.parametrize("word", ["kalaban", "kaaway"])
+def test_generic_enemy_words_mean_nearest_enemy(word: str) -> None:
+    assert parse(f"Spearman atake {word}", ENEMY_FAR_KAPRE) == Command(
+        CommandKind.ATTACK, "u_spear", "e_aswang_1"
+    )
+
+
+def test_manang_is_not_an_enemy_word() -> None:
+    assert parse("Spearman atake manang", ENEMY_FAR_KAPRE) == Command(
+        CommandKind.ATTACK, "u_spear", "e_aswang_1"
+    )
+
+
+@pytest.mark.parametrize(
+    "word", ["tirahin", "saksak", "atakihin", "sugurin", "palo", "paluin", "hampas"]
+)
+def test_gentle_attack_variants(word: str) -> None:
+    assert word in ATTACK_WORDS
+    assert parse(f"Spearman {word} aswang") == Command(
+        CommandKind.ATTACK, "u_spear", "e_aswang_1"
+    )
+
+
+@pytest.mark.parametrize("word", ["gamot", "pagaling", "ayusin", "i-heal", "iheal"])
+def test_heal_variants(word: str) -> None:
+    assert parse(f"Albularyo {word} Spearman") == Command(
+        CommandKind.HEAL, "u_heal", "u_spear"
+    )
+
+
+@pytest.mark.parametrize(
+    "word", ["protekta", "bantay", "kalasag", "i-use", "gamitin mo", "iuse"]
+)
+def test_power_variants(word: str) -> None:
+    assert parse(f"Anting-anting {word} kubo") == Command(
+        CommandKind.POWER, "u_charm", "u_kubo"
+    )
+
+
+def test_gamot_is_heal_and_gamitin_is_power() -> None:
+    assert "gamot" in HEAL_WORDS
+    assert "gamot" not in POWER_WORDS
+    assert parse("Albularyo gamot Spearman") == Command(
+        CommandKind.HEAL, "u_heal", "u_spear"
+    )
+    assert parse("Albularyo gamitin mo Spearman") == Command(
+        CommandKind.POWER, "u_heal", "u_spear"
+    )
+
+
+def test_gamot_is_not_a_class_alias() -> None:
+    nameless = GrammarUnit("u_x", "Xyz", "healer", 0.0, 0.0)
+    context = GrammarContext(units=(nameless, SPEARMAN), enemies=())
+    assert parse("Spearman gamot", context) == Command(
+        CommandKind.HEAL, "u_spear", None
+    )
+
+
+@pytest.mark.parametrize(
+    ("unit_class", "alias"),
+    [
+        ("fighter", "mandirigma"),
+        ("reach", "sibat"),
+        ("ranged", "pana"),
+        ("ranged", "archer"),
+        ("scout", "scout"),
+        ("wall", "pader"),
+        ("wall", "wall"),
+        ("healer", "manggagamot"),
+        ("kubo", "bahay"),
+    ],
+)
+def test_new_class_aliases(unit_class: str, alias: str) -> None:
+    unit = GrammarUnit("u_q", "Zzz Nameless", unit_class, 0.0, 0.0)
+    context = GrammarContext(units=(unit,), enemies=(ASWANG_1,))
+    assert parse(f"{alias} atake aswang", context) == Command(
+        CommandKind.ATTACK, "u_q", "e_aswang_1"
+    )
+
+
+def test_short_alias_does_not_match_near_words() -> None:
+    unit = GrammarUnit("u_q", "Zzz Nameless", "ranged", 0.0, 0.0)
+    context = GrammarContext(units=(unit,), enemies=(ASWANG_1,))
+    assert parse("pano atake aswang", context) is None
 
 
 def test_missing_instance_falls_back_to_nearest_of_type() -> None:

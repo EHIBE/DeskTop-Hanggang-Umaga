@@ -4,6 +4,7 @@ import logging
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from decimal import Decimal
+from typing import Any, ClassVar
 
 import pytest
 
@@ -17,6 +18,7 @@ from voice.session import (
     ConnectionClosedError,
     Microphone,
     MicrophoneError,
+    SoundDeviceMicrophone,
     VoiceMode,
     VoiceSession,
     VoiceStatus,
@@ -83,10 +85,13 @@ class FakeConnection:
         script: list[str | ConnectionClosedError] | None = None,
         gate: int = 0,
         hang: bool = False,
+        stops_at_end: bool = True,
     ) -> None:
         self.script = script or []
         self.gate = gate
         self.hang = hang
+        self.stops_at_end = stops_at_end
+        self.on_end: Callable[[], None] | None = None
         self.sent: list[str | bytes] = []
         self.is_closed = False
 
@@ -112,6 +117,8 @@ class FakeConnection:
             if isinstance(item, ConnectionClosedError):
                 raise item
             yield item
+        if self.stops_at_end and not self.hang and self.on_end is not None:
+            self.on_end()
         if self.hang:
             await asyncio.Event().wait()
 
@@ -159,9 +166,11 @@ def make_harness(
     plan: list[FakeConnection | Exception],
     mic_factory: Callable[[], Microphone] | None = None,
     meter_stop_usd: Decimal | None = None,
+    overrides: dict[str, Any] | None = None,
+    log: MemoryLog | None = None,
 ) -> Harness:
     rec = Recorder()
-    log = MemoryLog()
+    log = log or MemoryLog()
     meter = (
         CostMeter(log)
         if meter_stop_usd is None
@@ -176,19 +185,24 @@ def make_harness(
     def on_overlap() -> None:
         rec.overlaps += 1
 
-    session = VoiceSession(
-        api_key=API_KEY,
-        keywords=KEYWORDS,
-        microphone_factory=mic_factory or (lambda: FakeMic()),
-        connector=connector,
-        on_caption=rec.captions.append,
-        on_final=rec.finals.append,
-        on_overlap=on_overlap,
-        on_status=rec.statuses.append,
-        meter=meter,
-        clock=clock,
-        sleep=fake_sleep,
-    )
+    options: dict[str, Any] = {
+        "api_key": API_KEY,
+        "keywords": KEYWORDS,
+        "microphone_factory": mic_factory or (lambda: FakeMic()),
+        "connector": connector,
+        "on_caption": rec.captions.append,
+        "on_final": rec.finals.append,
+        "on_overlap": on_overlap,
+        "on_status": rec.statuses.append,
+        "meter": meter,
+        "clock": clock,
+        "sleep": fake_sleep,
+    }
+    options.update(overrides or {})
+    session = VoiceSession(**options)
+    for item in plan:
+        if isinstance(item, FakeConnection):
+            item.on_end = session.stop
     return Harness(session, rec, connector, log, meter, clock)
 
 
@@ -304,7 +318,13 @@ def test_overlapping_turns_drop_both_finals_and_call_overlap_once() -> None:
     run(h)
     assert h.rec.overlaps == 1
     assert [c.text for c in h.rec.finals] == ["Tapos"]
-    assert all(c.turn_id == "t3" for c in h.rec.captions)
+    dropped = [c for c in h.rec.captions if c.turn_id in ("t1", "t2")]
+    assert [(c.turn_id, c.text, c.is_final) for c in dropped] == [
+        ("t1", "", True),
+        ("t2", "", True),
+    ]
+    assert h.session._open == {}
+    assert h.session._tainted == set()
 
 
 def test_three_way_overlap_reports_once() -> None:
@@ -342,9 +362,10 @@ def test_untrusted_events_are_ignored_safely() -> None:
     )
     h = make_harness([conn])
     run(h)
-    assert h.rec.captions == []
+    assert h.rec.captions == [Caption("t1", "", True, None)]
     assert h.rec.finals == []
     assert h.rec.overlaps == 0
+    assert h.session._open == {}
 
 
 def test_long_text_is_truncated() -> None:
@@ -469,10 +490,32 @@ def test_session_limit_close_reconnects() -> None:
     assert h.session.status is VoiceStatus.OFF
 
 
-def test_normal_close_ends_without_retry() -> None:
-    h = make_harness([FakeConnection([ConnectionClosedError(1000)])])
+def test_unexpected_normal_close_reconnects_with_backoff() -> None:
+    plan: list[FakeConnection | Exception] = [
+        FakeConnection([ConnectionClosedError(1000)]) for _ in range(3)
+    ]
+    h = make_harness(plan)
+    run(h)
+    assert len(h.connector.urls) == 3
+    assert h.rec.sleeps == [0.5, 1.0]
+    assert h.session.status is VoiceStatus.DOWN
+
+
+def test_iterator_ending_without_stop_reconnects() -> None:
+    first = FakeConnection([], stops_at_end=False)
+    second = gated([])
+    h = make_harness([first, second])
+    run(h)
+    assert len(h.connector.urls) == 2
+    assert h.rec.sleeps == [0.5]
+    assert h.session.status is VoiceStatus.OFF
+
+
+def test_stop_makes_a_normal_close_expected() -> None:
+    h = make_harness([gated([])])
     run(h)
     assert len(h.connector.urls) == 1
+    assert h.rec.sleeps == []
     assert h.session.status is VoiceStatus.OFF
 
 
@@ -558,3 +601,325 @@ def test_stop_before_run_returns_immediately() -> None:
     run(h)
     assert h.connector.urls == []
     assert h.session.status is VoiceStatus.OFF
+
+
+def test_empty_final_clears_the_stuck_partial_and_closes_the_turn() -> None:
+    conn = gated(
+        [
+            event("speechStart", turnId="t1"),
+            event("transcript", turnId="t1", text="Spear"),
+            event("speaker", turnId="t1", speaker="S1"),
+            event("speechComplete", turnId="t1", text=""),
+        ]
+    )
+    h = make_harness([conn])
+    run(h)
+    assert h.rec.captions[-1] == Caption("t1", "", True, "S1")
+    assert h.rec.finals == []
+    assert h.session._open == {}
+    assert h.session._tainted == set()
+
+
+def test_empty_final_of_a_tainted_turn_clears_the_tainted_mark() -> None:
+    conn = gated(
+        [
+            event("speechStart", turnId="t1"),
+            event("speechStart", turnId="t2"),
+            event("speechComplete", turnId="t1", text=""),
+            event("speechComplete", turnId="t2", text="dalawa"),
+        ]
+    )
+    h = make_harness([conn])
+    run(h)
+    assert h.session._tainted == set()
+    assert h.rec.finals == []
+    assert [c.turn_id for c in h.rec.captions] == ["t1", "t2"]
+    assert all(c.is_final and c.text == "" for c in h.rec.captions)
+
+
+def test_callback_exceptions_are_logged_by_type_and_do_not_kill_run(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    finals: list[Caption] = []
+
+    def bad_caption(caption: Caption) -> None:
+        raise RuntimeError("secret transcript text")
+
+    def bad_overlap() -> None:
+        raise ValueError("overlap secret")
+
+    def bad_status(status: VoiceStatus) -> None:
+        raise KeyError("status secret")
+
+    conn = gated(
+        [
+            event("speechStart", turnId="t1"),
+            event("speechStart", turnId="t2"),
+            event("transcript", turnId="t1", text="hello"),
+            event("speechComplete", turnId="t1", text="x"),
+            event("speechComplete", turnId="t2", text="y"),
+            event("speechStart", turnId="t3"),
+            event("speechComplete", turnId="t3", text="Tapos"),
+        ]
+    )
+    h = make_harness(
+        [conn],
+        overrides={
+            "on_caption": bad_caption,
+            "on_final": finals.append,
+            "on_overlap": bad_overlap,
+            "on_status": bad_status,
+        },
+    )
+    run(h)
+    assert [c.text for c in finals] == ["Tapos"]
+    assert h.session.status is VoiceStatus.OFF
+    assert "RuntimeError" in caplog.text
+    assert "ValueError" in caplog.text
+    assert "KeyError" in caplog.text
+    assert "secret" not in caplog.text
+    assert "Traceback" not in caplog.text
+
+
+def test_final_callback_exception_does_not_kill_run() -> None:
+    def bad_final(caption: Caption) -> None:
+        raise RuntimeError("boom")
+
+    conn = gated(
+        [
+            event("speechStart", turnId="t1"),
+            event("speechComplete", turnId="t1", text="Tapos"),
+            event("speechStart", turnId="t2"),
+            event("speechComplete", turnId="t2", text="Hindi"),
+        ]
+    )
+    h = make_harness([conn], overrides={"on_final": bad_final})
+    run(h)
+    assert [c.text for c in h.rec.captions] == ["Tapos", "Hindi"]
+
+
+def test_microphone_is_closed_on_every_connection_end() -> None:
+    mics: list[FakeMic] = []
+
+    def factory() -> Microphone:
+        mic = FakeMic(total=2)
+        mics.append(mic)
+        return mic
+
+    plan: list[FakeConnection | Exception] = [
+        FakeConnection([ConnectionClosedError(1011)]),
+        FakeConnection([ConnectionClosedError(1013)]),
+        gated([], gate=2),
+    ]
+    h = make_harness(plan, factory)
+    run(h)
+    assert len(mics) == 3
+    assert all(mic.is_closed for mic in mics)
+
+
+def test_microphone_is_closed_when_the_mic_errors() -> None:
+    mics: list[FakeMic] = []
+
+    def factory() -> Microphone:
+        mic = FakeMic(error=True)
+        mics.append(mic)
+        return mic
+
+    conn = FakeConnection(hang=True)
+    h = make_harness([conn], factory)
+    run(h)
+    assert mics[0].is_closed
+    assert conn.is_closed
+
+
+def test_microphone_factory_failure_is_down_and_closes_the_connection() -> None:
+    def factory() -> Microphone:
+        raise OSError("no device")
+
+    conn = FakeConnection(hang=True)
+    h = make_harness([conn], factory)
+    run(h)
+    assert h.session.status is VoiceStatus.DOWN
+    assert conn.is_closed
+
+
+class StallMic:
+    def __init__(self) -> None:
+        self.is_closed = False
+
+    def __aiter__(self) -> AsyncIterator[bytes]:
+        return self._generate()
+
+    async def _generate(self) -> AsyncIterator[bytes]:
+        yield FRAME
+        await asyncio.Event().wait()
+
+    async def close(self) -> None:
+        self.is_closed = True
+
+
+def test_mic_stall_while_listening_is_down_and_ends_run() -> None:
+    mic = StallMic()
+    conn = FakeConnection(hang=True)
+    h = make_harness([conn], lambda: mic, overrides={"mic_timeout_s": 0.05})
+    run(h)
+    assert h.session.status is VoiceStatus.DOWN
+    assert h.rec.statuses[-1] is VoiceStatus.DOWN
+    assert mic.is_closed
+    assert conn.is_closed
+    assert len(h.connector.urls) == 1
+
+
+class ExplodingLog(MemoryLog):
+    def record_api_usage(self, record: ApiUsageRecord) -> None:
+        raise RuntimeError("disk full secret")
+
+
+def test_cost_record_failure_is_logged_by_type_and_session_survives(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    clock_holder: dict[str, FakeClock] = {}
+
+    def on_frame(index: int) -> None:
+        clock_holder["clock"].now += 30.0
+
+    conn = gated([], gate=5)
+    h = make_harness(
+        [conn],
+        lambda: FakeMic(total=5, on_frame=on_frame),
+        log=ExplodingLog(),
+    )
+    clock_holder["clock"] = h.clock
+    run(h)
+    assert conn.audio == [FRAME] * 5
+    assert h.session.status is VoiceStatus.OFF
+    assert "RuntimeError" in caplog.text
+    assert "secret" not in caplog.text
+
+
+def test_stop_during_backoff_returns_promptly() -> None:
+    async def never(seconds: float) -> None:
+        await asyncio.Event().wait()
+
+    h = make_harness(
+        [FakeConnection([ConnectionClosedError(1011)])],
+        overrides={"sleep": never},
+    )
+
+    async def scenario() -> None:
+        task = asyncio.create_task(h.session.run())
+        await asyncio.sleep(0.05)
+        assert not task.done()
+        h.session.stop()
+        await asyncio.wait_for(task, timeout=1)
+
+    asyncio.run(scenario())
+    assert len(h.connector.urls) == 1
+    assert h.session.status is VoiceStatus.OFF
+
+
+class HangingConnector:
+    def __init__(self) -> None:
+        self.started = asyncio.Event()
+        self.was_cancelled = False
+
+    async def connect(self, url: str) -> FakeConnection:
+        self.started.set()
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            self.was_cancelled = True
+            raise
+        raise AssertionError("unreachable")
+
+
+def test_stop_aborts_a_pending_connect() -> None:
+    async def scenario() -> HangingConnector:
+        connector = HangingConnector()
+        h = make_harness([], overrides={"connector": connector})
+        task = asyncio.create_task(h.session.run())
+        await asyncio.wait_for(connector.started.wait(), timeout=1)
+        h.session.stop()
+        await asyncio.wait_for(task, timeout=1)
+        assert h.session.status is VoiceStatus.OFF
+        return connector
+
+    assert asyncio.run(scenario()).was_cancelled
+
+
+class FakeStream:
+    instances: ClassVar[list["FakeStream"]] = []
+    fail_on_start = False
+
+    def __init__(self, **kwargs: object) -> None:
+        self.stops = 0
+        self.closes = 0
+        FakeStream.instances.append(self)
+
+    def start(self) -> None:
+        if FakeStream.fail_on_start:
+            raise OSError("no device")
+
+    def stop(self) -> None:
+        self.stops += 1
+
+    def close(self) -> None:
+        self.closes += 1
+
+
+@pytest.fixture
+def fake_stream(monkeypatch: pytest.MonkeyPatch) -> type[FakeStream]:
+    FakeStream.instances = []
+    FakeStream.fail_on_start = False
+    monkeypatch.setattr("voice.session.sounddevice.RawInputStream", FakeStream)
+    return FakeStream
+
+
+def test_sounddevice_close_stops_and_closes_the_stream_idempotently(
+    fake_stream: type[FakeStream],
+) -> None:
+    async def scenario() -> None:
+        mic = SoundDeviceMicrophone()
+        task = asyncio.ensure_future(anext(mic.__aiter__()))
+        await asyncio.sleep(0.01)
+        assert len(fake_stream.instances) == 1
+        await mic.close()
+        await mic.close()
+        with pytest.raises(StopAsyncIteration):
+            await asyncio.wait_for(task, timeout=1)
+
+    asyncio.run(scenario())
+    stream = fake_stream.instances[0]
+    assert stream.stops == 1
+    assert stream.closes == 1
+
+
+def test_sounddevice_start_failure_closes_the_stream(
+    fake_stream: type[FakeStream],
+) -> None:
+    fake_stream.fail_on_start = True
+
+    async def scenario() -> None:
+        mic = SoundDeviceMicrophone()
+        with pytest.raises(MicrophoneError):
+            await anext(mic.__aiter__())
+
+    asyncio.run(scenario())
+    stream = fake_stream.instances[0]
+    assert stream.stops == 1
+    assert stream.closes == 1
+
+
+def test_sounddevice_close_before_start_is_safe(
+    fake_stream: type[FakeStream],
+) -> None:
+    async def scenario() -> list[bytes]:
+        mic = SoundDeviceMicrophone()
+        await mic.close()
+        await mic.close()
+        return [frame async for frame in mic]
+
+    assert asyncio.run(scenario()) == []
+    assert fake_stream.instances == []
