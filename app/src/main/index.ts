@@ -1,25 +1,21 @@
 import { app, shell, session, BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
-import { randomBytes } from 'crypto'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { BackendProcess } from './backend'
+import { Keystore, KeystoreError } from './keystore'
 
 const APP_USER_MODEL_ID = 'com.ehibe.desktop'
-const BACKEND_PORT = 8765
-const TOKEN_BYTES = 32
 const CONFIG_CHANNEL = 'desktop:config'
+const KEY_STATUS_CHANNEL = 'desktop:key-status'
+const SAVE_KEY_CHANNEL = 'desktop:save-key'
+const MAX_KEY_INPUT = 1024
+const FILE_ORIGINS: readonly string[] = ['file://', 'null']
 const EXTERNAL_URL_ALLOWLIST: readonly Readonly<{ origin: string; path: string }>[] = [
   { origin: 'https://github.com', path: '/EHIBE/DeskTop-Hanggang-Umaga' },
   { origin: 'https://dev.meta.ai', path: '/docs' }
 ]
-
-type DesktopConfig = Readonly<{ port: number; token: string }>
-
-const desktopConfig: DesktopConfig = Object.freeze({
-  port: BACKEND_PORT,
-  token: randomBytes(TOKEN_BYTES).toString('hex')
-})
 
 const RENDERER_FILE_URL = pathToFileURL(join(__dirname, '../renderer/index.html')).href
 
@@ -109,22 +105,68 @@ function denyAllPermissions(): void {
   session.defaultSession.setPermissionCheckHandler(() => false)
 }
 
-function handleConfigRequest(event: IpcMainInvokeEvent): DesktopConfig {
-  if (!isTrustedSender(event)) throw new Error('untrusted sender')
-  return desktopConfig
+function backendDir(): string {
+  if (is.dev) return join(app.getAppPath(), '..', 'backend')
+  return join(process.resourcesPath, 'backend')
 }
 
-void app.whenReady().then(() => {
+function allowedOrigins(): readonly string[] {
+  const devUrl = rendererUrl()
+  if (devUrl !== undefined) return [new URL(devUrl).origin]
+  return FILE_ORIGINS
+}
+
+function requireTrusted(event: IpcMainInvokeEvent): void {
+  if (!isTrustedSender(event)) throw new Error('untrusted sender')
+}
+
+function registerIpc(keystore: Keystore, backend: BackendProcess): void {
+  ipcMain.handle(CONFIG_CHANNEL, (event) => {
+    requireTrusted(event)
+    const config = backend.config()
+    if (config === undefined) throw new Error('backend not ready')
+    return config
+  })
+  ipcMain.handle(KEY_STATUS_CHANNEL, (event) => {
+    requireTrusted(event)
+    return keystore.status()
+  })
+  ipcMain.handle(SAVE_KEY_CHANNEL, async (event, rawKey: unknown) => {
+    requireTrusted(event)
+    if (typeof rawKey !== 'string' || rawKey.length > MAX_KEY_INPUT) {
+      throw new KeystoreError('invalid key format')
+    }
+    const status = keystore.save(rawKey)
+    await backend.restart()
+    return status
+  })
+}
+
+const hasInstanceLock = app.requestSingleInstanceLock()
+if (!hasInstanceLock) app.quit()
+
+void app.whenReady().then(async () => {
   electronApp.setAppUserModelId(APP_USER_MODEL_ID)
   denyAllPermissions()
+  const userDataDir = app.getPath('userData')
+  const keystore = new Keystore(userDataDir)
+  const dir = backendDir()
+  const backend = new BackendProcess({
+    pythonPath: join(dir, '.venv', 'Scripts', 'python.exe'),
+    backendDir: dir,
+    userDataDir,
+    allowedOrigins: allowedOrigins(),
+    apiKey: () => keystore.load()
+  })
+  registerIpc(keystore, backend)
+  app.on('before-quit', () => void backend.stop())
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  ipcMain.handle(CONFIG_CHANNEL, handleConfigRequest)
-
   createWindow()
+  await backend.start().catch(() => undefined)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
