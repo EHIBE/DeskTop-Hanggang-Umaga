@@ -67,3 +67,20 @@ When a rule conflicts with a doc, update that doc and add an ADR.
 | Muse Image latency | | | |
 | Voice DIARIZATION handshake | | | |
 | Files `expires_after` | | | |
+
+## How to run the Phase 1 smoke tests (Manual: EHIBE)
+
+Built 2026-10-28. Each script logs to `api_usage` through `meta_client`, respects the $120 hard stop, scrubs secrets and saves fixtures under `fixtures/`. Run from `backend` after putting the key in `backend\.env`. Expected total spend is under $0.10.
+
+| Step | Command | Records |
+|---|---|---|
+| Spark structured output (A6) | `.venv\Scripts\python -m smoke.spark` | Which of 3 request shapes worked, seconds, `spark_line.json` |
+| SAM box prompts | `.venv\Scripts\python -m smoke.sam --image ..\eval\desk1.jpg --box 1,x1,y1,x2,y2 --box 2,x1,y1,x2,y2` | Masks with confidence, `sam_boxes.jsonl` and `.txt` |
+| SAM concept (calibration) | `.venv\Scripts\python -m smoke.sam --image ..\eval\desk1.jpg --concept "white paper" --name sam_concept` | `sam_concept.jsonl` |
+| Muse Image latency (A9) | `.venv\Scripts\python -m smoke.image --crop ..\eval\mug_crop.png --runs 20` | Min, median, max seconds, `sprite_kubo.png` |
+| Voice handshake (two speakers) | `.venv\Scripts\python -m smoke.voice --mode DIARIZATION --seconds 10` | Whether languageBias and keywords were accepted, `voice_diarization.jsonl` |
+| Files `expires_after` | `.venv\Scripts\python -m smoke.files --clip ..\eval\clip.mp4` | Which upload shape worked, delete result |
+
+Inputs `eval\desk1.jpg`, `eval\mug_crop.png` and `eval\clip.mp4` (H.264) are Manual: EHIBE. Paste each script's printed result into the Phase 1 table above and the timings into `docs/eval.md`.
+
+Verified from the installed packages and docs on 2026-10-28, before any live call: realtime events carry a `type` field, audio goes as binary PCM frames, input ends with `{"type": "endStream"}`, and the server replies to the handshake with a `sessionId`. The SDK `files.create` accepts `expires_after` directly. The structured output layout is still Unverified, because the docs page shows a different shape from the PRD, so `smoke.spark` tries both plus Chat Completions.

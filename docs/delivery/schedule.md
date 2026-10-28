@@ -45,7 +45,7 @@ The Build Guide schedule replaces the PRD timeline (ADR-0109). The date is fixed
 | Phase | Hours | Scope | Done when | If stuck |
 |---|---|---|---|---|
 | 0 Before code | 1.5 | Rules, credits, key, Standard mode, tools, physical setup, repo | Rules notes written, credits claimed, tools print versions, repo pushed | Re-scope same day if rules conflict |
-| 1 API smoke tests | 1.5 | Venv, shared client, Spark structured output, SAM boxes, Muse Image, Voice, Files | All 5 smoke tests run, fixtures saved, sprite latency noted | Ask in Discord office hours, move to Phase 2 |
+| 1 API smoke tests | 1.5 | Venv, shared client, Spark structured output, SAM boxes, Muse Image, Voice, Files | All 5 smoke tests run, fixtures saved, sprite latency noted. Scripts built 2026-10-28, runs are Manual: EHIBE (key, inputs, two voices) | Ask in Discord office hours, move to Phase 2 |
 | 2 Camera and calibration (F01) | 2 | Capture, A4 homography, ruler check, baseline | Warped feed square-on, ruler within 0.5 cm, calibration saved | Raise camera, use a plain mat |
 | 3 App shell (Tailwind, spawn, stream) | 3.5 | Electron scaffold, backend spawn with key and token, frame stream | Warped feed at 20 FPS+ in the window | Check electron-vite and Tailwind docs |
 | 4 Summon (F02) | 5 | Spark detect, SAM masks, clamp, caps, tap fallback | 5 objects with masks and cards, card in 8 s or less | Make tap-to-select the main path |
