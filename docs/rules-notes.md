@@ -43,12 +43,20 @@ When a rule conflicts with a doc, update that doc and add an ADR.
 
 | Check | Result | Date |
 |---|---|---|
-| `git --version` | | |
-| `node -v` | | |
-| `py -3.11 --version` | | |
-| `ffmpeg -version` | | |
-| Key created and stored in a password manager | | |
-| Contributor mode off | | |
+| `git --version` | git version 2.54.0.windows.1 | 2026-10-28 |
+| `node -v` | v22.23.3 (npm 10.9.9) | 2026-10-28 |
+| `py -3.11 --version` | Not installed. Python 3.13 and 3.14 present. Venv built on 3.13.15 (ADR-0101) | 2026-10-28 |
+| `ffmpeg -version` | Not on PATH. Manual: EHIBE, install before Phase 13 | 2026-10-28 |
+| Key created and stored in a password manager | Manual: EHIBE | |
+| Contributor mode off | Manual: EHIBE | |
+
+## Phase 1 environment findings
+
+| Item | Finding | Date |
+|---|---|---|
+| `meta-sam-parser` | 0.1.0 installed, requires Python 3.10+. `build_object_prompt(*, size, objects)`. Exports `PromptObject`, `FramePrompt`, `PromptBox`, `PromptPoint`, `parse_responses_stream`, `decode_mask_to_raster`, `image_segmentation_format`, `video_segmentation_format` | 2026-10-28 |
+| OpenCV | `opencv-contrib-python` 4.14.0.94. `cv2.TrackerKCF_create` and `cv2.TrackerCSRT_create` exist | 2026-10-28 |
+| OpenAI SDK | 3.40.0 | 2026-10-28 |
 
 ## Phase 1 smoke test findings
 

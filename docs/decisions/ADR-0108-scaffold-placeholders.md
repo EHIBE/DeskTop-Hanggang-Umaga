@@ -4,20 +4,20 @@ purpose: Record the decision on replace scaffold placeholders
 read_when: [changing this area, questioning this choice]
 canonical_for: [ADR-0108]
 sources: [CLAUDE.md#bugs-and-contradictions, docs/FEATURE_PROMPT.md#3-project]
-status: draft
+status: active
 last_verified: 2026-10-28
 related: [docs/decisions/README.md, CLAUDE.md]
 ---
 
 # ADR-0108: Replace scaffold placeholders
 
-Status: Proposed. Raised 2026-10-28. Awaiting EHIBE confirmation.
+Status: Accepted. Raised 2026-10-28. Accepted 2026-10-28 by EHIBE.
 
 ## Key facts
 
 | Field | Value |
 |---|---|
-| Status | Proposed |
+| Status | Accepted |
 | Tracks | B8 in CLAUDE.md |
 | Raised | 2026-10-28 |
 | Owner | EHIBE |
@@ -27,7 +27,7 @@ Status: Proposed. Raised 2026-10-28. Awaiting EHIBE confirmation.
 
 app/package.json name is app with author example.com. electron-builder appId is com.electron.app, productName app, executableName app, and publish points to https://example.com/auto-updates. Window title is Electron.
 
-## Proposed decision
+## Decision
 
 Set productName DeskTop, a real appId, the window title, and remove the publish block until a real update target exists.
 

@@ -17,8 +17,8 @@ Each record explains one decision: its context, the choice, and the cost. Accept
 
 | Fact | Value |
 |---|---|
-| Accepted | ADR-0001 to ADR-0011 |
-| Proposed | ADR-0101 to ADR-0110 (one per known contradiction B1 to B10) |
+| Accepted | ADR-0001 to ADR-0012, ADR-0101 to ADR-0110 |
+| Proposed | None |
 | Numbering | 0001+ for decisions, 0101+ for contradiction fixes |
 | Template | `TEMPLATE.md` |
 
@@ -37,21 +37,21 @@ Each record explains one decision: its context, the choice, and the cost. Accept
 | [0009](ADR-0009-ffmpeg-h264-recording.md) | ffmpeg H.264 MP4 recording | 2026-10-25 |
 | [0010](ADR-0010-openai-sdk-for-meta.md) | OpenAI SDK for Meta, websockets for voice, meta-sam-parser | 2026-10-25 |
 | [0011](ADR-0011-agents-sonnet-medium.md) | All agents on Sonnet 5.5 at medium effort | 2026-10-28 |
+| [0012](ADR-0012-mvp-build-defaults.md) | MVP build defaults for open rules, content and runtime gaps | 2026-10-28 |
+| [0101](ADR-0101-python-env-and-pins.md) | Rebuild backend venv and pin requirements (B1) | 2026-10-28 |
+| [0102](ADR-0102-wire-tailwind.md) | Wire Tailwind into the renderer (B2) | 2026-10-28 |
+| [0103](ADR-0103-electron-hardening.md) | Harden Electron window and preload (B3) | 2026-10-28 |
+| [0104](ADR-0104-capture-module-path.md) | Camera code in backend/capture/camera.py (B4) | 2026-10-28 |
+| [0105](ADR-0105-warped-frame-size.md) | Warped frame 1200x800 at 20 px per cm (B5) | 2026-10-28 |
+| [0106](ADR-0106-token-compare-and-client-injection.md) | Constant-time token compare, injected client (B6) | 2026-10-28 |
+| [0107](ADR-0107-money-precision.md) | Decimal for cost math (B7) | 2026-10-28 |
+| [0108](ADR-0108-scaffold-placeholders.md) | Replace scaffold placeholders (B8) | 2026-10-28 |
+| [0109](ADR-0109-schedule-source.md) | Build Guide schedule supersedes PRD timeline (B9) | 2026-10-28 |
+| [0110](ADR-0110-missing-prd-prompt.md) | Missing DeskTop_PRD_Prompt.md (B10) | 2026-10-28 |
 
 ## Proposed
 
-| ADR | Decision | Tracks |
-|---|---|---|
-| [0101](ADR-0101-python-env-and-pins.md) | Rebuild backend venv and pin requirements | B1 |
-| [0102](ADR-0102-wire-tailwind.md) | Wire Tailwind into the renderer | B2 |
-| [0103](ADR-0103-electron-hardening.md) | Harden Electron window and preload | B3 |
-| [0104](ADR-0104-capture-module-path.md) | Camera code in backend/capture/camera.py | B4 |
-| [0105](ADR-0105-warped-frame-size.md) | Warped frame 1200x800 at 20 px per cm | B5 |
-| [0106](ADR-0106-token-compare-and-client-injection.md) | Constant-time token compare, injected client | B6 |
-| [0107](ADR-0107-money-precision.md) | Decimal for cost math | B7 |
-| [0108](ADR-0108-scaffold-placeholders.md) | Replace scaffold placeholders | B8 |
-| [0109](ADR-0109-schedule-source.md) | Build Guide schedule supersedes PRD timeline | B9 |
-| [0110](ADR-0110-missing-prd-prompt.md) | Missing DeskTop_PRD_Prompt.md | B10 |
+None.
 
 ## Earlier decisions in the PRD change log
 
