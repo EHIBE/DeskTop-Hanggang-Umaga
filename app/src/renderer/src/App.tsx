@@ -4,7 +4,14 @@ import Bilingual from './components/Bilingual'
 import Stage from './components/Stage'
 import { isCopyKey, t, type CopyKey } from './lib/copy'
 import { useGameSocket } from './lib/socket'
-import type { AppPhase, CopyParams, CostMessage, KeyStatus, StateMessage } from './lib/types'
+import type {
+  AppPhase,
+  CopyParams,
+  CostMessage,
+  KeyStatus,
+  NarrationMessage,
+  StateMessage
+} from './lib/types'
 import Calibration from './screens/Calibration'
 import KeySetup from './screens/KeySetup'
 import Start from './screens/Start'
@@ -24,6 +31,13 @@ const NIGHT_PHASES: ReadonlySet<AppPhase> = new Set([
   'PHYSICAL_EFFECTS',
   'CHECK_END',
   'PAUSED'
+])
+
+const NARRATION_PHASES: ReadonlySet<AppPhase> = new Set([
+  ...NIGHT_PHASES,
+  'VOICE_CLAIM',
+  'SUNRISE',
+  'DEFEAT'
 ])
 
 type ActiveNotice = Readonly<{ id: number; key: CopyKey; params: CopyParams }>
@@ -50,11 +64,15 @@ function App(): React.JSX.Element {
   const [offlineChosen, setOfflineChosen] = useState(false)
   const [cost, setCost] = useState<CostMessage | null>(null)
   const [notice, setNotice] = useState<ActiveNotice | null>(null)
+  const [narration, setNarration] = useState<NarrationMessage | null>(null)
 
   useEffect(() => {
     return subscribe((message) => {
       if (message.type === 'state') {
         setState(message)
+        if (!NARRATION_PHASES.has(message.phase)) setNarration(null)
+      } else if (message.type === 'narration') {
+        setNarration(message)
       } else if (message.type === 'cost') {
         setCost(message)
       } else if (
@@ -108,11 +126,11 @@ function App(): React.JSX.Element {
   } else if (state.phase === 'VOICE_CLAIM') {
     screen = <VoiceClaim state={state} send={send} />
   } else if (NIGHT_PHASES.has(state.phase)) {
-    screen = <Night state={state} send={send} subscribe={subscribe} />
+    screen = <Night state={state} send={send} subscribe={subscribe} narration={narration} />
   } else if (state.phase === 'SUNRISE') {
-    screen = <Sunrise state={state} send={send} />
+    screen = <Sunrise state={state} send={send} narration={narration} />
   } else if (state.phase === 'DEFEAT') {
-    screen = <Defeat state={state} send={send} />
+    screen = <Defeat state={state} send={send} narration={narration} />
   } else {
     screen = <Summon state={state} send={send} subscribe={subscribe} />
   }

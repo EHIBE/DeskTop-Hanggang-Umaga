@@ -307,7 +307,13 @@ const entries = {
   'sunrise.next': { tl: 'Susunod na Gabi', en: 'Next Night' },
   'sunrise.quit': { tl: 'Umalis', en: 'Quit' },
   'defeat.title': { tl: 'NASIRA ANG KUBO', en: 'THE KUBO FELL' },
-  'defeat.retry': { tl: 'Subukan Ulit', en: 'Try Again' }
+  'defeat.retry': { tl: 'Subukan Ulit', en: 'Try Again' },
+  'narration.mood.kalmado': { tl: 'Kalmado', en: 'Calm' },
+  'narration.mood.kaba': { tl: 'Kaba', en: 'Tense' },
+  'narration.mood.takot': { tl: 'Takot', en: 'Fear' },
+  'narration.mood.tagumpay': { tl: 'Tagumpay', en: 'Triumph' },
+  'narration.mood.umaga': { tl: 'Umaga', en: 'Morning' },
+  'narration.hint': { tl: 'Payo', en: 'Hint' }
 } as const satisfies Record<string, CopyEntry>
 
 export type CopyKey = keyof typeof entries

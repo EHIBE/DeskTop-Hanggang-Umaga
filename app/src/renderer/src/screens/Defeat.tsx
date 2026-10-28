@@ -1,12 +1,14 @@
 import Bilingual from '../components/Bilingual'
 import ScorePanel from '../components/ScorePanel'
+import Narration from '../hud/Narration'
 import { t } from '../lib/copy'
 import { palette } from '../lib/palette'
-import type { ClientMessage, StateMessage } from '../lib/types'
+import type { ClientMessage, NarrationMessage, StateMessage } from '../lib/types'
 
 type DefeatProps = Readonly<{
   state: StateMessage
   send: (message: ClientMessage) => boolean
+  narration: NarrationMessage | null
 }>
 
 function FallenKubo(): React.JSX.Element {
@@ -30,7 +32,7 @@ function FallenKubo(): React.JSX.Element {
   )
 }
 
-function Defeat({ state, send }: DefeatProps): React.JSX.Element {
+function Defeat({ state, send, narration }: DefeatProps): React.JSX.Element {
   return (
     <main className="flex h-full w-full flex-col items-center gap-8 bg-gabi-ink pt-16">
       <h1 className="text-[48px] leading-[56px] text-gabi-sindak">{t('defeat.title').tl}</h1>
@@ -39,6 +41,10 @@ function Defeat({ state, send }: DefeatProps): React.JSX.Element {
       <div className="panel w-[880px] p-4 text-center" role="status" aria-live="polite">
         <Bilingual copyKey="lose" />
       </div>
+      <Narration
+        narration={narration !== null && narration.phase === 'defeat' ? narration : null}
+        className="w-[1200px]"
+      />
       <ScorePanel score={state.score} />
       <div className="flex gap-6">
         <button

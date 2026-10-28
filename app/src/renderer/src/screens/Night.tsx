@@ -7,6 +7,7 @@ import { drawFloaters, floatersFromEvents, type Floater } from '../canvas/floate
 import { drawMoveRing, drawStartGhost } from '../canvas/rings'
 import { MIN_SCALE, drawSprite, useUnitImages } from '../canvas/sprites'
 import Bilingual from '../components/Bilingual'
+import Narration from '../hud/Narration'
 import OrderChips from '../hud/OrderChips'
 import TapMenu from '../hud/TapMenu'
 import TopBar from '../hud/TopBar'
@@ -15,12 +16,19 @@ import { actionTarget, enemyLabel } from '../hud/targets'
 import { t } from '../lib/copy'
 import { palette } from '../lib/palette'
 import type { MessageHandler } from '../lib/socket'
-import type { ClientMessage, IntentAction, Point, StateMessage } from '../lib/types'
+import type {
+  ClientMessage,
+  IntentAction,
+  NarrationMessage,
+  Point,
+  StateMessage
+} from '../lib/types'
 
 type NightProps = Readonly<{
   state: StateMessage
   send: (message: ClientMessage) => boolean
   subscribe: (handler: MessageHandler) => () => void
+  narration: NarrationMessage | null
 }>
 
 type Selection = Readonly<{ turnKey: string; unitId: string; pending: IntentAction | null }>
@@ -36,7 +44,7 @@ const ARROW_PHASES: ReadonlySet<string> = new Set([
   'VALIDATE'
 ])
 
-function Night({ state, send, subscribe }: NightProps): React.JSX.Element {
+function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Element {
   const night = state.night
   const [selection, setSelection] = useState<Selection | null>(null)
   const [hitCount, setHitCount] = useState(0)
@@ -351,6 +359,13 @@ function Night({ state, send, subscribe }: NightProps): React.JSX.Element {
   const checking = phase === 'END_TURN_SNAPSHOT' || phase === 'VALIDATE'
   const blocked = blockedHeard && night.illegal_units.length > 0 && playerPhase
 
+  const nightNarration =
+    narration !== null &&
+    narration.night === night.number &&
+    (narration.phase === 'night_start' || narration.phase === 'resolution_then_telegraph')
+      ? narration
+      : null
+
   return (
     <main className="flex h-full w-full flex-col" data-pulse={pulse}>
       <TopBar night={night} phase={phase} demoSafe={state.demo_safe} hitCount={hitCount} />
@@ -400,6 +415,7 @@ function Night({ state, send, subscribe }: NightProps): React.JSX.Element {
           />
         </div>
       </div>
+      <Narration narration={nightNarration} className="mx-4 mb-2" />
       <footer className="flex min-h-[104px] shrink-0 items-center gap-6 border-t-2 border-gabi-dusk bg-gabi-night px-8 py-2">
         <OrderChips
           chips={night.chips}

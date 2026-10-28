@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react'
 import Bilingual from '../components/Bilingual'
 import ScorePanel from '../components/ScorePanel'
+import Narration from '../hud/Narration'
 import { t } from '../lib/copy'
-import type { ClientMessage, StateMessage } from '../lib/types'
+import type { ClientMessage, NarrationMessage, StateMessage } from '../lib/types'
 
 type SunriseProps = Readonly<{
   state: StateMessage
   send: (message: ClientMessage) => boolean
+  narration: NarrationMessage | null
 }>
 
 const DAWN_MS = 3000
 
-function Sunrise({ state, send }: SunriseProps): React.JSX.Element {
+function Sunrise({ state, send, narration }: SunriseProps): React.JSX.Element {
   const [dawn, setDawn] = useState(false)
 
   useEffect(() => {
@@ -41,6 +43,10 @@ function Sunrise({ state, send }: SunriseProps): React.JSX.Element {
         <div className="panel w-[880px] p-4 text-center" role="status" aria-live="polite">
           <Bilingual copyKey="win" />
         </div>
+        <Narration
+          narration={narration !== null && narration.phase === 'sunrise' ? narration : null}
+          className="w-[1200px]"
+        />
         <ScorePanel score={state.score} />
         <div className="flex gap-6">
           <button

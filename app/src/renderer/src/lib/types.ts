@@ -238,6 +238,25 @@ export type EventsMessage = Readonly<{
   events: readonly GameEvent[]
 }>
 
+export type NarrationPhase = 'night_start' | 'resolution_then_telegraph' | 'sunrise' | 'defeat'
+
+export type NarrationMood = 'kalmado' | 'kaba' | 'takot' | 'tagumpay' | 'umaga'
+
+export type NarrationCallout = Readonly<{ entity_id: string; text_tl: string }>
+
+export type NarrationMessage = Readonly<{
+  type: 'narration'
+  night: number
+  turn: number
+  phase: NarrationPhase
+  narration_tl: string
+  narration_en: string
+  mood: NarrationMood
+  callouts: readonly NarrationCallout[]
+  hint_tl: string
+  source: 'spark' | 'line_bank'
+}>
+
 export type CardMessage = Readonly<{ type: 'card'; seq: number; unit: UnitSummary }>
 
 export type ServerMessage =
@@ -250,6 +269,7 @@ export type ServerMessage =
   | SpriteMessage
   | CostMessage
   | EventsMessage
+  | NarrationMessage
 
 export type CampaignStartMessage =
   | Readonly<{ type: 'campaign.start'; campaign_id: string }>

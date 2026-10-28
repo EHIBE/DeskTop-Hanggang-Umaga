@@ -14,7 +14,8 @@ const SERVER_TYPES: ReadonlySet<string> = new Set([
   'card',
   'sprite',
   'cost',
-  'events'
+  'events',
+  'narration'
 ])
 
 const BACKOFF_MS: readonly number[] = [500, 1000, 2000, 5000]
