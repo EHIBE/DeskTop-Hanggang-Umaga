@@ -436,3 +436,13 @@ def test_stored_sprite_path_cannot_escape(store: Store) -> None:
         )
     with pytest.raises(UnsafePathError):
         store.find_sprite("k")
+
+
+def test_signatures_and_positions(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    night = store.start_or_resume_night(campaign.id)
+    unit = store.add_unit(night, card_fields(), SIGNATURE, UnitPlacement(1, 30.0, 20.0))
+    assert store.unit_signatures(night.id) == {unit.unit_id: ("mug", (0.5, 0.5))}
+    store.update_positions(night.id, {unit.unit_id: (12.5, 7.25)})
+    moved = store.night_units(night.id)[0]
+    assert (moved.x_cm, moved.y_cm) == (12.5, 7.25)

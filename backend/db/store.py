@@ -517,6 +517,34 @@ class Store:
             ).fetchall()
         return [_unit_from_row(row) for row in rows]
 
+    def unit_signatures(
+        self, night_id: str
+    ) -> dict[str, tuple[str, tuple[float, ...]]]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT nu.unit_id, os.label, os.hist_json FROM night_unit nu "
+                "JOIN unit u ON u.id = nu.unit_id "
+                "JOIN object_signature os ON os.id = u.object_signature_id "
+                "WHERE nu.night_id = ?",
+                (night_id,),
+            ).fetchall()
+        return {
+            str(row["unit_id"]): (
+                str(row["label"]),
+                tuple(float(v) for v in json.loads(str(row["hist_json"]))),
+            )
+            for row in rows
+        }
+
+    def update_positions(
+        self, night_id: str, positions: dict[str, tuple[float, float]]
+    ) -> None:
+        with self.transaction() as conn:
+            conn.executemany(
+                "UPDATE night_unit SET x_cm = ?, y_cm = ? WHERE night_id = ? AND unit_id = ?",
+                [(x, y, night_id, unit_id) for unit_id, (x, y) in positions.items()],
+            )
+
     def log_turn(
         self,
         night_id: str,

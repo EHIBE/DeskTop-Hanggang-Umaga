@@ -32,9 +32,12 @@ from capture.camera import (
     list_microphones,
     open_directshow,
 )
+from capture.tracker import TrackedPose, TrackerSet
 from config import (
     HANDS_OFF_WAIT_S,
     NIGHT_COST_ALERT_USD,
+    REANCHOR_BOX_PADDING,
+    SAM_ACCEPT_CONFIDENCE,
     STILL_FRAME_MEAN_DIFF_MAX,
     STREAM_FPS,
     STREAM_JPEG_QUALITY,
@@ -51,7 +54,7 @@ from db.store import (
     UnitPlacement,
     UnitRecord,
 )
-from meta_client import CostMeter
+from meta_client import CostMeter, MetaError
 from rules.units import (
     REROLLS_PER_UNIT,
     Difficulty,
@@ -59,8 +62,20 @@ from rules.units import (
     begin_night_block_key,
     clamp_card,
 )
-from state import Broadcast, EncodedFrame, FrameView, LiveState
-from vision.sam import PixelBox, clamp_box
+from state import Broadcast, EncodedFrame, FrameView, LiveState, Pose
+from vision.sam import (
+    Anchor,
+    ObjectPrompt,
+    PixelBox,
+    ReanchorTarget,
+    SegmentationError,
+    Segmenter,
+    TrackerOnlySegmenter,
+    clamp_box,
+    pad_box,
+    reanchor,
+)
+from vision.signature import bhattacharyya, histogram
 from vision.sprites import (
     FALLBACK_SUBJECT,
     SpriteError,
@@ -124,6 +139,12 @@ class UnitView:
 
 PipelineFactory = Callable[[bool], SummonPipeline]
 SpriteServiceFactory = Callable[[bool], SpriteService]
+SegmenterFactory = Callable[[bool], Segmenter]
+TrackerFactory = Callable[[float, tuple[int, int]], TrackerSet]
+
+
+def default_tracker(px_per_cm: float, warped_size: tuple[int, int]) -> TrackerSet:
+    return TrackerSet(px_per_cm=px_per_cm, warped_size=warped_size)
 
 
 def game_id_for(sam_id: int) -> str:
@@ -188,7 +209,15 @@ class GameController:
         meter: CostMeter | None = None,
         sprite_service_factory: SpriteServiceFactory | None = None,
         broadcast: Broadcast | None = None,
+        segmenter_factory: SegmenterFactory | None = None,
+        tracker_factory: TrackerFactory = default_tracker,
     ) -> None:
+        self._segmenter_factory = segmenter_factory
+        self._tracker_factory = tracker_factory
+        self._tracker: TrackerSet | None = None
+        self._is_tracker_dirty = True
+        self._poses: dict[int, TrackedPose] = {}
+        self._uncertain: set[int] = set()
         self._sprite_service_factory = sprite_service_factory
         self._broadcast = broadcast
         self._crops: dict[str, Image] = {}
@@ -404,6 +433,12 @@ class GameController:
             unit.sam_object_id: self._default_box(unit) for unit in self._units
         }
         self._pending = None
+        self._tracker = self._tracker_factory(
+            float(self._area.px_per_cm), self._area.warped_size
+        )
+        self._is_tracker_dirty = True
+        self._poses = {}
+        self._uncertain = set()
 
     def _default_box(self, unit: UnitRecord) -> PixelBox:
         ppc = self._area.px_per_cm
@@ -587,6 +622,7 @@ class GameController:
         for sam_id, mask in outcome.known_masks.items():
             self._boxes[sam_id] = clamp_box(mask.bounds, width, height)
         self._boxes[outcome.sam_id] = clamp_box(outcome.mask.bounds, width, height)
+        self._is_tracker_dirty = True
         self._units.append(unit)
         self._pending = None
         elapsed_ms = max(0, round((self._clock() - started) * 1000))
@@ -810,8 +846,149 @@ class GameController:
         if calibration is None:
             jpg, width, height = encode_jpeg(frame.image)
             return EncodedFrame(sequence, FrameView.RAW, width, height, jpg)
-        jpg, width, height = encode_jpeg(warp(frame.image, calibration))
-        return EncodedFrame(sequence, FrameView.WARPED, width, height, jpg)
+        warped = warp(frame.image, calibration)
+        poses = self.track(warped)
+        jpg, width, height = encode_jpeg(warped)
+        return EncodedFrame(sequence, FrameView.WARPED, width, height, jpg, poses)
+
+    def track(self, warped: Image) -> tuple[Pose, ...]:
+        with self._lock:
+            tracker = self._tracker
+            if tracker is None or not self._is_calibrated or not self._boxes:
+                return ()
+            if self._is_tracker_dirty:
+                tracker.reset(warped, dict(self._boxes))
+                self._is_tracker_dirty = False
+                return self._pose_list()
+            for pose in tracker.update(warped):
+                self._poses[pose.sam_id] = pose
+            return self._pose_list()
+
+    def _pose_list(self) -> tuple[Pose, ...]:
+        poses: list[Pose] = []
+        for unit in self._units:
+            sam_id = unit.sam_object_id
+            tracked = self._poses.get(sam_id)
+            x_cm, y_cm = (
+                (tracked.x_cm, tracked.y_cm) if tracked else (unit.x_cm, unit.y_cm)
+            )
+            is_frozen = tracked.is_frozen if tracked else False
+            poses.append(
+                Pose(
+                    game_id_for(sam_id),
+                    x_cm,
+                    y_cm,
+                    is_frozen or sam_id in self._uncertain,
+                )
+            )
+        return tuple(poses)
+
+    def _segmenter(self, allow_in_demo_safe: bool) -> Segmenter | None:
+        self.enforce_budget()
+        if self._segmenter_factory is None:
+            return None
+        if self._is_demo_safe and not allow_in_demo_safe:
+            return None
+        segmenter = self._segmenter_factory(False)
+        return segmenter if segmenter.is_available else None
+
+    async def recover_lost_objects(self) -> int:
+        tracker = self._tracker
+        calibration = self._calibration
+        if tracker is None or calibration is None or not self._is_calibrated:
+            return 0
+        candidates = tracker.recovery_candidates()
+        if not candidates:
+            return 0
+        segmenter = self._segmenter(allow_in_demo_safe=False)
+        frame = await asyncio.to_thread(self.wait_for_frame)
+        if segmenter is None or frame is None:
+            return 0
+        warped = warp(frame, calibration)
+        width, height = self._area.warped_size
+        boxes = tracker.boxes()
+        recovered = 0
+        for sam_id in candidates:
+            box = boxes.get(sam_id)
+            if box is None:
+                continue
+            tracker.mark_recovery_used(sam_id)
+            prompt = ObjectPrompt(
+                sam_id, pad_box(box, REANCHOR_BOX_PADDING, width, height)
+            )
+            try:
+                result = await segmenter.segment(warped, [prompt])
+            except (SegmentationError, MetaError):
+                logger.warning("between-turn recovery failed")
+                return recovered
+            mask = result.get(sam_id)
+            if mask is None or (mask.confidence or 0.0) < SAM_ACCEPT_CONFIDENCE:
+                continue
+            with self._lock:
+                tracker.relock(sam_id, warped, clamp_box(mask.bounds, width, height))
+            recovered += 1
+        return recovered
+
+    async def reanchor_all(self) -> dict[int, Anchor]:
+        night = self._night
+        calibration = self._calibration
+        tracker = self._tracker
+        if night is None or calibration is None or tracker is None:
+            raise GameError("cmd.unknown")
+        frame = await asyncio.to_thread(self.wait_for_still_frame)
+        if frame is None:
+            raise GameError("cam.busy")
+        signatures = self._store.unit_signatures(night.id)
+        tracked = tracker.boxes()
+        targets = [
+            ReanchorTarget(
+                sam_id=unit.sam_object_id,
+                tracker_box=tracked.get(unit.sam_object_id)
+                or self._boxes.get(unit.sam_object_id)
+                or self._default_box(unit),
+                label=signatures.get(unit.unit_id, (unit.card.name, ()))[0],
+                histogram=signatures.get(unit.unit_id, ("", ()))[1],
+            )
+            for unit in self._units
+        ]
+        segmenter = self._segmenter(allow_in_demo_safe=True)
+        anchors = await reanchor(
+            segmenter or TrackerOnlySegmenter(),
+            frame,
+            targets,
+            float(self._area.px_per_cm),
+            histogram,
+            bhattacharyya,
+        )
+        self._apply_anchors(night, frame, anchors)
+        return anchors
+
+    def _apply_anchors(
+        self, night: NightRecord, frame: Image, anchors: dict[int, Anchor]
+    ) -> None:
+        width, height = self._area.warped_size
+        positions: dict[str, tuple[float, float]] = {}
+        with self._lock:
+            for unit in self._units:
+                anchor = anchors.get(unit.sam_object_id)
+                if anchor is None:
+                    continue
+                positions[unit.unit_id] = (anchor.x_cm, anchor.y_cm)
+                box = clamp_box(anchor.box, width, height)
+                self._boxes[unit.sam_object_id] = box
+                if anchor.is_uncertain:
+                    self._uncertain.add(unit.sam_object_id)
+                    continue
+                self._uncertain.discard(unit.sam_object_id)
+                if self._tracker is not None:
+                    self._tracker.relock(unit.sam_object_id, frame, box)
+            self._units = [
+                replace(u, x_cm=positions[u.unit_id][0], y_cm=positions[u.unit_id][1])
+                if u.unit_id in positions
+                else u
+                for u in self._units
+            ]
+        self._store.update_positions(night.id, positions)
 
     def _close_camera(self) -> None:
         if self._camera is not None:

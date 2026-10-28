@@ -26,6 +26,7 @@ from game.night import (
     GameController,
     GameError,
     PipelineFactory,
+    SegmenterFactory,
     Snapshot,
     SpriteServiceFactory,
     UnitView,
@@ -34,7 +35,7 @@ from gm.schemas import ContentFilter
 from meta_client import CostMeter, MetaClient, create_openai_client
 from rules.units import Difficulty
 from state import Broadcast, EncodedFrame, LiveState
-from vision.sam import SamSegmenter, TrackerOnlySegmenter
+from vision.sam import SamSegmenter, Segmenter, TrackerOnlySegmenter
 from vision.sprites import MuseImageGenerator, PlaceholderGenerator, SpriteService
 from vision.summon import FallbackDetector, SparkDetector, SummonPipeline
 
@@ -193,6 +194,7 @@ def build_services(settings: AppSettings) -> Services:
         pipeline_factory=build_pipeline_factory(meta, content, log_invalid),
         meter=meta.meter,
         sprite_service_factory=build_sprite_factory(store, meta),
+        segmenter_factory=build_segmenter_factory(meta),
         broadcast=broadcast,
     )
     pump = FramePump(controller, live)
@@ -223,6 +225,16 @@ def build_pipeline_factory(
         return SummonPipeline(
             SparkDetector(meta, content, log_invalid), SamSegmenter(meta), content
         )
+
+    return factory
+
+
+def build_segmenter_factory(meta: MetaClient) -> SegmenterFactory:
+    live = SamSegmenter(meta)
+    offline = TrackerOnlySegmenter()
+
+    def factory(_: bool) -> Segmenter:
+        return live if meta.has_credentials else offline
 
     return factory
 
@@ -490,6 +502,18 @@ class Connection:
         return None
 
 
+RECOVERY_INTERVAL_S: Final = 1.0
+
+
+async def recover_forever(controller: GameController) -> None:
+    while True:
+        await asyncio.sleep(RECOVERY_INTERVAL_S)
+        try:
+            await controller.recover_lost_objects()
+        except GameError:
+            logger.warning("between-turn recovery skipped")
+
+
 def create_app(
     settings: AppSettings,
     allowed_origins: frozenset[str],
@@ -502,7 +526,9 @@ def create_app(
         services = services_factory(settings)
         services.pump.start()
         holder["services"] = services
+        recovery = asyncio.create_task(recover_forever(services.controller))
         yield
+        recovery.cancel()
         services.close()
 
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
