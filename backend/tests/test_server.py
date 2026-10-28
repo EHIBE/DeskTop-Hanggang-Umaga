@@ -287,6 +287,23 @@ def test_campaign_delete_is_refused_outside_start(client: TestClient) -> None:
         assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
 
 
+def test_voice_messages_and_state(client: TestClient) -> None:
+    with connect(client) as ws:
+        state = receive_type(ws, "state")
+        assert state["voice"] == {"status": "off", "mode": "open", "ptt_down": False}
+        ws.send_text(json.dumps({"type": "ptt", "down": True}))
+        assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
+        receive_type(ws, "state")
+        ws.send_text(json.dumps({"type": "voice.mode", "mode": "ptt"}))
+        assert receive_type(ws, "state")["voice"]["mode"] == "ptt"  # type: ignore[index]
+        ws.send_text(json.dumps({"type": "ptt", "down": True}))
+        assert receive_type(ws, "state")["voice"]["ptt_down"] is True  # type: ignore[index]
+        ws.send_text(json.dumps({"type": "voice.retry"}))
+        assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
+        ws.send_text(json.dumps({"type": "voice.mode", "mode": "loud"}))
+        assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
+
+
 def test_pause_and_resume_need_a_night(client: TestClient) -> None:
     with connect(client) as ws:
         receive_type(ws, "state")

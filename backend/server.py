@@ -5,7 +5,8 @@ import logging
 import os
 import sys
 import threading
-from collections.abc import AsyncIterator, Awaitable, Callable
+import time
+from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from decimal import Decimal
@@ -33,6 +34,7 @@ from game.night import (
     Snapshot,
     SpriteServiceFactory,
     UnitView,
+    VoiceFactory,
 )
 from gm.narrator import LineBank, NarrationService, SparkNarrator
 from gm.schemas import ContentFilter
@@ -43,6 +45,14 @@ from state import Broadcast, EncodedFrame, LiveState
 from vision.sam import SamSegmenter, Segmenter, TrackerOnlySegmenter
 from vision.sprites import MuseImageGenerator, PlaceholderGenerator, SpriteService
 from vision.summon import FallbackDetector, SparkDetector, SummonPipeline
+from voice.session import (
+    Caption,
+    SoundDeviceMicrophone,
+    VoiceMode,
+    VoiceSession,
+    VoiceStatus,
+    WebsocketsConnector,
+)
 
 logger = logging.getLogger("desktop.server")
 
@@ -202,6 +212,20 @@ class DemoSafeMessage(ClientModel):
     on: bool
 
 
+class PttMessage(ClientModel):
+    type: Literal["ptt"]
+    down: bool
+
+
+class VoiceModeMessage(ClientModel):
+    type: Literal["voice.mode"]
+    mode: VoiceMode
+
+
+class VoiceRetryMessage(ClientModel):
+    type: Literal["voice.retry"]
+
+
 class DemoSafeSamMessage(ClientModel):
     type: Literal["demo_safe.sam"]
     on: bool
@@ -233,6 +257,9 @@ ClientMessage = (
     | NightResumeMessage
     | DemoSafeMessage
     | DemoSafeSamMessage
+    | PttMessage
+    | VoiceModeMessage
+    | VoiceRetryMessage
 )
 CLIENT_MESSAGE: Final = TypeAdapter[ClientMessage](ClientMessage)
 
@@ -277,6 +304,7 @@ def build_services(settings: AppSettings) -> Services:
         segmenter_factory=build_segmenter_factory(meta),
         broadcast=broadcast,
         narration=build_narration(meta, content, log_invalid),
+        voice_factory=build_voice_factory(settings.api_key, meta.meter),
     )
     pump = FramePump(controller, live)
 
@@ -319,6 +347,34 @@ def build_narration(
     return NarrationService(
         line_bank, lambda: SparkNarrator(meta, content, line_bank, log_invalid)
     )
+
+
+def build_voice_factory(api_key: str | None, meter: CostMeter) -> VoiceFactory | None:
+    if api_key is None:
+        return None
+    key = api_key
+
+    def factory(
+        keywords: Sequence[str],
+        on_caption: Callable[[Caption], None],
+        on_final: Callable[[Caption], None],
+        on_overlap: Callable[[], None],
+        on_status: Callable[[VoiceStatus], None],
+    ) -> VoiceSession:
+        return VoiceSession(
+            key,
+            keywords,
+            lambda: SoundDeviceMicrophone(None),
+            WebsocketsConnector(),
+            on_caption,
+            on_final,
+            on_overlap,
+            on_status,
+            meter,
+            time.monotonic,
+        )
+
+    return factory
 
 
 def build_segmenter_factory(meta: MetaClient) -> SegmenterFactory:
@@ -440,6 +496,8 @@ def night_json(night: NightView) -> JsonObject:
                 "unit_id": c.unit_id,
                 "action": c.action,
                 "target_id": c.target_id,
+                "source": c.source,
+                "speaker": c.speaker,
             }
             for c in night.chips
         ],
@@ -481,6 +539,11 @@ def state_json(snapshot: Snapshot) -> JsonObject:
         "begin_block_key": snapshot.begin_block_key,
         "awaiting_tap": snapshot.is_awaiting_tap,
         "resume_turn": snapshot.resume_turn,
+        "voice": {
+            "status": snapshot.voice.status,
+            "mode": snapshot.voice.mode,
+            "ptt_down": snapshot.voice.is_ptt_down,
+        },
         "night": None if snapshot.night is None else night_json(snapshot.night),
         "score": None if snapshot.score is None else score_json(snapshot.score),
     }
@@ -700,6 +763,15 @@ class Connection:
             return None
         if isinstance(message, NightResumeMessage):
             await asyncio.to_thread(controller.resume_night, message.force)
+            return None
+        if isinstance(message, PttMessage):
+            controller.set_ptt(message.down)
+            return None
+        if isinstance(message, VoiceModeMessage):
+            controller.set_voice_mode(message.mode)
+            return None
+        if isinstance(message, VoiceRetryMessage):
+            controller.retry_voice()
             return None
         if isinstance(message, DemoSafeSamMessage):
             await asyncio.to_thread(controller.set_demo_safe_sam, message.on)

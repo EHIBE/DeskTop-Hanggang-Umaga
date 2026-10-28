@@ -135,8 +135,31 @@ from vision.summon import (
     SummonPipeline,
     SummonRequest,
 )
+from voice.grammar import (
+    Command,
+    CommandKind,
+    GrammarContext,
+    GrammarEnemy,
+    GrammarUnit,
+    parse_command,
+)
+from voice.session import Caption, VoiceMode, VoiceSession, VoiceStatus
 
 logger = logging.getLogger("desktop.game")
+
+VoiceFactory = Callable[
+    [
+        Sequence[str],
+        Callable[[Caption], None],
+        Callable[[Caption], None],
+        Callable[[], None],
+        Callable[[VoiceStatus], None],
+    ],
+    VoiceSession,
+]
+
+TAP_SOURCE: Final = "tap"
+VOICE_SOURCE: Final = "voice"
 
 Image = npt.NDArray[np.uint8]
 
@@ -207,6 +230,8 @@ class ChipView:
     unit_id: str
     action: str
     target_id: str | None
+    source: str = TAP_SOURCE
+    speaker: str | None = None
 
 
 @dataclass(frozen=True)
@@ -277,6 +302,13 @@ def game_id_for(sam_id: int) -> str:
 
 
 @dataclass(frozen=True)
+class VoiceView:
+    status: str
+    mode: str
+    is_ptt_down: bool
+
+
+@dataclass(frozen=True)
 class Snapshot:
     phase: AppPhase
     campaign: Campaign | None
@@ -292,6 +324,7 @@ class Snapshot:
     begin_block_key: str | None = None
     is_awaiting_tap: bool = False
     resume_turn: int | None = None
+    voice: VoiceView = VoiceView(VoiceStatus.OFF.value, VoiceMode.OPEN.value, False)
     night: NightView | None = None
     score: FinalScore | None = None
 
@@ -341,8 +374,16 @@ class GameController:
         segmenter_factory: SegmenterFactory | None = None,
         tracker_factory: TrackerFactory = default_tracker,
         narration: NarrationService | None = None,
+        voice_factory: VoiceFactory | None = None,
     ) -> None:
         self._narration = narration
+        self._voice_factory = voice_factory
+        self._voice: VoiceSession | None = None
+        self._voice_status = VoiceStatus.OFF
+        self._voice_mode = VoiceMode.OPEN
+        self._is_ptt_down = False
+        self._voice_tasks: set[asyncio.Task[None]] = set()
+        self._voice_turns: set[asyncio.Task[None]] = set()
         self._segmenter_factory = segmenter_factory
         self._tracker_factory = tracker_factory
         self._tracker: TrackerSet | None = None
@@ -409,6 +450,9 @@ class GameController:
                 ),
                 is_awaiting_tap=self._pending is not None,
                 resume_turn=self._resume_turn,
+                voice=VoiceView(
+                    self._voice_status.value, self._voice_mode.value, self._is_ptt_down
+                ),
                 night=self._night_view(),
                 score=None if self._session is None else self._session.final_score,
             )
@@ -471,7 +515,12 @@ class GameController:
             ]
         chips = tuple(
             ChipView(
-                c.chip_id, c.intent.unit_id, c.intent.action.value, c.intent.target_id
+                c.chip_id,
+                c.intent.unit_id,
+                c.intent.action.value,
+                c.intent.target_id,
+                c.source,
+                c.speaker,
             )
             for c in session.chips
         )
@@ -559,6 +608,7 @@ class GameController:
         self._notify("restore", {})
         self._publish_events(result)
         self._narrate(NarrationPhase.RESOLUTION_THEN_TELEGRAPH, result.telegraph)
+        self._start_voice()
 
     def claim(
         self,
@@ -579,6 +629,7 @@ class GameController:
         result = self._run_session(lambda: session.finish_claims(poses, sizes))
         self._publish_events(result)
         self._narrate(NarrationPhase.NIGHT_START, result.telegraph)
+        self._start_voice()
 
     def _unit_sizes(self) -> dict[str, tuple[float, float]]:
         ppc = float(self._area.px_per_cm)
@@ -639,8 +690,10 @@ class GameController:
             return
         if session.state is TurnState.SUNRISE:
             self._narrate(NarrationPhase.SUNRISE, result.events)
+            self._stop_voice()
         elif session.state is TurnState.DEFEAT:
             self._narrate(NarrationPhase.DEFEAT, result.events)
+            self._stop_voice()
         else:
             self._narrate(
                 NarrationPhase.RESOLUTION_THEN_TELEGRAPH, result.events + result.telegraph
@@ -1018,6 +1071,161 @@ class GameController:
     def _stop_narration(self) -> None:
         if self._narration is not None:
             self._narration.cancel()
+        self._stop_voice()
+
+    def _start_voice(self) -> None:
+        factory = self._voice_factory
+        if factory is None or self._voice is not None or not self._demo_safe.allows_voice:
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        names = [u.card.name for u in self._units]
+        voice = factory(
+            [*VOICE_KEYWORDS, *names],
+            self._publish_caption,
+            self._on_voice_final,
+            self._on_voice_overlap,
+            self._on_voice_status,
+        )
+        voice.set_mode(self._voice_mode)
+        self._voice = voice
+        self._track_voice_task(loop.create_task(voice.run()))
+
+    def _track_voice_task(self, task: asyncio.Task[None]) -> None:
+        self._voice_tasks.add(task)
+        task.add_done_callback(self._voice_tasks.discard)
+
+    def _stop_voice(self) -> None:
+        voice = self._voice
+        self._voice = None
+        self._is_ptt_down = False
+        if voice is not None:
+            voice.stop()
+        self._voice_status = VoiceStatus.OFF
+
+    async def wait_for_voice_end_turns(self) -> None:
+        if self._voice_turns:
+            await asyncio.gather(*self._voice_turns, return_exceptions=True)
+
+    async def wait_for_voice(self) -> None:
+        if self._voice_tasks:
+            await asyncio.gather(*self._voice_tasks, return_exceptions=True)
+
+    def set_voice_mode(self, mode: VoiceMode) -> None:
+        self._voice_mode = mode
+        self._is_ptt_down = False
+        if self._voice is not None:
+            self._voice.set_mode(mode)
+            self._voice.set_ptt(False)
+
+    def set_ptt(self, is_down: bool) -> None:
+        if self._voice_mode is not VoiceMode.PTT:
+            raise GameError("cmd.unknown")
+        self._is_ptt_down = is_down
+        if self._voice is not None:
+            self._voice.set_ptt(is_down)
+
+    def retry_voice(self) -> None:
+        session = self._session_or_error()
+        if session.state not in VOICE_STATES:
+            raise GameError("cmd.unknown")
+        self._stop_voice()
+        self._start_voice()
+
+    def _push_state(self) -> None:
+        if self._broadcast is not None:
+            self._broadcast.publish({"type": STATE_CHANGED})
+
+    def _publish_caption(self, caption: Caption) -> None:
+        if self._broadcast is None:
+            return
+        self._broadcast.publish(
+            {
+                "type": "caption",
+                "turn_id": caption.turn_id,
+                "text": caption.text,
+                "is_final": caption.is_final,
+                "speaker": caption.speaker,
+            }
+        )
+
+    def _on_voice_status(self, status: VoiceStatus) -> None:
+        if self._voice is None:
+            return
+        self._voice_status = status
+        if status is VoiceStatus.DOWN:
+            self._notify("net.down", {})
+        self._push_state()
+
+    def _on_voice_overlap(self) -> None:
+        self._notify("cmd.overlap", {})
+        self._push_state()
+
+    def _on_voice_final(self, caption: Caption) -> None:
+        session = self._session
+        if session is None or session.state is not TurnState.PLAYER_PHASE:
+            return
+        context = self._grammar_context(session)
+        command = None if context is None else parse_command(caption.text, context)
+        try:
+            self._apply_voice_command(session, command, caption.speaker)
+        except SessionError as error:
+            self._notify(error.copy_key, error.params)
+        self._push_state()
+
+    def _apply_voice_command(
+        self, session: NightSession, command: Command | None, speaker: str | None
+    ) -> None:
+        if command is None:
+            self._notify("cmd.unknown", {})
+            return
+        if command.kind is CommandKind.END_TURN:
+            task = asyncio.get_running_loop().create_task(self._voice_end_turn())
+            self._voice_turns.add(task)
+            task.add_done_callback(self._voice_turns.discard)
+            return
+        if command.kind is CommandKind.CANCEL:
+            session.cancel_last_voice_chip(speaker)
+            self._notify("cmd.cancel", {})
+            return
+        if command.unit_id is None:
+            self._notify("cmd.unknown", {})
+            return
+        session.add_intent(
+            command.unit_id,
+            Action(command.kind.value),
+            command.target_id,
+            VOICE_SOURCE,
+            speaker,
+        )
+
+    async def _voice_end_turn(self) -> None:
+        try:
+            await self.end_turn()
+        except GameError as error:
+            self._notify(error.copy_key, error.params)
+        self._push_state()
+
+    def _grammar_context(self, session: NightSession) -> GrammarContext | None:
+        board = session.board
+        if board is None:
+            return None
+        names = {game_id_for(u.sam_object_id): u.card.name for u in self._units}
+        return GrammarContext(
+            units=tuple(
+                GrammarUnit(
+                    u.id, names.get(u.id, u.id), u.unit_class.value, u.position[0], u.position[1]
+                )
+                for u in board.units
+            ),
+            enemies=tuple(
+                GrammarEnemy(e.id, e.type.value, e.position[0], e.position[1])
+                for e in board.enemies
+                if e.is_alive
+            ),
+        )
 
     def drain_notices(self) -> list[tuple[str, dict[str, str]]]:
         notices = self._notices
@@ -1641,6 +1849,18 @@ DOWN_STATUS: Final = "down"
 STUNNED_STATUS: Final = "stunned"
 REFORM_STATUS_PREFIX: Final = "reform_"
 STATE_CHANGED: Final = "state.changed"
+VOICE_KEYWORDS: Final = (
+    "tapos",
+    "hindi",
+    "kubo",
+    "anting-anting",
+    "albularyo",
+    "aswang",
+    "tikbalang",
+    "kapre",
+    "manananggal",
+    "duwende",
+)
 PLAYER_ALIAS_PREFIX: Final = "P"
 PLAYER_ALIAS_PATTERN: Final = re.compile(r"\bP[1-4]\b")
 ACTIVE_NIGHT_STATES: Final = frozenset(
@@ -1648,6 +1868,7 @@ ACTIVE_NIGHT_STATES: Final = frozenset(
     for state in TurnState
     if state not in (TurnState.SUMMON, TurnState.PAUSED, TurnState.SUNRISE, TurnState.DEFEAT)
 )
+VOICE_STATES: Final = ACTIVE_NIGHT_STATES | {TurnState.PAUSED}
 MIN_HULL_POINTS: Final = 3
 RESTORE_EVENT: Final = "restore"
 
@@ -1663,6 +1884,8 @@ class SessionError(Exception):
 class Chip:
     chip_id: str
     intent: Intent
+    source: str = TAP_SOURCE
+    speaker: str | None = None
 
 
 @dataclass(frozen=True)
@@ -1928,7 +2151,14 @@ class NightSession:
         self._announce(events)
         return events
 
-    def add_intent(self, game_id: str, action: Action, target_id: str | None) -> Chip:
+    def add_intent(
+        self,
+        game_id: str,
+        action: Action,
+        target_id: str | None,
+        source: str = TAP_SOURCE,
+        speaker: str | None = None,
+    ) -> Chip:
         self._require(TurnState.PLAYER_PHASE)
         board = self._board
         if board is None:
@@ -1937,9 +2167,17 @@ class NightSession:
         error = intent_error(board, intent)
         if error is not None:
             raise SessionError(error, {"unit": self._name_of(game_id)})
-        chip = Chip(chip_id=str(uuid.uuid4()), intent=intent)
+        chip = Chip(chip_id=str(uuid.uuid4()), intent=intent, source=source, speaker=speaker)
         self._chips = [c for c in self._chips if c.intent.unit_id != game_id] + [chip]
         return chip
+
+    def cancel_last_voice_chip(self, speaker: str | None) -> Chip:
+        self._require(TurnState.PLAYER_PHASE)
+        for chip in reversed(self._chips):
+            if chip.source == VOICE_SOURCE and (speaker is None or chip.speaker == speaker):
+                self._chips = [c for c in self._chips if c.chip_id != chip.chip_id]
+                return chip
+        raise SessionError("cmd.unknown")
 
     def cancel_chip(self, chip_id: str) -> None:
         self._require(TurnState.PLAYER_PHASE)

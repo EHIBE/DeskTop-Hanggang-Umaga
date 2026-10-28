@@ -26,7 +26,7 @@ class MemorySettings:
 def test_defaults_allow_every_paid_call() -> None:
     mode = DemoSafeMode.load(MemorySettings())
     assert mode == DemoSafeMode(is_on=False, is_sam_reanchor_on=True)
-    assert mode.allows_spark and mode.allows_image
+    assert mode.allows_spark and mode.allows_image and mode.allows_voice
     assert mode.allows_sam_recovery and mode.allows_sam_reanchor
 
 
@@ -34,6 +34,7 @@ def test_on_blocks_paid_calls_but_keeps_reanchor_by_default() -> None:
     mode = DemoSafeMode().with_on(True)
     assert not mode.allows_spark
     assert not mode.allows_image
+    assert not mode.allows_voice
     assert not mode.allows_sam_recovery
     assert mode.allows_sam_reanchor
     assert not mode.with_sam_reanchor(False).allows_sam_reanchor
