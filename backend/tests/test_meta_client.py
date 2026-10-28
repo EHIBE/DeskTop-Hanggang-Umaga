@@ -186,6 +186,15 @@ def test_retry_after_http_date_is_honored() -> None:
     assert harness.sleeps == [4.0]
 
 
+def test_retry_after_longer_than_timeout_fails_fast() -> None:
+    harness = make_harness()
+    operation, calls = scripted(status_error(503, headers={"Retry-After": "300"}), "ok")
+    with pytest.raises(MetaUnavailableError):
+        run(harness.client.execute(SPARK, operation, spark_usage))
+    assert len(calls) == 1
+    assert harness.sleeps == []
+
+
 def test_rate_limit_without_retry_window_stops_paid_calls() -> None:
     harness = make_harness()
     operation, calls = scripted(status_error(429))

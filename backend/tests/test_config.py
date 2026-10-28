@@ -56,6 +56,13 @@ def test_default_port_and_missing_key(tmp_path: Path) -> None:
     assert settings.api_key is None
 
 
+def test_blank_port_uses_default(tmp_path: Path) -> None:
+    settings = load_settings(
+        {"DESKTOP_TOKEN": "t", "DESKTOP_DATA_DIR": str(tmp_path), "DESKTOP_PORT": " "}
+    )
+    assert settings.port == 8765
+
+
 @pytest.mark.parametrize("raw_port", ["abc", "80", "70000", "-1"])
 def test_invalid_port_raises(tmp_path: Path, raw_port: str) -> None:
     with pytest.raises(ConfigError):

@@ -376,6 +376,10 @@ class MetaClient:
         if is_credit_exhausted:
             self._meter.force_stop()
             raise BudgetExceededError("credits exhausted") from error
+        is_wait_too_long = (
+            retry_after is not None and retry_after > self._timeouts[spec.kind]
+        )
         return _AttemptFailure(
-            is_retryable=_is_retryable_status(status), retry_after_s=retry_after
+            is_retryable=_is_retryable_status(status) and not is_wait_too_long,
+            retry_after_s=retry_after,
         )

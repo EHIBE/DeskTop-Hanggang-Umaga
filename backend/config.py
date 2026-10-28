@@ -137,7 +137,7 @@ def load_settings(env: Mapping[str, str]) -> AppSettings:
         raise ConfigError("DESKTOP_TOKEN is required")
     raw_data_dir = env.get("DESKTOP_DATA_DIR", "").strip()
     data_dir = Path(raw_data_dir) if raw_data_dir else _default_data_dir(env)
-    port = _parse_port(env.get("DESKTOP_PORT", str(DEFAULT_PORT)).strip())
+    port = _parse_port(env.get("DESKTOP_PORT", "").strip() or str(DEFAULT_PORT))
     api_key = env.get("MODEL_API_KEY", "").strip() or None
     return AppSettings(
         token=token, data_dir=data_dir.resolve(), port=port, api_key=api_key
