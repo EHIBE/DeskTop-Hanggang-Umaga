@@ -61,6 +61,6 @@ The PRD change log (section 0) records the history these ADRs summarize: rename 
 
 1. Copy `TEMPLATE.md` to `ADR-<next number>-<slug>.md`.
 2. Fill context, decision, consequences, alternatives, sources.
-3. Status Proposed until EHIBE confirms. Then Accepted.
+3. Status Proposed until EHIBE confirms, with front matter `status: draft`. Then Accepted with `status: active`.
 4. Superseding a decision: set the old one to Superseded and link the new one.
 5. Add a row to this index and update CLAUDE.md Decisions.

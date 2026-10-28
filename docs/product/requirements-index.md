@@ -19,7 +19,7 @@ Every functional and non-functional requirement with where it lives and its buil
 |---|---|
 | Functional requirements | FR-01 to FR-56 |
 | Non-functional | NFR-01 to NFR-31 |
-| Demo-critical (★) | 33 FRs |
+| Demo-critical (★) | 31 FRs |
 | Status values | Planned, Built, Tested, Cut, Could |
 | Status on 2026-10-28 | Nothing built. Cut and Could per Build Guide |
 

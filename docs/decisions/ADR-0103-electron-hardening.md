@@ -4,7 +4,7 @@ purpose: Record the decision on harden the Electron window and preload
 read_when: [changing this area, questioning this choice]
 canonical_for: [ADR-0103]
 sources: [CLAUDE.md#bugs-and-contradictions, docs/FEATURE_PROMPT.md#3-project]
-status: active
+status: draft
 last_verified: 2026-10-28
 related: [docs/decisions/README.md, CLAUDE.md]
 ---

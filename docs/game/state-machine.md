@@ -18,7 +18,7 @@ The backend runs one state machine per night as an enum with a single `transitio
 | Fact | Value |
 |---|---|
 | Module | `backend/game/state_machine.py` |
-| States | 16 |
+| States | 15 |
 | Requirement | FR-31 (every transition occurs in order in a scripted test) |
 | Logging | One turn_log row per transition |
 | Autosave | One transaction at CHECK_END |

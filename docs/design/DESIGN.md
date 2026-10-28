@@ -78,7 +78,7 @@ Rules:
 Full state tables: `hud-components.md`.
 
 - Buttons: flat pixel boxes, 2 px ink border, lantern fill for the single primary action (End Turn, Begin Night, Start Night), dusk fill for secondary. Pressed state shifts 1 px down. Focus shows a 2 px lantern outline.
-- Chips (orders, speakers): dusk fill, moon text, X target 32 px or larger.
+- Chips (orders, speakers): dusk fill, moon text, X target 48 px or larger.
 - Panels: night fill with dusk 2 px border, square corners. No soft shadows, no blur.
 - Rings and arrows: drawn on canvas, pixel-aligned, shape plus color.
 - Cards (unit card only): night panel with the sprite at integer scale, stats in a grid.
