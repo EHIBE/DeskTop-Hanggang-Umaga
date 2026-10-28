@@ -446,3 +446,19 @@ def test_signatures_and_positions(store: Store) -> None:
     store.update_positions(night.id, {unit.unit_id: (12.5, 7.25)})
     moved = store.night_units(night.id)[0]
     assert (moved.x_cm, moved.y_cm) == (12.5, 7.25)
+
+
+def test_players_and_owners(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    night = store.start_or_resume_night(campaign.id)
+    unit = store.add_unit(night, card_fields(), SIGNATURE, UnitPlacement(1, 30.0, 20.0))
+    migs = store.find_or_add_player(campaign.id, "Migs", "#F2C14E")
+    assert store.find_or_add_player(campaign.id, "Migs", "#F2C14E") == migs
+    store.set_unit_owner(unit.unit_id, migs)
+    assert store.unit_owners(night.id) == {unit.unit_id: "Migs"}
+    store.set_unit_owner(unit.unit_id, None)
+    assert store.unit_owners(night.id) == {}
+    with pytest.raises(NotFoundError):
+        store.set_unit_owner("missing", None)
+    with pytest.raises(sqlite3.IntegrityError):
+        store.find_or_add_player(campaign.id, "Bea", "yellow")

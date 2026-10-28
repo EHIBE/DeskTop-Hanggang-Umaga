@@ -545,6 +545,40 @@ class Store:
                 [(x, y, night_id, unit_id) for unit_id, (x, y) in positions.items()],
             )
 
+    def find_or_add_player(
+        self, campaign_id: str, display_name: str, color_hex: str
+    ) -> str:
+        with self.transaction() as conn:
+            row = conn.execute(
+                "SELECT id FROM player WHERE campaign_id = ? AND display_name = ?",
+                (campaign_id, display_name),
+            ).fetchone()
+            if row is not None:
+                return str(row["id"])
+            player_id = self._new_id()
+            conn.execute(
+                "INSERT INTO player (id, campaign_id, display_name, color_hex) VALUES (?, ?, ?, ?)",
+                (player_id, campaign_id, display_name, color_hex),
+            )
+        return player_id
+
+    def set_unit_owner(self, unit_id: str, player_id: str | None) -> None:
+        with self.transaction() as conn:
+            cursor = conn.execute(
+                "UPDATE unit SET player_id = ? WHERE id = ?", (player_id, unit_id)
+            )
+        if cursor.rowcount == 0:
+            raise NotFoundError("unit not found")
+
+    def unit_owners(self, night_id: str) -> dict[str, str]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT u.id, p.display_name FROM night_unit nu JOIN unit u ON u.id = nu.unit_id "
+                "JOIN player p ON p.id = u.player_id WHERE nu.night_id = ?",
+                (night_id,),
+            ).fetchall()
+        return {str(row["id"]): str(row["display_name"]) for row in rows}
+
     def log_turn(
         self,
         night_id: str,
