@@ -17,7 +17,7 @@ DeskTop is played by groups sitting around a laptop, some who will not speak and
 
 | Rule | Requirement |
 |---|---|
-| Minimum text | 16 px at 1080p (8 px pixel font at 2x) | 
+| Minimum text | 16 px at 1080p (8 px pixel font at 2x) |
 | Captions | Always on |
 | Color | Shape plus color on rings and arrows |
 | Input | Tap path for every voice action |
