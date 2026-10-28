@@ -55,7 +55,7 @@ The night HUD frames the warped desk feed with a top band for status and a botto
 | Intent arrow | arrows.ts | Red, "!" icon at head, damage number. Hidden inside kapre smoke (smoke cut) |
 | Unit badge | sprites.ts | "?" uncertain, lock when stolen, scar mark (Could) |
 | Sprite | sprites.ts | Placeholder, real, greyed (down), blue night tint, dawn tint |
-| Speaker chip | SpeakerChip | Label and name, pulses while speaking, "?" when unknown |
+| Speaker chip | Not built (M11 shows the label inline in Captions and OrderChips) | Label and name, pulses while speaking, "?" when unknown |
 | Captions | Captions | Partial (replaces, never appends), final, GM narration Taglish line plus English caption |
 | Order chips | OrderChips | Pending (cancelable by "hindi" or X), resolving, removed |
 | Unit strip | UnitStrip | Name, HP n/max, cooldown CD n, down, stolen, uncertain |

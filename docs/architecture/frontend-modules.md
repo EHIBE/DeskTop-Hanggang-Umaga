@@ -20,7 +20,7 @@ The app is an electron-vite React TypeScript project. Main spawns the backend an
 | Tooling | Electron ^44.7.2, electron-vite ^6.0.0, Vite ^8.3.4, React ^19.3.0, TypeScript ^5.9.3 (noImplicitAny on), Tailwind ^4.3.3 (wired, devDependency) |
 | Lint and format | ESLint ^9.39.5 flat config, Prettier (singleQuote, no semi, width 100) |
 | Alias | `@renderer` to `src/renderer/src` |
-| Exists today | `main/index.ts`, `main/backend.ts` (spawn, free port, health, restart), `main/keystore.ts` (safeStorage), preload `getConfig`, `getKeyStatus`, `saveKey`. Renderer: `lib/types.ts`, `lib/socket.ts`, `lib/copy.ts`, `lib/palette.ts`, `canvas/Board.tsx`, `components/Stage.tsx`, `components/Bilingual.tsx`, screens KeySetup, Start, Calibration (M3) |
+| Exists today | `main/index.ts`, `main/backend.ts` (spawn, free port, health, restart), `main/keystore.ts` (safeStorage), preload `getConfig`, `getKeyStatus`, `saveKey`. Renderer: `lib/types.ts`, `lib/socket.ts`, `lib/copy.ts`, `lib/palette.ts`, `canvas/Board.tsx`, `components/Stage.tsx`, `components/Bilingual.tsx`, screens KeySetup, Start, Calibration (M3), then Summon, UnitCard, VoiceClaim, Night, Sunrise, Defeat, and hud TopBar, UnitStrip, OrderChips, TapMenu, Narration, Captions, VoiceControls (M4 to M11) |
 
 ## Process roles
 
@@ -45,9 +45,10 @@ The app is an electron-vite React TypeScript project. Main spawns the backend an
 | `canvas/arrows.ts` | Enemy intent arrows |
 | `hud/TopBar.tsx` | Turn, phase, kubo HP, banners, REC |
 | `hud/UnitStrip.tsx` | HP and cooldowns |
-| `hud/Captions.tsx` | Live transcript and narration |
+| `hud/Captions.tsx` | Live transcript with speaker label. Narration lives in `hud/Narration.tsx` |
+| `hud/VoiceControls.tsx` | Mic status, open or push-to-talk switch, hold Space or the hold button, Voice problems retry |
 | `hud/OrderChips.tsx` | Order chips |
-| `hud/SpeakerChip.tsx` | Speaker indicator |
+| `hud/SpeakerChip.tsx` | Not built. The speaker label shows inline in captions and voice chips |
 | `hud/TapMenu.tsx` | Tap controls (FR-25) |
 | `screens/*.tsx` | Start, KeySetup, Calibration, Summon, UnitCard, VoiceClaim, Night, Sunrise, Defeat, Replay, Settings |
 

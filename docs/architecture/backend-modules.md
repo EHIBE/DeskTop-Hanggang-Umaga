@@ -19,7 +19,7 @@ The backend follows the PRD folder tree. Each module has one job, and dependenci
 |---|---|
 | Language | Python 3.13 (ADR-0101) |
 | Framework | FastAPI on uvicorn, 127.0.0.1:8765 |
-| Exists today | `server.py` (GET /health), `config.py`, `meta_client.py`, `db/schema.sql`, `db/store.py`, `smoke/*.py`, `capture/camera.py`, `capture/calibration.py`, `rules/geometry.py` (forest edge only), `rules/units.py`, `gm/schemas.py` (unit_card, gm_turn, ContentFilter), `gm/prompts.py` (summon, GM), `gm/narrator.py` (LineBank, SparkNarrator, NarrationService), `game/demo_safe.py`, `game/state_machine.py`, `rules/*`, `vision/sam.py`, `vision/signature.py`, `vision/summon.py`, `state.py`, `game/night.py` (GameController, FramePump), tests for each |
+| Exists today | `server.py` (GET /health), `config.py`, `meta_client.py`, `db/schema.sql`, `db/store.py`, `smoke/*.py`, `capture/camera.py`, `capture/calibration.py`, `rules/geometry.py` (forest edge only), `rules/units.py`, `gm/schemas.py` (unit_card, gm_turn, ContentFilter), `gm/prompts.py` (summon, GM), `gm/narrator.py` (LineBank, SparkNarrator, NarrationService), `game/demo_safe.py`, `game/state_machine.py`, `voice/grammar.py`, `voice/session.py` (VoiceSession, SoundDeviceMicrophone, WebsocketsConnector), `rules/*`, `vision/sam.py`, `vision/signature.py`, `vision/summon.py`, `state.py`, `game/night.py` (GameController, FramePump), tests for each |
 | Layering | server (entry) to game (orchestration) to vision, voice, gm, replay, capture (I/O services) to rules (pure) and db (persistence) |
 | Injection | FastAPI Depends and constructor parameters. No module-level clients |
 
@@ -48,7 +48,7 @@ The backend follows the PRD folder tree. Each module has one job, and dependenci
 | `vision/signature.py` | HSV histogram, area, aspect, match score | `make_signature()`, `match()` | numpy, opencv | 6 |
 | `vision/sprites.py` | Muse Image call, chroma key, palette lock, cache | `generate_sprite()` | meta_client, pillow, db.store | 5 |
 | `voice/session.py` | Realtime WebSocket, audio pacing, close codes, mode switch | `VoiceSession` | websockets, sounddevice | 11 |
-| `voice/grammar.py` | Local Taglish command parser | `parse(text, units, enemies)` | rapidfuzz | 11 |
+| `voice/grammar.py` | Local Taglish command parser | `parse_command(text, GrammarContext) -> Command or None` | rapidfuzz | 11 |
 | `voice/claim.py` | "Ako si" enrollment, unit ownership | `claim()` | rapidfuzz | 12 |
 | `gm/narrator.py` | GM call, validate, repair, line bank fallback | `narrate()` | meta_client, gm.schemas | 9 |
 | `gm/prompts.py` | Stable system prompts and templates | Constants | none | 4, 9 |

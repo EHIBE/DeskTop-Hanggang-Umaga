@@ -30,7 +30,7 @@ The night must finish even when the network or a model fails. Every external cal
 | SAM | Tracker positions with "?" badge and tap confirm | `track.uncertain` when needed |
 | Muse Image | Placeholder sprites | Nothing |
 | Spark | Line bank narration, local grammar, class default cards | Nothing or `net.down` |
-| Voice | Tap controls and push-to-talk banner | `net.down` |
+| Voice | Tap controls and the `voice.down_banner` line. Voice problems retries | `net.down` |
 | Credits at $120 | Block paid calls, Demo Safe Mode | `credits.low` |
 
 ## Demo Safe Mode (FR-50)
@@ -39,7 +39,7 @@ The night must finish even when the network or a model fails. Every external cal
 |---|---|
 | Sprites and cards | From cache and assets |
 | Narration | Line bank |
-| Commands | Local grammar and tap |
+| Commands | Tap only. Voice is a paid call, so no session starts (`allows_voice` false) |
 | SAM re-anchor | On by default, toggle to tracker-only (`demo_safe.sam`) |
 | SAM summon and between-turn recovery | Off |
 | Other paid calls | Off |

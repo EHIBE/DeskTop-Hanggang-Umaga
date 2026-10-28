@@ -13,6 +13,8 @@ related: [docs/decisions/ADR-0007-voice-diarization-enrollment.md, docs/design/c
 
 Two realtime sessions run per night: ENDPOINTING for summon and DIARIZATION for the night. A local grammar turns Taglish transcripts into intents, and every intent shows as a cancelable chip.
 
+Built in M11 (2026-10-28): the night DIARIZATION session only, in `backend/voice/session.py`, started by `game/night.py` when claims finish or on restore. The URL carries `?sessionId=desktop-<uuid>`. Keywords are creature words, order verbs and unit names, with no player names. The ENDPOINTING summon session and `voice/claim.py` are not built, so summon is typed and claim is by tap. Event field names (`turnId`, `text`, `speaker`) are Unverified until a live fixture is recorded.
+
 ## Key facts
 
 | Fact | Value |
@@ -74,8 +76,8 @@ Two open turnIds at once: drop both orders, show `cmd.overlap`.
 | attack | atake, saksakin, tira, hampasin, banatan, attack, hit | "Spearman, saksakin ang aswang!" |
 | power | gamitin, protektahan, bantayan, power, use | "Anting-anting, protektahan ang kubo!" |
 | heal | gamutin, pagalingin, heal | "Albularyo, gamutin si Spearman" |
-| end_turn | tapos, tapos na, end turn, done | "Tapos!" |
-| cancel | hindi, cancel, mali, wag | "Hindi, mali" |
+| end_turn | tapos na, done, end, next, end turn, or a bare tapos. A lone tapos inside a longer sentence means then | "Tapos!" |
+| cancel | hindi, wag, huwag, mali, cancel, ayaw, kansela, stop, only when they open the utterance and the rest is not an order | "Hindi, mali" |
 
 - Unit and target by rapidfuzz `partial_ratio` with cutoff 75.
 - Target resolution: named target, else nearest enemy of that type, else nearest enemy in range.
@@ -89,7 +91,7 @@ Two open turnIds at once: drop both orders, show `cmd.overlap`.
 | Trigger | Fallback |
 |---|---|
 | No `speaker` events in 30 s of speech, or "Voice problems" tapped | Reconnect in ENDPOINTING |
-| WebSocket fails 3 times | Push-to-talk (hold Space, PUSH_TO_TALK mode) and tap controls |
+| WebSocket fails 3 times | Status down, `net.down`, tap controls and the Voice problems retry. Built M11 with backoff 0.5, 1 and 2 s and no automatic PUSH_TO_TALK switch |
 | Breaker open | `net.down` banner, tap controls |
 
 ## Close codes

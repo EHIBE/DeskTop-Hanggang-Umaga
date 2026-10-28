@@ -17,7 +17,7 @@ All player-facing text, keyed. This file is canonical until `app/src/renderer/sr
 
 | Fact | Value |
 |---|---|
-| UI keys | 48 from PRD plus 50 Proposed |
+| UI keys | 192 in copy.ts (48 from PRD, the rest Proposed) |
 | Line bank moments | 19 (14 from PRD, 4 aswang edge variants, quiet) |
 | Placeholders | [name], [unit], [object], [player], [feature], [HP], [n], [action], [target], [pangalan], [turn], [seconds] |
 | Review | 2 Filipino playtesters review every Taglish line before recording |
@@ -228,8 +228,22 @@ English text for these is a proposal for playtester review.
 | night.pause | Pause | Pause | M10, Proposed, playtester review |
 | night.resume | Ituloy | Resume | M10, Proposed, playtester review |
 | night.continue_anyway | Ituloy pa rin | Continue anyway | M10, Proposed, playtester review |
-| night.cam_hint | Maaaring mali ang mga posisyon kapag itinuloy nang hindi nag-calibrate. | Positions may be off if you continue without recalibrating. | M10, Proposed, playtester review |
-| claim.countdown | Magsasara ang pag-claim sa [seconds] segundo | Claims close in [seconds] seconds | M10, Proposed, playtester review |
+| night.cam_hint | Baka mali ang posisyon kung hindi muna mag-calibrate. | Positions may be off if you continue without recalibrating. | M10, Proposed, playtester review |
+| claim.countdown | Sasara ang claim sa [seconds] segundo | Claims close in [seconds] seconds | M10, Proposed, playtester review |
+| voice.region | Boses | Voice | M11, Proposed, playtester review |
+| voice.status.off | Naka-off ang mic | Mic off | M11, Proposed, playtester review |
+| voice.status.connecting | Kumokonekta ang mic | Connecting mic | M11, Proposed, playtester review |
+| voice.status.listening | Nakikinig | Listening | M11, Proposed, playtester review |
+| voice.status.down | Hindi gumagana ang mic | Voice down | M11, Proposed, playtester review |
+| voice.mode.open | Bukas na mic | Open mic | M11, Proposed, playtester review |
+| voice.mode.ptt | Pindot para magsalita | Push to talk | M11, Proposed, playtester review |
+| voice.mode.label | Paraan ng mic | Mic mode | M11, Proposed, playtester review |
+| voice.problems | Problema sa boses | Voice problems | M11, Proposed, playtester review |
+| voice.down_banner | Hindi gumagana ang boses ngayon. Pwede pa ring mag-tap. | Voice is down. Tap controls still work. | M11, Proposed, playtester review |
+| voice.ptt_hold | Pindutin at hawakan para magsalita (Space) | Hold to talk (Space) | M11, Proposed, playtester review |
+| voice.ptt_held | Nakikinig... (Space) | Listening... (Space) | M11, Proposed, playtester review |
+| voice.chip_mic | Mic | Mic | M11, Proposed, playtester review |
+| voice.caption_label | Live na caption | Live caption | M11, Proposed, playtester review |
 
 ## GM line bank (local fallback and Spark style reference)
 
@@ -260,7 +274,7 @@ Goes into `assets/lines.json`.
 
 The three new aswang edge lines and the three quiet lines are Proposed, playtester review. In `assets/lines.json` the north line is stored as `spawn_aswang_north` and also as `spawn_aswang`. The local pick uses the edge variant. `[HP]` and `[unit]` are literal placeholders. The cultural review on 2026-10-28 changed tabi_tabi, the unit_down caption and quiet 2.
 
-Open questions for the playtesters (cultural review 2026-10-28): `last_turn` may read better as "Huling turn na bago mag-umaga. Konting tiis na lang!". `spawn_duwende` names the charm, but duwende steal any unit. The aswang edge lines may sound formal next to "galing sa north". `narration.hint` "Payo" may sound parental next to "Tip" (English shows Hint). `narration.mood.kaba` may fit "Nervous" better than "Tense". `lose` and `defeat.title` say "Nasira" (ruined) while the English says fell. `phase.check`, `sunrise.quit` and `score.bayani` may be formal. `tik.push` uses "Usugin", and usog is also a folk illness, so "Itulak" may be clearer.
+Open questions for the playtesters (cultural review 2026-10-28): `last_turn` may read better as "Huling turn na bago mag-umaga. Konting tiis na lang!". `spawn_duwende` names the charm, but duwende steal any unit. The aswang edge lines may sound formal next to "galing sa north". `narration.hint` "Payo" may sound parental next to "Tip" (English shows Hint). `narration.mood.kaba` may fit "Nervous" better than "Tense". `lose` and `defeat.title` say "Nasira" (ruined) while the English says fell. `phase.check`, `sunrise.quit` and `score.bayani` may be formal. `tik.push` uses "Usugin", and usog is also a folk illness, so "Itulak" may be clearer. After M11: `voice.status.off`, `voice.status.down`, `voice.down_banner`, `voice.ptt_hold`, `night.cam_hint` and `claim.countdown` were softened to everyday Taglish. Playtesters should confirm the grammar trigger words in `backend/voice/grammar.py` match how players really give orders.
 
 ## Unit card template
 

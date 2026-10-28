@@ -26,7 +26,8 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 | M7 and M8 rules, turn loop, enemies | Built 2026-10-28. Rules engine (99% coverage, E7 100%, 1.1 ms resolve), 15-state machine, night session with claim, tap intents, End Turn re-anchor, autosave, Night HUD, Sunrise, Defeat |
 | M9 GM narration | Built 2026-10-28. Line bank (19 moments), gm_turn schema, SparkNarrator with repair and safety checks, background NarrationService with 20 s timeout, captions on Night, Sunrise and Defeat. Players sent as P1 to P4, `store` false |
 | M10 safety | Built 2026-10-28. Delete campaign (rows, files, orphan sprites), autosave restore at the saved turn (schema v2 `night.board_json`), Demo Safe module with SAM re-anchor toggle, pause, camera check at End Turn, 60 s claim timeout, renderer controls |
-| Tests | 735 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
+| M11 voice | Built 2026-10-28. Taglish grammar, realtime DIARIZATION night session, live captions, voice chips with spoken cancel and End Turn, push-to-talk, voice off in Demo Safe and while paused. Live run Manual: EHIBE (key, mic). MVP scope complete offline |
+| Tests | 944 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
 | CI, git hooks | None |
 
 ## Pending queue
@@ -38,8 +39,8 @@ Ordered. Canonical schedule: `docs/delivery/schedule.md`.
 3. Manual: EHIBE. Look at the window: KeySetup or Start, then Calibration with the real camera (feed at 20 FPS+, 4 corner taps, ruler check)
 4. Manual: EHIBE. Install ffmpeg on PATH before Phase 13
 5. Manual: EHIBE. Run `backend\.venv\Scripts\python -m smoke.assets --date <today>` from `backend` for placeholder and enemy art, then rate sprites (E5)
-6. Manual: EHIBE. Play a Demo Safe night with Wi-Fi off, kill the app at turn 5 and resume, delete a test campaign and check `%APPDATA%\DeskTop` (Playtest 1)
-7. Phase 11: voice orders, grammar, captions, chips, push-to-talk (F10). MVP done here
+6. Manual: EHIBE. Voice smoke script, then a spoken night (captions, chips, "hindi", "tapos na", hold Space) and record a DIARIZATION fixture so the event field names are verified
+7. Manual: EHIBE. Play a Demo Safe night with Wi-Fi off, kill the app at turn 5 and resume, delete a test campaign and check `%APPDATA%\DeskTop` (Playtest 1)
 8. Phase 12 to 15: physical enemies, voice claim and overlap, recording, evals, freeze, replay, video, submission
 
 ## Constraints

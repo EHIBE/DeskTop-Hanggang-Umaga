@@ -21,7 +21,7 @@ Every functional and non-functional requirement with where it lives and its buil
 | Non-functional | NFR-01 to NFR-31 |
 | Demo-critical (★) | 31 FRs |
 | Status values | Planned, Built, Tested, Cut, Could |
-| Status on 2026-10-28 | M0 to M10 built. Voice (M11) is next. Rows below give each test |
+| Status on 2026-10-28 | M0 to M11 built, the MVP scope is complete offline. Phase 12 (F11, F08) is next. Rows below give each test |
 
 Update the Status column when a requirement is built (code merged) and tested (test green). Use the `desktop-docs-sync` skill.
 
@@ -38,8 +38,8 @@ Update the Status column when a requirement is built (code merged) and tested (t
 | F07 | Aswang, Manananggal, telegraph | Must | 8.50 | 2 | FR-35 | Tested |
 | F08 | Tikbalang, Duwende, Kapre effects | Should | 2.80 | 3 | FR-36 | Planned (Kapre smoke cut) |
 | F09 | GM narration and line bank | Must | 5.67 | 3 | FR-38, FR-39 | Built (live Spark check Manual: EHIBE) |
-| F10 | Voice, grammar, captions, chips, PTT | Must | 4.20 | 4 | FR-17, FR-19, FR-20, FR-22, FR-24 | Planned |
-| F11 | Voice claim and overlap | Should | 3.00 | 2 | FR-18, FR-23 | Planned |
+| F10 | Voice, grammar, captions, chips, PTT | Must | 4.20 | 4 | FR-17, FR-19, FR-20, FR-22, FR-24 | Built (live Taglish run and E3 Manual: EHIBE) |
+| F11 | Voice claim and overlap | Should | 3.00 | 2 | FR-18, FR-23 | Planned (overlap detection built in M11, spoken claim waits) |
 | F12 | Spark fallback parser | Should | 2.80 | 1 | FR-21 | Cut |
 | F13 | Tap controls | Must (guardrail) | 2.53 | 1.5 | FR-25 | Built |
 | F14 | Autosave and restore | Must (guardrail) | 1.90 | 1 | FR-41 | Tested |
@@ -65,7 +65,7 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | FR-03 | ★ | Play area 60 x 40 cm with 5 cm forest edge | F01 | JS-01 | calibration.py, screens/Calibration.tsx | test_calibration.py, run check pending EHIBE | Built |
 | FR-04 | | Empty-desk baseline, camera-moved detection | F01 | JS-10 | calibration.py, db/store.py | test_calibration.py, test_store.py | Tested (backend) |
 | FR-05 | | New or continue campaign, difficulty | F06 | JS-09, JS-11 | backend/db/store.py, game/night.py, screens/Start.tsx | test_server.py, test_night.py | Tested |
-| FR-06 | ★ | Summon one object by voice or typed name, card in 8 s p90 | F02 | JS-02 | backend/vision/summon.py, game/night.py, screens/Summon.tsx | test_summon.py, test_night.py, test_server.py. 8 s p90 is E6, Manual: EHIBE | Built (typed name, voice in M11) |
+| FR-06 | ★ | Summon one object by voice or typed name, card in 8 s p90 | F02 | JS-02 | backend/vision/summon.py, game/night.py, screens/Summon.tsx | test_summon.py, test_night.py, test_server.py. 8 s p90 is E6, Manual: EHIBE | Built (typed name. Voice summon, the ENDPOINTING session, is not built) |
 | FR-07 | ★ | Spark detects new object box (0 to 1000 grid, clamped) | F02 | JS-02 | vision/summon.py, gm/schemas.py | test_summon.py, test_schemas.py. E1 Manual: EHIBE | Built |
 | FR-08 | ★ | One SAM image call with box prompts, IDs 1 to 16 | F02 | JS-02 | backend/vision/sam.py | test_vision.py (records and prompts). Fixture test waits on a real SAM fixture | Built |
 | FR-09 | ★ | Unit card from fixed class and power lists | F02 | JS-02 | vision/summon.py, gm/schemas.py | test_schemas.py, test_summon.py | Tested |
@@ -76,14 +76,14 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | FR-14 | | Tap-to-select fallback for new object | F02 | JS-02 | game/night.py, screens/Summon.tsx | test_server.py, test_summon.py | Tested (backend) |
 | FR-15 | ★ | Exactly one kubo as first summon | F02 | JS-12 | rules/units.py | test_units.py | Tested |
 | FR-16 | | Cap 12 objects, 2 Charms, 2 Walls | F02 | JS-02 | rules/units.py, vision/summon.py | test_units.py, test_summon.py | Tested |
-| FR-17 | ★ | Voice session per phase, ENDPOINTING then DIARIZATION | F10 | JS-03 | backend/voice/session.py | voice fixtures | Planned |
+| FR-17 | ★ | Voice session per phase, ENDPOINTING then DIARIZATION | F10 | JS-03 | backend/voice/session.py, game/night.py | test_voice_session.py, test_voice_flow.py. Live fixture Manual: EHIBE | Built (night DIARIZATION session only) |
 | FR-18 | | Voice claim maps labels to players and units | F11 | JS-03 | backend/voice/claim.py | unit test | Planned |
-| FR-19 | ★ | Live partial and final captions with speaker chip | F10 | JS-04 | hud/Captions.tsx, hud/SpeakerChip.tsx | manual | Planned |
-| FR-20 | ★ | Local Taglish and English command grammar under 20 ms | F10 | JS-03 | backend/voice/grammar.py | test_grammar.py | Planned |
+| FR-19 | ★ | Live partial and final captions with speaker chip | F10 | JS-04 | hud/Captions.tsx, hud/OrderChips.tsx | test_voice_flow.py (caption messages). Display Manual: EHIBE | Built |
+| FR-20 | ★ | Local Taglish and English command grammar under 20 ms | F10 | JS-03 | backend/voice/grammar.py | test_grammar.py (triggers, Taglish examples, misfires, under 20 ms median). E3 Manual: EHIBE | Tested |
 | FR-21 | | Spark fallback parser | F12 | JS-03 | n/a | n/a | Cut |
-| FR-22 | ★ | Order chip before resolve, "hindi" or X cancels | F10 | JS-04 | hud/OrderChips.tsx, voice/grammar.py | test_grammar.py | Planned |
-| FR-23 | | Detect overlapping speakers, "Isa-isa lang!" | F11 | JS-03 | voice/session.py | unit test | Planned |
-| FR-24 | ★ | Push-to-talk (hold Space), mode switch | F10 | JS-10 | voice/session.py, renderer | manual | Planned |
+| FR-22 | ★ | Order chip before resolve, "hindi" or X cancels | F10 | JS-04 | hud/OrderChips.tsx, voice/grammar.py | test_grammar.py, test_voice_flow.py (voice chip, spoken cancel) | Tested |
+| FR-23 | | Detect overlapping speakers, "Isa-isa lang!" | F11 | JS-03 | voice/session.py | test_voice_session.py (overlap drops both) | Built (claim half waits for F11) |
+| FR-24 | ★ | Push-to-talk (hold Space), mode switch | F10 | JS-10 | hud/VoiceControls.tsx, game/night.py, voice/session.py | test_voice_session.py, test_voice_flow.py. Space key Manual: EHIBE | Built |
 | FR-25 | ★ | Tap menu for every voice action | F13 | JS-14 | hud/TapMenu.tsx | test_night_flow.py (intent validation). TapMenu.tsx | Built |
 | FR-26 | ★ | Local tracker, sprites follow at 10 Hz+, render 30 FPS+ | F04 | JS-05 | backend/capture/tracker.py, game/night.py, screens/Summon.tsx | test_tracker.py benchmark: 12 KCF trackers 31.9 ms median per update on a synthetic 1200x800 frame. Real-desk check Manual: EHIBE | Tested |
 | FR-27 | ★ | Freeze sprite on tracker loss, re-lock within 1 s | F04 | JS-07 | capture/tracker.py | test_tracker.py, test_tracking_flow.py | Tested |
@@ -136,7 +136,7 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | NFR-13 | Reliability | 2 retries, 0.5 s then 1 s, jitter 250 ms, Retry-After, no retry on 400 | unit test (test_meta_client.py) | Tested |
 | NFR-14 | Reliability | Breaker: 3 failures opens fallback 2 min | unit test (test_meta_client.py) | Tested |
 | NFR-15 | Reliability | Graceful degradation per model | dry run | Planned |
-| NFR-16 | Reliability | Voice reconnect rules, silence frames | voice fixtures | Planned |
+| NFR-16 | Reliability | Voice reconnect rules, silence frames | test_voice_session.py (backoff, 1008 retry, normal close reconnect, PTT silence frames) | Built |
 | NFR-17 | Reliability | Crash resume within 15 s | manual | Planned |
 | NFR-18 | Cost | Per night $0.50 expected, $1.40 worst | api_usage | Planned |
 | NFR-19 | Cost | Warn $90, stop $120 | unit test (test_meta_client.py) | Tested |

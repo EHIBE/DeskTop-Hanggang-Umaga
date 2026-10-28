@@ -55,8 +55,8 @@ The Build Guide schedule replaces the PRD timeline (ADR-0109). The date is fixed
 | 8 Core enemies (F07) | 2 | Aswang, Manananggal, stats for the rest, waves | Full 8-turn night with all waves and arrows. Done offline 2026-10-28 (test_night_flow.py). On-screen night Manual: EHIBE | None |
 | 9 GM narration (F09) | 3 | System prompt, gm_turn, repair, line bank | Every turn shows a caption within 6 s or a line bank line. Built 2026-10-28, live Spark timing Manual: EHIBE | Line bank only |
 | 10 Safety (F13, F14, F17, F24) | 5 | Tap controls, autosave, Demo Safe Mode, delete data, Playtest 1 | Whole night by taps, kill and resume at turn 5, Wi-Fi off night completes, no files remain. Built and tested offline 2026-10-28. Wi-Fi off run and Playtest 1 Manual: EHIBE | Fix rule bugs only |
-| 11 Voice (F10) | 4 | Two sessions, audio loop, events, grammar, PTT | 40 of 50 test orders parsed | ENDPOINTING plus tap-to-claim |
-| 12 Voice claim, physical enemies (F11, F08) | 4 | Claim, overlap, push, steal | Both effects work in a test night | Cut duwende steal first |
+| 11 Voice (F10) | 4 | Two sessions, audio loop, events, grammar, PTT | 40 of 50 test orders parsed. Built 2026-10-28 with one DIARIZATION night session, grammar, captions, voice chips and PTT. No ENDPOINTING summon session. Live 40 of 50 run Manual: EHIBE | ENDPOINTING plus tap-to-claim |
+| 12 Voice claim, physical enemies (F11, F08) | 4 | Claim, overlap, push, steal | Both effects work in a test night. Overlap detection already built in M11 | Cut duwende steal first |
 | 13 Recording, evals, freeze, demo | 8 | Consent, recorder, evals, fixes, freeze, Playtest 2 | 2 complete nights recorded, footage backed up | Crash and demo-visible fixes only |
 | 14 Replay reel (F15) | 4 | Highlights, proxy, upload, SAM video, delete, render | 30 to 60 s reel from demo footage | Keep a 10 s clip, move on by 2:00 PM SGT |
 | 15 Video, README, submission | 4 | Video, README, secret scan, submit | Submitted, confirmation saved | Submit what is done by Nov 5, 8:00 AM SGT |

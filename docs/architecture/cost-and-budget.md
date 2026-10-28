@@ -86,6 +86,8 @@ With F12 cut, the command fallback line mostly disappears. Recompute from api_us
 
 ## Cost meter rules
 
+Voice is metered in 60 s slices plus the remainder at each connection end, logged as kind `voice`. A hard stop ends the session, and voice stops while the night is paused (built M11).
+
 - Log every call to `api_usage` with tokens, images, frames, audio seconds, cost, latency, ok.
 - Check the running sum before each paid call. At $120 block and switch to Demo Safe Mode.
 - Each attempt reserves a worst-case estimate (`UNMETERED_CALL_ESTIMATE_USD` in `config.py`) while it is in flight, so parallel calls cannot all pass the check. Timeouts and 5xx answers are charged that estimate because the provider may still bill them.

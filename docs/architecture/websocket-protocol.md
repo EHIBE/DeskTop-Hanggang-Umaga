@@ -23,7 +23,7 @@ The renderer and backend talk over one WebSocket at `ws://127.0.0.1:8765/ws`. On
 | HTTP auth | `X-Desktop-Token` header on every route, 401 when missing or wrong |
 | Encoding | JSON text frames with a `type` field |
 | Frame rate | About 25 per second |
-| Established | Server: `state`, `devices`, `campaigns`, `frame`, `notice`, `sprite`, `events`, `narration`, `cost` (dev). Renderer: `campaign.list`, `campaign.start`, `campaign.delete`, `devices.list`, `camera.select`, `calibrate.*`, `summon.*`, `unit.*`, `night.*`, `claim.*`, `intent.tap`, `chip.cancel`, `end_turn`, `demo_safe`, `demo_safe.sam` (2026-10-28). Types in `app/src/renderer/src/lib/types.ts`, Pydantic models in `backend/server.py` |
+| Established | Server: `state`, `devices`, `campaigns`, `frame`, `notice`, `sprite`, `events`, `narration`, `caption`, `cost` (dev). Renderer: `campaign.list`, `campaign.start`, `campaign.delete`, `devices.list`, `camera.select`, `calibrate.*`, `summon.*`, `unit.*`, `night.*`, `claim.*`, `intent.tap`, `chip.cancel`, `end_turn`, `demo_safe`, `demo_safe.sam`, `ptt`, `voice.mode`, `voice.retry` (2026-10-28). Types in `app/src/renderer/src/lib/types.ts`, Pydantic models in `backend/server.py` |
 | Size limit | 16 KiB per renderer message. Larger or invalid messages get `notice` `cmd.unknown` |
 | HTTP | `GET /health` returns `{"ok": true}` |
 
@@ -36,13 +36,13 @@ Every message is a JSON object with `type` plus fields. Proposed shared fields: 
 | Type | Status | Fields | Purpose |
 |---|---|---|---|
 | `frame` | Established | `view` (raw or warped), `width` and `height` (source pixels, the JPEG is downscaled to 960 px wide, quality 70), `jpg`, `poses` | Desk feed and sprite positions |
-| `state` | Established (M3 and M4 fields, plus `units`, `begin_block_key`, `awaiting_tap`) | `phase` (any AppPhase), `campaign`, `camera`, `calibrated`, `calibration_preview`, `play_w_cm`, `play_h_cm`, `demo_safe`, `demo_safe_sam`, `has_api_key`, `resume_turn` (turn a saved night resumes at, or null), `night` (turn, units, enemies, chips, illegal units, kubo HP), `score` | Full snapshot on connect and after every handled message |
+| `state` | Established (M3 and M4 fields, plus `units`, `begin_block_key`, `awaiting_tap`) | `phase` (any AppPhase), `campaign`, `camera`, `calibrated`, `calibration_preview`, `play_w_cm`, `play_h_cm`, `demo_safe`, `demo_safe_sam`, `has_api_key`, `voice` (`status` off, connecting, listening or down, `mode` open or ptt, `ptt_down`), `resume_turn` (turn a saved night resumes at, or null), `night` (turn, units, enemies, chips, illegal units, kubo HP), `score` | Full snapshot on connect and after every handled message |
 | `devices` | Established | `cameras` (index, width, height), `microphones` (index, name) | Device picker (FR-01) |
 | `campaigns` | Established | `campaigns` (id, name, difficulty, nights_survived, created_at), newest first, 20 per page | Continue list (FR-05) |
 | `events` | Established | `turn`, `events` (type, src, dst, dmg, edge, pos) | Resolution events, then the next turn's spawn and intent events, as two messages |
-| `caption` | Proposed | `turn_id`, `text`, `is_final`, `speaker` | Live transcript (partials replace) |
+| `caption` | Established | `turn_id`, `text`, `is_final`, `speaker` | Live transcript. Partials replace. A dropped turn ends with an empty final |
 | `narration` | Established | `night`, `turn`, `phase` (night_start, resolution_then_telegraph, sunrise, defeat), `narration_tl`, `narration_en`, `mood`, `callouts`, `hint_tl`, `source` (spark or line_bank) | GM caption, sent in the background after claims, each resolved turn, sunrise or defeat. A newer request drops an older pending one |
-| `chip` | Proposed | `chip_id`, `unit_id`, `action`, `target_id`, `speaker`, `status` | Order chip add, update, remove |
+| `chip` | Not used | none | Chips ride in `state.night.chips` with `source` (tap or voice) and `speaker` |
 | `card` | Established | `unit` (id, unit_id, sam_id, name, class, hp, hp_max, atk, move, range, power_id, power_name_tl, card_text_tl, card_text_en, x_cm, y_cm, rerolls_left). `sprite_url` arrives in M5 | New or changed unit card |
 | `sprite` | Established | `unit_id` (UUID), `sprite_png` (base64 48x48 PNG). `state.units[].sprite_png` carries it afterwards | Swap placeholder for real sprite. Pushed from the background job through a broadcast queue |
 | `notice` | Established | `copy_key`, `params` | Banner or prompt by copy key (never raw text) |
@@ -73,7 +73,9 @@ Every message is a JSON object with `type` plus fields. Proposed shared fields: 
 | `chip.cancel` | Established | `chip_id` | PLAYER_PHASE |
 | `end_turn` | Established | none. Re-anchor, validate, resolve, autosave | PLAYER_PHASE |
 | `uncertain.tap` | Proposed | `unit_id`, `point` | VALIDATE or PLAYER_PHASE |
-| `ptt` | Proposed | `down` (bool) | PLAYER_PHASE |
+| `ptt` | Established | `down` (bool). Only in push-to-talk mode, else `cmd.unknown`. A release outside it is ignored | Any |
+| `voice.mode` | Established | `mode` (open or ptt) | Any |
+| `voice.retry` | Established | none. Restarts the voice session | Active night or PAUSED |
 | `night.pause` | Established | none | PLAYER_PHASE to PAUSED |
 | `night.resume` | Established | `force` (bool, default false). Without force a still-moved camera answers `cam.moved` and stays PAUSED | PAUSED |
 | `demo_safe` | Established | `on` (bool). Persisted in `settings` | Any |
