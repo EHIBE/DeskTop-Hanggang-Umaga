@@ -1,0 +1,75 @@
+---
+title: Docs index
+purpose: Map of every project document and the read order for each kind of task
+read_when: [start of any task, looking for where a fact lives]
+canonical_for: [doc map, doc conventions, read order]
+sources: [CLAUDE.md, docs/DeskTop_PRD.md, docs/DeskTop_Build_Guide.md]
+status: active
+last_verified: 2026-10-28
+related: [CLAUDE.md, docs/glossary.md, docs/FEATURE_PROMPT.md]
+---
+
+# Docs index
+
+This file maps every document in `docs/` and says which ones to read for each kind of task. Each fact has one canonical home, listed in the `canonical_for` front matter of that file.
+
+## Key facts
+
+| Fact | Value |
+|---|---|
+| What to build | `DeskTop_PRD.md` v1.1 (canonical source, kept unchanged) |
+| How and when to build | `DeskTop_Build_Guide.md` (canonical for schedule, phases, cut list) |
+| Working prompt | `FEATURE_PROMPT.md` |
+| Precedence | Code beats docs on what exists. PRD beats derived docs on what to build. Build Guide beats PRD on schedule and cuts |
+| Conflicts | Recorded as ADRs in `decisions/` |
+
+## Source documents
+
+| File | Role |
+|---|---|
+| `DeskTop_PRD.md` | Full product requirements, 22 sections. Historical source of truth |
+| `DeskTop_Build_Guide.md` | Phase 0 to 15 build plan, schedule, cut order |
+| `FEATURE_PROMPT.md` | Master prompt every feature run follows |
+| `eval.md` | Eval results E1 to E7 (real runs only) |
+| `playtests.md` | Playtest logs (real sessions only) |
+| `rules-notes.md` | Official Rules answers and smoke-test findings |
+
+## Derived documents
+
+| Folder | Files | Covers |
+|---|---|---|
+| `product/` | product-brief, goals-and-metrics, personas-and-jobs, requirements-index, scope-and-cuts, open-questions | Why, for whom, what, status |
+| `market/` | market-and-audience, competitive-landscape, positioning-and-messaging, launch-and-community, judging-strategy | Market, rivals, message, judges |
+| `game/` | core-loop, state-machine, units-and-classes, powers, enemies, waves-and-difficulty, combat-math, win-lose-score, campaign-progression, balance-and-tuning | Rules |
+| `design/` | DESIGN, screens, hud-components, copy-deck, art-direction, audio, accessibility, cultural-care | Look, feel, words |
+| `architecture/` | overview, backend-modules, frontend-modules, websocket-protocol, data-model, meta-api-integration, ai-contracts, sprite-pipeline, tracking-and-reanchor, voice-pipeline, reliability-and-fallbacks, cost-and-budget | System and contracts |
+| `engineering/` | setup-windows, coding-standards, testing-strategy, security-and-privacy, environment-and-config, git-and-commits, definition-of-done | How to work |
+| `delivery/` | schedule, risk-register, demo-runbook, video-script, submission-checklist, readme-outline | Shipping |
+| `decisions/` | README, template, ADR-0001 to ADR-0011, ADR-0101 to ADR-0110 | Why things are the way they are |
+| root | `glossary.md` | Terms and ID prefixes |
+
+## Read order by task
+
+| Task | Read, in order |
+|---|---|
+| Any task | `CLAUDE.md`, this file |
+| Rules engine work | `game/combat-math.md`, `game/units-and-classes.md`, `game/powers.md`, `game/enemies.md`, `game/waves-and-difficulty.md`, `game/state-machine.md`, `engineering/testing-strategy.md` |
+| Vision work | `architecture/meta-api-integration.md`, `architecture/tracking-and-reanchor.md`, `architecture/sprite-pipeline.md`, `architecture/reliability-and-fallbacks.md`, `architecture/cost-and-budget.md` |
+| Voice work | `architecture/voice-pipeline.md`, `design/copy-deck.md`, `architecture/reliability-and-fallbacks.md` |
+| GM and prompts | `architecture/ai-contracts.md`, `design/cultural-care.md`, `design/copy-deck.md` |
+| UI work | `design/DESIGN.md`, `design/screens.md`, `design/hud-components.md`, `design/copy-deck.md`, `design/accessibility.md`, `architecture/websocket-protocol.md` |
+| Electron or security | `engineering/security-and-privacy.md`, `architecture/frontend-modules.md`, `architecture/websocket-protocol.md` |
+| Data | `architecture/data-model.md` |
+| Demo prep | `delivery/demo-runbook.md`, `delivery/video-script.md`, `delivery/submission-checklist.md`, `market/judging-strategy.md` |
+| Docs work | this file, `FEATURE_PROMPT.md` section 4.7, `decisions/README.md` |
+
+## Conventions for adding docs
+
+- Front matter keys: title, purpose, read_when, canonical_for, sources, status, last_verified, related.
+- First body line is a two-sentence summary. Then a Key facts table.
+- One topic per file. Under 300 lines.
+- Keep each fact canonical in one file. Elsewhere write "Summary. Canonical: path#anchor".
+- Use existing IDs: FR, NFR, F, R, E, P, JS, PG, A, Q, copy keys, state names. New decisions get the next ADR number.
+- Mark unverified items "Unverified" with the step that verifies them.
+- Prose has no semicolons and no em dashes.
+- After any change, run the `desktop-docs-sync` skill.
