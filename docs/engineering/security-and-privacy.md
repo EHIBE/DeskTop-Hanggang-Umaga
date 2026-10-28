@@ -1,0 +1,96 @@
+---
+title: Security and privacy
+purpose: Threat model, data inventory, Electron and local server hardening, and the OWASP checklist for this stack
+read_when: [touching main, preload, server.py, meta_client, recording, uploads, any input path]
+canonical_for: [threat model, data inventory, hardening checklist, privacy rules]
+sources: [docs/FEATURE_PROMPT.md#5-security-guardrails-mapped-to-owasp-top-102025, docs/DeskTop_PRD.md#10-non-functional-requirements, app/src/main/index.ts, app/src/preload/index.ts, app/src/renderer/index.html]
+status: active
+last_verified: 2026-10-28
+related: [docs/decisions/ADR-0103-electron-hardening.md, docs/architecture/websocket-protocol.md, docs/architecture/data-model.md]
+---
+
+# Security and privacy
+
+DeskTop has no accounts, so the main assets are the Meta API key, the players' camera and mic data, and the credit balance. The design keeps all three on the laptop and treats the renderer and every model output as untrusted.
+
+## Key facts
+
+| Asset | Protection |
+|---|---|
+| MODEL_API_KEY | Electron safeStorage, passed to the backend by env, never in renderer, logs, repo or docs |
+| Local server | 127.0.0.1 only, per-launch DESKTOP_TOKEN on every request, constant-time compare |
+| Video and audio | Local. Only frames, crops, live audio and a consented proxy leave |
+| Credits | Cost meter, $120 hard stop, breaker |
+| Players | Consent before recording, profanity filter, no faces in frame |
+| Reviewer | `desktop-electron-security-reviewer`, `desktop-privacy-cost-auditor`, `security-review` skill |
+
+## Threat model
+
+| Threat | Vector | Control |
+|---|---|---|
+| Another local process drives the game or reads frames | HTTP or WS on localhost | Bind 127.0.0.1, token, Origin check |
+| Key theft | Renderer compromise, logs, git | safeStorage, env only, scrubbed logs, secret scan |
+| Renderer code execution | Malicious content, open links | sandbox, contextIsolation, CSP, openExternal allowlist |
+| Prompt injection | Spoken text, typed names, object labels | Data inside JSON fields, strict schemas, enum IDs, clamps |
+| Path traversal | IDs used in file paths | UUID names, resolve and check prefix under user data root |
+| Command injection | ffmpeg arguments | List args, no shell, no player text |
+| Cost runaway | Retry loops, spam | Retry cap, breaker, hard stop, per-turn SAM cap, 1 re-roll |
+| Privacy leak | Raw video upload, long retention | No raw upload, consent, expires_after, explicit DELETE |
+| Offensive content | Names, generated text, sprites | Profanity and banned-word filters, content policy fallback |
+
+## Data inventory
+
+| Data | Stays local | Sent to Meta | Retention |
+|---|---|---|---|
+| Full camera video | Yes | Never | Until deleted |
+| Warped single frames | Yes | Yes (Spark, SAM) | Per call |
+| Mask crops | Yes | Yes (Muse Image) | Per call |
+| Mic audio | Live only | Streamed (Voice) | Not stored locally |
+| Highlight proxy clip | Yes | With consent (Files, SAM video) | 24 h max, deleted after processing |
+| Database, sprites, recordings | Yes | Never | Until delete campaign |
+
+All calls in Standard mode, never Contributor mode.
+
+## Electron hardening checklist (ADR-0103)
+
+- [ ] `sandbox: true`, `contextIsolation: true`, `nodeIntegration: false`, `webSecurity: true`
+- [ ] Preload exposes only `{ port, token }`. No `electronAPI`, no raw `ipcRenderer`
+- [ ] `ipcMain` handlers validate the sender
+- [ ] `setWindowOpenHandler` denies, `shell.openExternal` only for allowlisted https URLs
+- [ ] CSP keeps `default-src 'self'`, adds `connect-src` for the backend only
+- [ ] Remove the scaffold `ping` handler
+- [ ] Disable auto-update publish (example.com placeholder)
+
+## Local server checklist
+
+- [ ] uvicorn `--host 127.0.0.1`
+- [ ] Token on every HTTP route and WS connect, `hmac.compare_digest`, close 1008 on mismatch
+- [ ] WS Origin check
+- [ ] No CORS middleware, or app origin only
+- [ ] FastAPI docs, redoc and openapi URLs off outside dev
+- [ ] Pydantic `extra="forbid"` on every message
+- [ ] State-machine check on every action
+- [ ] Minimal error detail to the renderer
+
+## OWASP Top 10:2025 summary
+
+Summary. Canonical: `docs/FEATURE_PROMPT.md` section 5.
+
+| Category | Key control here |
+|---|---|
+| A01 Access control | Token, 127.0.0.1, ID and state checks, consent gate, fixed outbound hosts, path prefix checks |
+| A02 Misconfiguration | Electron flags, CSP, no CORS, docs off, no debug output |
+| A03 Supply chain | No new deps without approval, lockfile, pinned requirements, npm audit |
+| A04 Crypto | safeStorage, crypto.randomBytes token, compare_digest |
+| A05 Injection | Parameterized SQL, list-arg subprocess, untrusted text as data, React escaping, profanity filter |
+| A06 Insecure design | Abuse cases, server-side limits, cost meter, models never write numbers |
+| A07 Authentication | Per-launch token, regenerated on restart, no cookies so no CSRF |
+| A08 Integrity | H.264 only, size check, no pickle, validated JSON |
+| A09 Logging | Log token mismatch, rejects, gm_invalid, breaker, hard stop. Never log secrets |
+| A10 Exceptional conditions | Fail closed, rollback autosave, specific exceptions |
+
+## Release checks
+
+- Secret scan before any push: `git log -p | Select-String -Pattern "MODEL_API_KEY|sk-|Bearer "` (PowerShell).
+- Check staged files before every commit. Never stage `.env`, keys, recordings, user data or `*.sqlite`.
+- Repo is public and organizers get a perpetual license (R17). Nothing confidential goes in.
