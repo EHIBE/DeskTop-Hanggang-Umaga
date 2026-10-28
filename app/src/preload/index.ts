@@ -20,6 +20,7 @@ function toKeyStatus(value: unknown): KeyStatus {
 
 async function getConfig(): Promise<DesktopConfig> {
   const value: unknown = await ipcRenderer.invoke(CONFIG_CHANNEL)
+  if (value === null) throw new Error('backend not ready')
   if (!isDesktopConfig(value)) throw new Error('invalid desktop config')
   return Object.freeze({ port: value.port, token: value.token })
 }

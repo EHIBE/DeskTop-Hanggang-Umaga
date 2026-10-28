@@ -123,9 +123,7 @@ function requireTrusted(event: IpcMainInvokeEvent): void {
 function registerIpc(keystore: Keystore, backend: BackendProcess): void {
   ipcMain.handle(CONFIG_CHANNEL, (event) => {
     requireTrusted(event)
-    const config = backend.config()
-    if (config === undefined) throw new Error('backend not ready')
-    return config
+    return backend.config() ?? null
   })
   ipcMain.handle(KEY_STATUS_CHANNEL, (event) => {
     requireTrusted(event)
