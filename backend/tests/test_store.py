@@ -250,6 +250,17 @@ def test_delete_campaign_removes_files_and_owned_sprites(store: Store) -> None:
     assert [c.id for c in store.list_campaigns()] == [other.id]
 
 
+def test_delete_campaign_sweeps_unlinked_sprites_and_stray_files(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    rerolled = store.save_sprite("rerolled", b"a", "p", "v", None)
+    stray = store.data_root / "sprites" / "stray.png"
+    stray.write_bytes(b"x")
+    assert store.delete_campaign(campaign.id)
+    assert store.find_sprite("rerolled") is None
+    assert not rerolled.path.exists()
+    assert not stray.exists()
+
+
 def test_delete_campaign_reports_leftover_files(
     store: Store, monkeypatch: pytest.MonkeyPatch
 ) -> None:

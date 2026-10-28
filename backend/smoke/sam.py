@@ -78,6 +78,7 @@ async def stream_events(
 ) -> list[JsonValue]:
     stream = await ctx.client.sdk().responses.create(
         model=MetaModel.SAM.value,
+        store=False,
         input=[
             {
                 "type": "message",

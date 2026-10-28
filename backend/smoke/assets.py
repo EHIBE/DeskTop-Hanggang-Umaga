@@ -124,6 +124,7 @@ async def generate_one(ctx: SmokeContext, spec: AssetSpec) -> Image:
         async def operation(text: str = prompt) -> object:
             return await ctx.client.sdk().responses.create(
                 model=MetaModel.IMAGE.value,
+                store=False,
                 extra_body={"input": text, "tools": [IMAGE_TOOL]},
             )
 

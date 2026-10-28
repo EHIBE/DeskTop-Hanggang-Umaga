@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
+import re
 import threading
 import time
 import uuid
@@ -520,8 +521,7 @@ class GameController:
             self._notify,
             self._clock,
         )
-        if self._narration is not None:
-            self._narration.new_night()
+        self._stop_narration()
         if saved is not None:
             self._resume(session, saved)
             return
@@ -869,6 +869,9 @@ class GameController:
             self._enter_summon()
 
     def restart_calibration(self) -> None:
+        session = self._session
+        if session is not None and session.state in ACTIVE_NIGHT_STATES:
+            raise GameError("cmd.unknown")
         with self._lock:
             if self._campaign is None:
                 raise GameError("start.ready")
@@ -885,7 +888,7 @@ class GameController:
         )
         self._is_night_alerted = False
         self._units = self._store.night_units(self._night.id)
-        saved = self._store.saved_night(self._night.id)
+        saved = None if self._session is not None else self._store.saved_night(self._night.id)
         self._resume_turn = None if saved is None else saved.turns_completed + 1
         self._boxes = {
             unit.sam_object_id: self._default_box(unit) for unit in self._units
@@ -950,6 +953,7 @@ class GameController:
         if board is None:
             return
         names = {game_id_for(u.sam_object_id): u.card.name for u in self._units}
+        aliases = {name: f"{PLAYER_ALIAS_PREFIX}{i + 1}" for i, name in enumerate(session.players)}
         kubo = board.kubo
         request = NarrationRequest(
             night=night.number,
@@ -960,7 +964,12 @@ class GameController:
             kubo_hp_max=0 if kubo is None else kubo.hp_max,
             units=tuple(
                 NarrationUnit(
-                    u.id, names.get(u.id, u.id), u.unit_class.value, max(0, u.hp), u.hp_max, u.owner
+                    u.id,
+                    names.get(u.id, u.id),
+                    u.unit_class.value,
+                    max(0, u.hp),
+                    u.hp_max,
+                    None if u.owner is None else aliases.get(u.owner),
                 )
                 for u in board.units
                 if not u.is_kubo
@@ -972,11 +981,19 @@ class GameController:
             ),
             events=tuple(events),
         )
-        narration.submit(request, not self._demo_safe.allows_spark, self._publish_narration)
+        players = {alias: name for name, alias in aliases.items()}
+        narration.submit(
+            request,
+            not self._demo_safe.allows_spark,
+            lambda sent, reply: self._publish_narration(sent, reply, players),
+        )
 
-    def _publish_narration(self, request: NarrationRequest, narration: Narration) -> None:
+    def _publish_narration(
+        self, request: NarrationRequest, narration: Narration, players: Mapping[str, str]
+    ) -> None:
         if self._broadcast is None:
             return
+        narration = restore_player_names(narration, players)
         self._broadcast.publish(
             {
                 "type": "narration",
@@ -1330,8 +1347,8 @@ class GameController:
             encoded = base64.b64encode(self._store.sprite_png(sprite_id)).decode(
                 "ascii"
             )
-        except (StoreError, OSError, SpriteError):
-            logger.exception("sprite job failed, keeping the placeholder")
+        except (StoreError, OSError, SpriteError) as error:
+            logger.warning("sprite job failed with %s, keeping the placeholder", type(error).__name__)
             return
         if self._sprite_versions.get(job.unit_id) != version:
             return
@@ -1378,6 +1395,8 @@ class GameController:
         with self._lock:
             self._demo_safe = self._demo_safe.with_on(is_on)
             self._demo_safe.save(self._store)
+        if is_on:
+            self._stop_narration()
 
     def set_demo_safe_sam(self, is_on: bool) -> None:
         with self._lock:
@@ -1622,6 +1641,13 @@ DOWN_STATUS: Final = "down"
 STUNNED_STATUS: Final = "stunned"
 REFORM_STATUS_PREFIX: Final = "reform_"
 STATE_CHANGED: Final = "state.changed"
+PLAYER_ALIAS_PREFIX: Final = "P"
+PLAYER_ALIAS_PATTERN: Final = re.compile(r"\bP[1-4]\b")
+ACTIVE_NIGHT_STATES: Final = frozenset(
+    state
+    for state in TurnState
+    if state not in (TurnState.SUMMON, TurnState.PAUSED, TurnState.SUNRISE, TurnState.DEFEAT)
+)
 MIN_HULL_POINTS: Final = 3
 RESTORE_EVENT: Final = "restore"
 
@@ -2082,6 +2108,19 @@ class NightSession:
                 self._notify("unit.down", {"unit": self._name_of(event.dst)})
             elif event.type is EventType.SPLIT:
                 self._notify("mana.split", {})
+
+
+def restore_player_names(narration: Narration, players: Mapping[str, str]) -> Narration:
+    def swap(text: str) -> str:
+        return PLAYER_ALIAS_PATTERN.sub(lambda m: players.get(m.group(0), m.group(0)), text)
+
+    return replace(
+        narration,
+        narration_tl=swap(narration.narration_tl),
+        narration_en=swap(narration.narration_en),
+        hint_tl=swap(narration.hint_tl),
+        callouts=tuple(replace(c, text_tl=swap(c.text_tl)) for c in narration.callouts),
+    )
 
 
 def _event_payload(event: Event) -> dict[str, object]:

@@ -135,8 +135,6 @@ class Narration:
 class Narrator(Protocol):
     async def narrate(self, request: NarrationRequest) -> Narration: ...
 
-    def new_night(self) -> None: ...
-
 
 class LineBankError(ValueError):
     pass
@@ -264,9 +262,6 @@ class LineBankNarrator:
     async def narrate(self, request: NarrationRequest) -> Narration:
         return self._line_bank.pick(request)
 
-    def new_night(self) -> None:
-        return None
-
 
 def names_unknown_id(text: str, allowed: tuple[str, ...]) -> bool:
     return any(match not in allowed for match in ID_PATTERN.findall(text))
@@ -284,10 +279,6 @@ class SparkNarrator:
         self._content = content
         self._line_bank = line_bank
         self._log_invalid = log_invalid
-        self._previous_id: str | None = None
-
-    def new_night(self) -> None:
-        self._previous_id = None
 
     async def narrate(self, request: NarrationRequest) -> Narration:
         allowed = request.allowed_ids
@@ -296,7 +287,7 @@ class SparkNarrator:
         repair = ""
         for _ in range(MAX_ATTEMPTS):
             try:
-                raw, response_id = await self._ask(prompt + repair, schema)
+                raw = await self._ask(prompt + repair, schema)
             except MetaError:
                 logger.warning("spark narration unavailable, using the line bank")
                 break
@@ -310,7 +301,6 @@ class SparkNarrator:
             if narration is None:
                 self._log_invalid("gm_invalid:UnsafeNarration")
                 break
-            self._previous_id = response_id
             return narration
         return self._line_bank.pick(request)
 
@@ -338,17 +328,14 @@ class SparkNarrator:
             source=NarrationSource.SPARK,
         )
 
-    async def _ask(self, prompt: str, schema: dict[str, object]) -> tuple[str, str]:
-        previous = self._previous_id
-
+    async def _ask(self, prompt: str, schema: dict[str, object]) -> str:
         async def operation() -> openai.types.responses.Response:
             return await self._client.sdk().responses.create(
                 model=MetaModel.SPARK.value,
                 instructions=GM_SYSTEM_PROMPT,
                 input=prompt,
                 reasoning={"effort": "low"},
-                store=True,
-                previous_response_id=previous,
+                store=False,
                 extra_body={
                     "text": {
                         "format": {
@@ -362,7 +349,7 @@ class SparkNarrator:
             )
 
         response = await self._client.execute(GM_SPEC, operation, response_usage)
-        return response.output_text, response.id
+        return response.output_text
 
 
 Publish = Callable[[NarrationRequest, Narration], None]
@@ -381,11 +368,6 @@ class NarrationService:
         self._live: Narrator | None = None
         self._sequence = 0
         self._tasks: set[asyncio.Task[None]] = set()
-
-    def new_night(self) -> None:
-        self.cancel()
-        if self._live is not None:
-            self._live.new_night()
 
     def submit(self, request: NarrationRequest, is_offline: bool, publish: Publish) -> None:
         self._sequence += 1
@@ -417,8 +399,8 @@ class NarrationService:
         except TimeoutError:
             logger.warning("narration timed out, using the line bank")
             narration = self._line_bank.pick(request)
-        except (MetaError, ValueError):
-            logger.exception("narration failed, using the line bank")
+        except (MetaError, openai.OpenAIError, ValueError, TypeError, KeyError, OSError) as error:
+            logger.warning("narration failed with %s, using the line bank", type(error).__name__)
             narration = self._line_bank.pick(request)
         if sequence == self._sequence:
             publish(request, narration)

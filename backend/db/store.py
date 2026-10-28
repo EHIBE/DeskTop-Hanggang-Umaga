@@ -310,13 +310,10 @@ class Store:
         directory = self.campaign_dir(campaign_id)
         with self.transaction() as conn:
             sprite_rows = conn.execute(
-                "SELECT s.id, s.path FROM sprite s WHERE s.id IN ("
-                "SELECT sprite_id FROM unit WHERE campaign_id = ? AND sprite_id IS NOT NULL "
-                "UNION SELECT style_anchor_sprite_id FROM campaign "
-                "WHERE id = ? AND style_anchor_sprite_id IS NOT NULL) "
-                "AND NOT EXISTS (SELECT 1 FROM unit u WHERE u.sprite_id = s.id AND u.campaign_id <> ?) "
+                "SELECT s.id, s.path FROM sprite s "
+                "WHERE NOT EXISTS (SELECT 1 FROM unit u WHERE u.sprite_id = s.id AND u.campaign_id <> ?) "
                 "AND NOT EXISTS (SELECT 1 FROM campaign c WHERE c.style_anchor_sprite_id = s.id AND c.id <> ?)",
-                (campaign_id, campaign_id, campaign_id, campaign_id),
+                (campaign_id, campaign_id),
             ).fetchall()
             sprite_paths = [self._sprite_file(str(row["path"])) for row in sprite_rows]
             cursor = conn.execute("DELETE FROM campaign WHERE id = ?", (campaign_id,))
@@ -327,6 +324,25 @@ class Store:
             self._conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
         self._remove_files(directory, sprite_paths)
         return cursor.rowcount > 0
+
+    def _sweep_sprite_files(self) -> list[Path]:
+        sprite_root = self._data_root / SPRITES_DIR_NAME
+        if not sprite_root.is_dir():
+            return []
+        with self._lock:
+            known = {
+                self._sprite_file(str(row[0]))
+                for row in self._conn.execute("SELECT path FROM sprite").fetchall()
+            }
+        leftovers: list[Path] = []
+        for path in sprite_root.glob("*.png"):
+            resolved = path.resolve()
+            if resolved in known:
+                continue
+            resolved.unlink(missing_ok=True)
+            if resolved.exists():
+                leftovers.append(resolved)
+        return leftovers
 
     def _sprite_file(self, stored: str) -> Path:
         resolved = (self._data_root / stored).resolve()
@@ -340,6 +356,7 @@ class Store:
             sprite_path.unlink(missing_ok=True)
             if sprite_path.exists():
                 leftovers.append(sprite_path)
+        leftovers.extend(self._sweep_sprite_files())
         if directory.exists():
             shutil.rmtree(directory, ignore_errors=True)
         if directory.exists():

@@ -489,6 +489,7 @@ class MuseImageGenerator:
         async def operation() -> object:
             return await self._client.sdk().responses.create(
                 model=MetaModel.IMAGE.value,
+                store=False,
                 extra_body={
                     "input": [{"role": "user", "content": content}],
                     "tools": [IMAGE_TOOL],

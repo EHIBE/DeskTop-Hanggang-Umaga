@@ -4,6 +4,7 @@ from pathlib import Path
 from db.store import Store
 from game.night import AppPhase, GameController
 from gm.narrator import (
+    Callout,
     LineBank,
     Narration,
     NarrationRequest,
@@ -40,7 +41,6 @@ def claimed(controller: GameController) -> None:
 class FixedNarrator:
     def __init__(self, delay_s: float = 0.0, error: Exception | None = None) -> None:
         self.requests: list[NarrationRequest] = []
-        self.nights = 0
         self._delay_s = delay_s
         self._error = error
 
@@ -50,10 +50,9 @@ class FixedNarrator:
             await asyncio.sleep(self._delay_s)
         if self._error is not None:
             raise self._error
-        return Narration("Live tl", "Live en", Mood.KABA, (), "", NarrationSource.SPARK)
-
-    def new_night(self) -> None:
-        self.nights += 1
+        return Narration(
+            "Galing P1!", "Nice one P1!", Mood.KABA, (Callout("u_2", "P1 bida"),), "", NarrationSource.SPARK
+        )
 
 
 def test_line_bank_narrates_every_moment_of_a_night(tmp_path: Path) -> None:
@@ -148,13 +147,15 @@ def test_live_narration_runs_in_the_background(tmp_path: Path) -> None:
     asyncio.run(play())
     sent = narrations(queue)
     assert [m["source"] for m in sent] == ["spark", "spark"]
-    assert sent[0]["narration_tl"] == "Live tl"
-    assert live.nights == 0
+    assert sent[0]["narration_tl"] == "Galing Migs!"
+    assert sent[0]["narration_en"] == "Nice one Migs!"
+    assert sent[0]["callouts"] == [{"entity_id": "u_2", "text_tl": "Migs bida"}]
     assert live.requests[0].phase == "night_start"
     request = live.requests[1]
     assert request.phase == "resolution_then_telegraph"
     assert {u.id for u in request.units} == {"u_2", "u_3"}
-    assert {u.owner for u in request.units} == {"Migs", None}
+    assert {u.owner for u in request.units} == {"P1", None}
+    assert "Migs" not in repr(request)
     assert request.kubo_hp_max > 0
     assert request.events
     controller.close()
@@ -208,21 +209,6 @@ def test_cancel_stops_pending_narration() -> None:
 
     asyncio.run(run())
     assert published == []
-
-
-def test_new_night_resets_the_live_chain() -> None:
-    live = FixedNarrator()
-
-    async def run() -> None:
-        service = NarrationService(LineBank(), lambda: live)
-        service.submit(
-            NarrationRequest(1, 1, "night_start", "normal", 10, 10), False, lambda r, n: None
-        )
-        await service.wait()
-        service.new_night()
-
-    asyncio.run(run())
-    assert live.nights == 1
 
 
 def test_gm_invalid_is_logged_at_the_current_turn(tmp_path: Path) -> None:

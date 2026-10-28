@@ -42,6 +42,7 @@ PROMPT_TEMPLATE: Final = (
 async def generate(ctx: SmokeContext, prompt: str, crop: Path) -> JsonValue:
     response = await ctx.client.sdk().responses.create(
         model=MetaModel.IMAGE.value,
+        store=False,
         input=[
             {
                 "role": "user",

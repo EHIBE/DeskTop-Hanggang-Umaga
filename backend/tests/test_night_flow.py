@@ -10,6 +10,7 @@ from rules.resolve import Action
 from rules.units import Difficulty
 from state import Broadcast
 from tests.test_night import CONTENT
+from tests.test_server import SHEET
 from tests.test_tracking_flow import ConfidentSegmenter, controller_for, summon_three
 from vision.sam import TrackerOnlySegmenter
 
@@ -387,5 +388,40 @@ def test_voice_claim_ends_after_the_timeout(tmp_path: Path) -> None:
         types.append(queue.get_nowait()["type"])
     assert types[-1] == "state.changed"
     assert not controller.enforce_claim_timeout()
+    controller.close()
+    store.close()
+
+
+def test_recalibrate_while_paused_resumes_the_same_night(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    controller = controller_for(store, ConfidentSegmenter())
+    start_night(controller)
+    play_turns(controller, 1)
+    controller.pause_night()
+    before = controller.snapshot().night
+    controller.restart_calibration()
+    assert controller.snapshot().phase is AppPhase.CALIBRATE
+    controller.submit_corners(SHEET, 60.0, 40.0)
+    controller.confirm_calibration()
+    paused = controller.snapshot()
+    assert paused.phase is AppPhase.PAUSED
+    assert paused.resume_turn is None
+    assert paused.night is not None and before is not None
+    assert paused.night.turn == before.turn
+    assert paused.night.enemies == before.enemies
+    controller.resume_night(is_forced=False)
+    asyncio.run(controller.end_turn())
+    assert controller.snapshot().night.turn == before.turn + 1  # type: ignore[union-attr]
+    controller.close()
+    store.close()
+
+
+def test_recalibrate_is_refused_mid_turn(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    controller = controller_for(store, ConfidentSegmenter())
+    start_night(controller)
+    with pytest.raises(GameError):
+        controller.restart_calibration()
+    assert controller.snapshot().phase is AppPhase.PLAYER_PHASE
     controller.close()
     store.close()

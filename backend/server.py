@@ -593,8 +593,8 @@ class Connection:
         except NotFoundError:
             await self.send(notice_json(INVALID_MESSAGE_KEY))
             return
-        except (StoreError, CalibrationError, CameraError, OSError, ValueError):
-            logger.exception("message handling failed")
+        except (StoreError, CalibrationError, CameraError, OSError, ValueError) as error:
+            logger.warning("message handling failed with %s", type(error).__name__)
             await self.send(notice_json(FAILURE_KEY))
             await self.send_state()
             return

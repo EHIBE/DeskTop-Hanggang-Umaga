@@ -289,6 +289,7 @@ class SamSegmenter:
         async def operation() -> Sequence[SegmentationRecord]:
             stream = await self._client.sdk().responses.create(
                 model=MetaModel.SAM.value,
+                store=False,
                 input=[
                     {
                         "type": "message",

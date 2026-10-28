@@ -250,7 +250,6 @@ def test_pick_is_deterministic_and_has_no_callouts() -> None:
     assert first.source is NarrationSource.LINE_BANK
     narrator = LineBankNarrator(BANK)
     assert asyncio.run(narrator.narrate(req)) == first
-    narrator.new_night()
 
 
 def test_input_text_matches_contract() -> None:
@@ -331,8 +330,8 @@ def test_spark_success_sends_contract_call() -> None:
     assert call["model"] == "muse-spark-1.3"
     assert call["instructions"] == GM_SYSTEM_PROMPT
     assert call["reasoning"] == {"effort": "low"}
-    assert call["store"] is True
-    assert call["previous_response_id"] is None
+    assert call["store"] is False
+    assert "previous_response_id" not in call
     fmt = call["extra_body"]["text"]["format"]
     assert fmt["name"] == "gm_turn"
     assert fmt["strict"] is True
@@ -397,22 +396,3 @@ def test_spark_unknown_id_in_text_uses_line_bank() -> None:
 def test_spark_known_id_in_text_is_accepted() -> None:
     narrator, _, _ = spark([turn_json(tl="Sibak ni u_spear!")], [])
     assert narrate(narrator).source is NarrationSource.SPARK
-
-
-def test_previous_response_id_chains_and_resets() -> None:
-    narrator, responses, _ = spark([turn_json(), turn_json(), turn_json()], [])
-    narrate(narrator)
-    narrate(narrator)
-    narrator.new_night()
-    narrate(narrator)
-    ids = [call["previous_response_id"] for call in responses.calls]
-    assert ids == [None, "resp_1", None]
-
-
-def test_failed_turn_does_not_advance_chain() -> None:
-    narrator, responses, _ = spark([turn_json(), "{}", "{}", turn_json()], [])
-    narrate(narrator)
-    narrate(narrator)
-    narrate(narrator)
-    ids = [call["previous_response_id"] for call in responses.calls]
-    assert ids == [None, "resp_1", "resp_1", "resp_1"]

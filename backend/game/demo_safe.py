@@ -27,10 +27,6 @@ class DemoSafeMode:
         return not self.is_on
 
     @property
-    def allows_sam_summon(self) -> bool:
-        return not self.is_on
-
-    @property
     def allows_sam_recovery(self) -> bool:
         return not self.is_on
 
