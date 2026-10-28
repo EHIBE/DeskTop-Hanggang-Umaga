@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { palette } from '../lib/palette'
 import type { MessageHandler } from '../lib/socket'
-import type { FrameView, Point } from '../lib/types'
+import type { FrameView, Point, Pose } from '../lib/types'
 
 export type BoardMapping = Readonly<{
   view: FrameView
@@ -11,6 +11,9 @@ export type BoardMapping = Readonly<{
   offsetX: number
   offsetY: number
   toCanvas: (x: number, y: number) => Point
+  poses: readonly Pose[]
+  now: number
+  requestRedraw: () => void
 }>
 
 export type BoardOverlay = (ctx: CanvasRenderingContext2D, mapping: BoardMapping) => void
@@ -27,9 +30,15 @@ type LoadedFrame = {
   view: FrameView
   width: number
   height: number
+  poses: readonly Pose[]
 }
 
-function buildMapping(frame: LoadedFrame, cw: number, ch: number): BoardMapping {
+function buildMapping(
+  frame: LoadedFrame,
+  cw: number,
+  ch: number,
+  requestRedraw: () => void
+): BoardMapping {
   const scale = Math.min(cw / frame.width, ch / frame.height)
   const offsetX = Math.floor((cw - frame.width * scale) / 2)
   const offsetY = Math.floor((ch - frame.height * scale) / 2)
@@ -40,7 +49,10 @@ function buildMapping(frame: LoadedFrame, cw: number, ch: number): BoardMapping 
     scale,
     offsetX,
     offsetY,
-    toCanvas: (x, y) => [offsetX + x * scale, offsetY + y * scale]
+    toCanvas: (x, y) => [offsetX + x * scale, offsetY + y * scale],
+    poses: frame.poses,
+    now: performance.now(),
+    requestRedraw
   }
 }
 
@@ -76,7 +88,7 @@ function Board({ subscribe, onTap, overlay, label }: BoardProps): React.JSX.Elem
       ctx.fillRect(0, 0, cw, ch)
       const frame = frameRef.current
       if (!frame) return
-      const mapping = buildMapping(frame, cw, ch)
+      const mapping = buildMapping(frame, cw, ch, () => scheduleRef.current())
       ctx.drawImage(
         frame.image,
         mapping.offsetX,
@@ -106,7 +118,8 @@ function Board({ subscribe, onTap, overlay, label }: BoardProps): React.JSX.Elem
           image,
           view: message.view,
           width: message.width,
-          height: message.height
+          height: message.height,
+          poses: message.poses
         }
         schedule()
       }
@@ -132,7 +145,7 @@ function Board({ subscribe, onTap, overlay, label }: BoardProps): React.JSX.Elem
     if (rect.width === 0 || rect.height === 0) return
     const cx = ((event.clientX - rect.left) * canvas.width) / rect.width
     const cy = ((event.clientY - rect.top) * canvas.height) / rect.height
-    const mapping = buildMapping(frame, canvas.width, canvas.height)
+    const mapping = buildMapping(frame, canvas.width, canvas.height, () => undefined)
     const x = (cx - mapping.offsetX) / mapping.scale
     const y = (cy - mapping.offsetY) / mapping.scale
     if (x < 0 || y < 0 || x > frame.width || y > frame.height) return

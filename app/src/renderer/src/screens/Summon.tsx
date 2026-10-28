@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import SpriteView from '../canvas/SpriteView'
 import { drawSprite, useUnitImages } from '../canvas/sprites'
 import Board, { type BoardMapping } from '../canvas/Board'
@@ -20,12 +20,25 @@ const NAME_MAX = 40
 const EDGE_CM = 5
 const MARKER = 32
 const BUSY_TIMEOUT_MS = 15000
+const SNAP_CM = 1
+const SNAP_MS = 200
+
+type Anim = {
+  x: number
+  y: number
+  fromX: number
+  fromY: number
+  toX: number
+  toY: number
+  start: number
+}
 
 function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
   const [cardUnit, setCardUnit] = useState<UnitSummary | null>(null)
   const [beginNote, setBeginNote] = useState<CopyKey | null>(null)
+  const animsRef = useRef(new Map<string, Anim>())
 
   const ordered = useMemo(
     () => [
@@ -100,32 +113,90 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
       ctx.font = '16px "Press Start 2P"'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
+      const poseById = new Map(mapping.poses.map((pose) => [pose.id, pose]))
+      const live = new Set<string>()
+      let animating = false
       ordered.forEach((unit, index) => {
-        const [x, y] = mapping.toCanvas(unit.x_cm * pxPerCm, unit.y_cm * pxPerCm)
+        const pose = poseById.get(unit.id)
+        const targetX = pose ? pose.x_cm : unit.x_cm
+        const targetY = pose ? pose.y_cm : unit.y_cm
+        live.add(unit.unit_id)
+        let anim = animsRef.current.get(unit.unit_id)
+        if (!anim) {
+          anim = {
+            x: targetX,
+            y: targetY,
+            fromX: targetX,
+            fromY: targetY,
+            toX: targetX,
+            toY: targetY,
+            start: 0
+          }
+          animsRef.current.set(unit.unit_id, anim)
+        } else if (anim.toX !== targetX || anim.toY !== targetY) {
+          if (Math.hypot(targetX - anim.x, targetY - anim.y) > SNAP_CM) {
+            anim.fromX = anim.x
+            anim.fromY = anim.y
+            anim.start = mapping.now
+          } else {
+            anim.start = 0
+          }
+          anim.toX = targetX
+          anim.toY = targetY
+        }
+        if (anim.start > 0) {
+          const progress = Math.min(1, (mapping.now - anim.start) / SNAP_MS)
+          const eased = 1 - (1 - progress) * (1 - progress) * (1 - progress)
+          anim.x = anim.fromX + (anim.toX - anim.fromX) * eased
+          anim.y = anim.fromY + (anim.toY - anim.fromY) * eased
+          if (progress >= 1) anim.start = 0
+          else animating = true
+        } else {
+          anim.x = anim.toX
+          anim.y = anim.toY
+        }
+        const [x, y] = mapping.toCanvas(anim.x * pxPerCm, anim.y * pxPerCm)
         const image = images.get(unit.unit_id)
         const badgeFill = unit.class === 'kubo' ? palette.lantern : palette.moon
+        let left: number
+        let top: number
+        let width: number
+        let badge: number
         if (image) {
           const box = drawSprite(ctx, image, x, y, 2)
-          const badge = 28
-          ctx.fillStyle = badgeFill
-          ctx.fillRect(box.left, box.top, badge, badge)
-          ctx.strokeStyle = palette.ink
-          ctx.lineWidth = 2
-          ctx.strokeRect(box.left, box.top, badge, badge)
-          ctx.fillStyle = palette.ink
-          ctx.fillText(String(index + 1), box.left + badge / 2, box.top + badge / 2 + 1)
-          return
+          left = box.left
+          top = box.top
+          width = box.width
+          badge = 28
+        } else {
+          left = Math.round(x - MARKER / 2)
+          top = Math.round(y - MARKER / 2)
+          width = MARKER
+          badge = MARKER
         }
-        const left = Math.round(x - MARKER / 2)
-        const top = Math.round(y - MARKER / 2)
         ctx.fillStyle = badgeFill
-        ctx.fillRect(left, top, MARKER, MARKER)
+        ctx.fillRect(left, top, badge, badge)
         ctx.strokeStyle = palette.ink
         ctx.lineWidth = 2
-        ctx.strokeRect(left, top, MARKER, MARKER)
+        ctx.strokeRect(left, top, badge, badge)
         ctx.fillStyle = palette.ink
-        ctx.fillText(String(index + 1), left + MARKER / 2, top + MARKER / 2 + 1)
+        ctx.fillText(String(index + 1), left + badge / 2, top + badge / 2 + 1)
+        if (pose?.uncertain) {
+          const qLeft = left + width - badge
+          const qTop = top - badge + 4
+          ctx.fillStyle = palette.ink
+          ctx.fillRect(qLeft, qTop, badge, badge)
+          ctx.strokeStyle = palette.lantern
+          ctx.lineWidth = 2
+          ctx.strokeRect(qLeft, qTop, badge, badge)
+          ctx.fillStyle = palette.lantern
+          ctx.fillText('?', qLeft + badge / 2, qTop + badge / 2 + 1)
+        }
       })
+      animsRef.current.forEach((_, id) => {
+        if (!live.has(id)) animsRef.current.delete(id)
+      })
+      if (animating) mapping.requestRedraw()
     },
     [ordered, images, state.play_w_cm]
   )
