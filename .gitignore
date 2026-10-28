@@ -1,0 +1,10 @@
+.env
+*.key
+node_modules/
+.venv/
+__pycache__/
+out/
+dist/
+recordings/
+userdata/
+*.sqlite
