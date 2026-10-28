@@ -11,7 +11,7 @@ related: [docs/architecture/backend-modules.md, docs/engineering/security-and-pr
 
 # Data model
 
-All state lives in one SQLite file in the Electron user data folder. `backend/db/schema.sql` (schema version 1 in `PRAGMA user_version`) implements the schema below plus the changes under "Built schema changes".
+All state lives in one SQLite file in the Electron user data folder. `backend/db/schema.sql` (schema version 2 in `PRAGMA user_version`) implements the schema below plus the changes under "Built schema changes".
 
 ## Key facts
 
@@ -22,7 +22,7 @@ All state lives in one SQLite file in the Electron user data folder. `backend/db
 | Tables | campaign, calibration, player, object_signature, sprite, unit, night, night_unit, enemy, voice_map, turn_log, api_usage, settings |
 | IDs | TEXT UUIDs for entities. Game-state IDs `u_*` and `e_<type>_<n>` |
 | Time | UTC ISO 8601 text, turn timing in `t_ms` |
-| Migrations | `PRAGMA user_version` is 1. `db/store.py` builds a fresh database and refuses a newer version. Schema changes after a database exists need approval and a stepped migration |
+| Migrations | `PRAGMA user_version` is 2. `db/store.py` builds a fresh database, steps version 1 up with `MIGRATIONS`, and refuses a newer version. Schema changes after a database exists need approval and a stepped migration |
 | Money | REAL columns, values rounded to 1e-8 USD on write and summed as integers, Decimal in code (ADR-0107) |
 
 ## Schema
@@ -118,6 +118,8 @@ CREATE INDEX idx_turn_log_night ON turn_log(night_id, turn);
 | `night_unit.unit_id` and `voice_map.player_id` ON DELETE CASCADE. `unit.player_id` and `unit.sprite_id` ON DELETE SET NULL | Delete campaign leaves no orphans |
 | Indexes on every campaign_id and night_id foreign key, `unit.object_signature_id`, `night_unit.unit_id`, `voice_map.player_id`, `api_usage.ts`, `campaign.created_at` | Lookups, joins, the cost meter sum and the campaign list sort |
 | `PRAGMA foreign_keys = ON` and WAL journal on every connection | Foreign keys are off by default in SQLite |
+| `PRAGMA secure_delete = ON` on every connection, WAL checkpoint after delete campaign | Deleted rows do not linger in free pages or the WAL file |
+| `night.board_json` (version 2, added M10, approval pending from EHIBE) | Restore needs rules counters the tables do not hold: players, player order, enemies defeated, enemy id counters, damage per owner, unit hulls. Manananggal reform timers ride in `enemy.status_json` as `reform_<n>` |
 
 ## ID schemes
 
@@ -131,7 +133,7 @@ CREATE INDEX idx_turn_log_night ON turn_log(night_id, turn);
 
 ## Autosave
 
-One transaction at CHECK_END writes `night_unit`, `enemy`, `night` and that turn's `turn_log` rows. Roll back fully on failure. Restore resumes at the start of the current turn's PLAYER_PHASE.
+One transaction at CHECK_END writes `night_unit`, `enemy`, `night` (with `board_json`) and that turn's `turn_log` rows. Roll back fully on failure. Restore resumes at the start of the current turn's PLAYER_PHASE: Begin Night on an unfinished night with turns done rebuilds the board and runs `begin_turn`, which is deterministic, so spawns and intents match the original. Summon and re-roll are refused until then.
 
 ## Lifecycle and deletion
 

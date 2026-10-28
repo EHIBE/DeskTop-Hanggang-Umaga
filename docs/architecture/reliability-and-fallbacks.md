@@ -40,8 +40,10 @@ The night must finish even when the network or a model fails. Every external cal
 | Sprites and cards | From cache and assets |
 | Narration | Line bank |
 | Commands | Local grammar and tap |
-| SAM re-anchor | On by default, toggle to tracker-only |
+| SAM re-anchor | On by default, toggle to tracker-only (`demo_safe.sam`) |
+| SAM summon and between-turn recovery | Off |
 | Other paid calls | Off |
+| Module | `backend/game/demo_safe.py` (`DemoSafeMode`), settings `demo_safe` and `demo_safe_sam` |
 
 Done when: a night completes all 8 turns with Wi-Fi off.
 
@@ -58,7 +60,7 @@ Done when: a night completes all 8 turns with Wi-Fi off.
 | 7 | Two people talk at once | Two open turnIds | Drop both | `cmd.overlap` |
 | 8 | New object mid-night | No matching ID | Ignore, exclude from prompts | "?" outline only |
 | 9 | Lighting changes | Brightness over 30% change | Lower tracker trust, more recovery | `calib.dark` |
-| 10 | Camera bumped | Baseline diff | Pause, keep state | `cam.moved` |
+| 10 | Camera bumped | Baseline diff on the still frame at End Turn (built M10) | Pause, keep state. Resume checks again, Continue Anyway takes a new baseline | `cam.moved` |
 | 11 | Two similar objects | Signatures within 0.05 or IoU swap | Tracker priors, then ask | `track.similar` |
 | 12 | More than 16 objects | Spark count | Use 12, ignore extras | `summon.full` |
 | 13 | Stacked objects | Overlap over 60% | Both Uncertain | `summon.stack` |

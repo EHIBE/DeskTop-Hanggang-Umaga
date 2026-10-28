@@ -53,8 +53,8 @@ The Build Guide schedule replaces the PRD timeline (ADR-0109). The date is fixed
 | 6 Tracking and re-anchor (F04, F05) | 7 | Trackers, EMA, freeze, re-anchor ladder | 6 objects follow, re-anchor 20 of 20. Built and tested offline 2026-10-28. Real-desk follow and 20 of 20 are Manual: EHIBE (camera, key) | Drop look-alike objects from the demo |
 | 7 Rules, loop, HUD (F06) | 6 | Rules engine, state machine, HUD, tests | Tests green, a night runs through every state. Done 2026-10-28 (664 tests, rules 99% coverage, E7 100%) | None |
 | 8 Core enemies (F07) | 2 | Aswang, Manananggal, stats for the rest, waves | Full 8-turn night with all waves and arrows. Done offline 2026-10-28 (test_night_flow.py). On-screen night Manual: EHIBE | None |
-| 9 GM narration (F09) | 3 | System prompt, gm_turn, repair, line bank | Every turn shows a caption within 6 s or a line bank line | Line bank only |
-| 10 Safety (F13, F14, F17, F24) | 5 | Tap controls, autosave, Demo Safe Mode, delete data, Playtest 1 | Whole night by taps, kill and resume at turn 5, Wi-Fi off night completes, no files remain | Fix rule bugs only |
+| 9 GM narration (F09) | 3 | System prompt, gm_turn, repair, line bank | Every turn shows a caption within 6 s or a line bank line. Built 2026-10-28, live Spark timing Manual: EHIBE | Line bank only |
+| 10 Safety (F13, F14, F17, F24) | 5 | Tap controls, autosave, Demo Safe Mode, delete data, Playtest 1 | Whole night by taps, kill and resume at turn 5, Wi-Fi off night completes, no files remain. Built and tested offline 2026-10-28. Wi-Fi off run and Playtest 1 Manual: EHIBE | Fix rule bugs only |
 | 11 Voice (F10) | 4 | Two sessions, audio loop, events, grammar, PTT | 40 of 50 test orders parsed | ENDPOINTING plus tap-to-claim |
 | 12 Voice claim, physical enemies (F11, F08) | 4 | Claim, overlap, push, steal | Both effects work in a test night | Cut duwende steal first |
 | 13 Recording, evals, freeze, demo | 8 | Consent, recorder, evals, fixes, freeze, Playtest 2 | 2 complete nights recorded, footage backed up | Crash and demo-visible fixes only |

@@ -23,7 +23,7 @@ The renderer and backend talk over one WebSocket at `ws://127.0.0.1:8765/ws`. On
 | HTTP auth | `X-Desktop-Token` header on every route, 401 when missing or wrong |
 | Encoding | JSON text frames with a `type` field |
 | Frame rate | About 25 per second |
-| Established | Server: `state`, `devices`, `campaigns`, `frame`, `notice`. Renderer: `campaign.list`, `campaign.start`, `devices.list`, `camera.select`, `calibrate.corners`, `calibrate.done`, `calibrate.restart`, `demo_safe` (2026-10-28). Types in `app/src/renderer/src/lib/types.ts`, Pydantic models in `backend/server.py` |
+| Established | Server: `state`, `devices`, `campaigns`, `frame`, `notice`, `sprite`, `events`, `narration`, `cost` (dev). Renderer: `campaign.list`, `campaign.start`, `campaign.delete`, `devices.list`, `camera.select`, `calibrate.*`, `summon.*`, `unit.*`, `night.*`, `claim.*`, `intent.tap`, `chip.cancel`, `end_turn`, `demo_safe`, `demo_safe.sam` (2026-10-28). Types in `app/src/renderer/src/lib/types.ts`, Pydantic models in `backend/server.py` |
 | Size limit | 16 KiB per renderer message. Larger or invalid messages get `notice` `cmd.unknown` |
 | HTTP | `GET /health` returns `{"ok": true}` |
 
@@ -36,12 +36,12 @@ Every message is a JSON object with `type` plus fields. Proposed shared fields: 
 | Type | Status | Fields | Purpose |
 |---|---|---|---|
 | `frame` | Established | `view` (raw or warped), `width` and `height` (source pixels, the JPEG is downscaled to 960 px wide, quality 70), `jpg`, `poses` | Desk feed and sprite positions |
-| `state` | Established (M3 and M4 fields, plus `units`, `begin_block_key`, `awaiting_tap`) | `phase` (START, CALIBRATE, SUMMON so far), `campaign`, `camera`, `calibrated`, `calibration_preview`, `play_w_cm`, `play_h_cm`, `demo_safe`, `has_api_key`. Night fields (`turn`, `night`, `kubo`, `units`, `enemies`, `flags`) arrive in M7 | Full snapshot on connect and after every handled message |
+| `state` | Established (M3 and M4 fields, plus `units`, `begin_block_key`, `awaiting_tap`) | `phase` (any AppPhase), `campaign`, `camera`, `calibrated`, `calibration_preview`, `play_w_cm`, `play_h_cm`, `demo_safe`, `demo_safe_sam`, `has_api_key`, `resume_turn` (turn a saved night resumes at, or null), `night` (turn, units, enemies, chips, illegal units, kubo HP), `score` | Full snapshot on connect and after every handled message |
 | `devices` | Established | `cameras` (index, width, height), `microphones` (index, name) | Device picker (FR-01) |
 | `campaigns` | Established | `campaigns` (id, name, difficulty, nights_survived, created_at), newest first, 20 per page | Continue list (FR-05) |
 | `events` | Established | `turn`, `events` (type, src, dst, dmg, edge, pos) | Resolution events, then the next turn's spawn and intent events, as two messages |
 | `caption` | Proposed | `turn_id`, `text`, `is_final`, `speaker` | Live transcript (partials replace) |
-| `narration` | Proposed | `narration_tl`, `narration_en`, `mood`, `callouts`, `hint_tl`, `source` (spark or line_bank) | GM caption |
+| `narration` | Established | `night`, `turn`, `phase` (night_start, resolution_then_telegraph, sunrise, defeat), `narration_tl`, `narration_en`, `mood`, `callouts`, `hint_tl`, `source` (spark or line_bank) | GM caption, sent in the background after claims, each resolved turn, sunrise or defeat. A newer request drops an older pending one |
 | `chip` | Proposed | `chip_id`, `unit_id`, `action`, `target_id`, `speaker`, `status` | Order chip add, update, remove |
 | `card` | Established | `unit` (id, unit_id, sam_id, name, class, hp, hp_max, atk, move, range, power_id, power_name_tl, card_text_tl, card_text_en, x_cm, y_cm, rerolls_left). `sprite_url` arrives in M5 | New or changed unit card |
 | `sprite` | Established | `unit_id` (UUID), `sprite_png` (base64 48x48 PNG). `state.units[].sprite_png` carries it afterwards | Swap placeholder for real sprite. Pushed from the background job through a broadcast queue |
@@ -74,10 +74,12 @@ Every message is a JSON object with `type` plus fields. Proposed shared fields: 
 | `end_turn` | Established | none. Re-anchor, validate, resolve, autosave | PLAYER_PHASE |
 | `uncertain.tap` | Proposed | `unit_id`, `point` | VALIDATE or PLAYER_PHASE |
 | `ptt` | Proposed | `down` (bool) | PLAYER_PHASE |
-| `pause` / `resume` | Proposed | none | Any night state |
+| `night.pause` | Established | none | PLAYER_PHASE to PAUSED |
+| `night.resume` | Established | `force` (bool, default false). Without force a still-moved camera answers `cam.moved` and stays PAUSED | PAUSED |
 | `demo_safe` | Established | `on` (bool). Persisted in `settings` | Any |
+| `demo_safe.sam` | Established | `on` (bool). SAM re-anchor inside Demo Safe Mode, on by default. Persisted in `settings` | Any |
 | `replay.request` | Proposed | none | SUNRISE with consent |
-| `campaign.delete` | Proposed | `campaign_id` | Campaign menu |
+| `campaign.delete` | Established | `campaign_id`. Replies with `campaigns` and notice `delete.done`, or `delete.failed` | START |
 
 The backend validates every message with a Pydantic model (`extra="forbid"`), checks the current state, and checks every ID against live state. Invalid messages get a `notice` and are logged.
 

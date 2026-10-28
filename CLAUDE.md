@@ -24,7 +24,9 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 | M5 sprites and cost | Built 2026-10-28. Sprite pipeline, Muse Image generator, cache, style anchor, background push, dev credit meter, hard stop turns Demo Safe on. Asset script `backend/smoke/assets.py` waits on the key |
 | M6 tracking and re-anchor | Built 2026-10-28. KCF TrackerSet (31.9 ms for 12 objects), freeze on loss, between-turn recovery, re-anchor ladder, live poses on the board |
 | M7 and M8 rules, turn loop, enemies | Built 2026-10-28. Rules engine (99% coverage, E7 100%, 1.1 ms resolve), 15-state machine, night session with claim, tap intents, End Turn re-anchor, autosave, Night HUD, Sunrise, Defeat |
-| Tests | 669 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
+| M9 GM narration | Built 2026-10-28. Line bank (19 moments), gm_turn schema, SparkNarrator with repair and safety checks, background NarrationService with 20 s timeout, captions on Night, Sunrise and Defeat. Players sent as P1 to P4, `store` false |
+| M10 safety | Built 2026-10-28. Delete campaign (rows, files, orphan sprites), autosave restore at the saved turn (schema v2 `night.board_json`), Demo Safe module with SAM re-anchor toggle, pause, camera check at End Turn, 60 s claim timeout, renderer controls |
+| Tests | 735 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
 | CI, git hooks | None |
 
 ## Pending queue
@@ -36,9 +38,9 @@ Ordered. Canonical schedule: `docs/delivery/schedule.md`.
 3. Manual: EHIBE. Look at the window: KeySetup or Start, then Calibration with the real camera (feed at 20 FPS+, 4 corner taps, ruler check)
 4. Manual: EHIBE. Install ffmpeg on PATH before Phase 13
 5. Manual: EHIBE. Run `backend\.venv\Scripts\python -m smoke.assets --date <today>` from `backend` for placeholder and enemy art, then rate sprites (E5)
-6. Phase 9 and 10: GM narration, safety features (F09, F13, F14, F17, F24)
-7. Phase 11 and 12: voice, voice claim, physical enemies (F10, F11, F08)
-8. Phase 13 to 15: recording, evals, freeze, replay, video, submission
+6. Manual: EHIBE. Play a Demo Safe night with Wi-Fi off, kill the app at turn 5 and resume, delete a test campaign and check `%APPDATA%\DeskTop` (Playtest 1)
+7. Phase 11: voice orders, grammar, captions, chips, push-to-talk (F10). MVP done here
+8. Phase 12 to 15: physical enemies, voice claim and overlap, recording, evals, freeze, replay, video, submission
 
 ## Constraints
 
@@ -69,6 +71,7 @@ B11 (fixed port) closed in M3. B1 to B10 resolved 2026-10-28 (ADR-0101 to ADR-01
 | B12 | No Electron fuses (RunAsNode, ASAR integrity). Needs `@electron/fuses`, a new dependency | Approval: EHIBE |
 | B13 | `@electron-toolkit/preload` unused since ADR-0103. Removal is a dependency change | Approval: EHIBE |
 | B14 | Python 3.11 not installed, venv uses 3.13. ffmpeg not on PATH | ADR-0101, Manual: EHIBE |
+| B15 | Schema v2 adds `night.board_json` with a stepped migration so restore is exact. data-model.md asks for approval on schema changes | Approval: EHIBE |
 
 ## Commands
 

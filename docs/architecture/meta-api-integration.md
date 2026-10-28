@@ -30,7 +30,7 @@ Four Meta models plus the Files API, all called from `backend/meta_client.py` in
 | # | Use | Model | Endpoint | Parameters | When | Per night (expected) | Cost per call (est.) |
 |---|---|---|---|---|---|---|---|
 | 1 | Detect new object and write unit card | muse-spark-1.3 | POST /v1/responses | `reasoning.effort: medium`, one `input_image` (warped JPEG, base64) plus `input_text` (name, known boxes JSON), `text.format` json_schema `unit_card`, `strict: true`, `store: false` | Each summon | 8 | $0.010 |
-| 2 | GM narration | muse-spark-1.3 | POST /v1/responses | `reasoning.effort: low`, `previous_response_id` chain within the night, `store: true`, json_schema `gm_turn`, strict, stable system prompt first for caching | Night start, each turn, sunrise | 10 | $0.008 |
+| 2 | GM narration | muse-spark-1.3 | POST /v1/responses | `reasoning.effort: low`, `store: false` with no `previous_response_id` chain (privacy audit 2026-10-28, ADR-0012), json_schema `gm_turn`, strict, stable system prompt first for caching | Night start, each turn, sunrise | 10 | $0.008 |
 | 3 | Free-form command fallback | muse-spark-1.3 | POST /v1/responses | `reasoning.effort: minimal`, json_schema `command_parse` with enums from live IDs, `store: false` | Grammar fails | 15 | $0.003 (cut, F12) |
 | 4 | Recap | muse-spark-1.3 | POST /v1/responses | `reasoning.effort: low`, json_schema `recap` | Sunrise or defeat | 1 | $0.008 |
 | 5 | Returning object match | muse-spark-1.3 | POST /v1/responses | Up to 6 crops plus new crop, json_schema `match`, effort low | Next night ties | 0 to 3 | $0.004 (Could) |

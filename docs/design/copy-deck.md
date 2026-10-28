@@ -17,9 +17,9 @@ All player-facing text, keyed. This file is canonical until `app/src/renderer/sr
 
 | Fact | Value |
 |---|---|
-| UI keys | 48 from PRD plus 32 Proposed |
-| Line bank moments | 14 |
-| Placeholders | [name], [unit], [object], [player], [feature], [HP], [n], [action], [target], [pangalan] |
+| UI keys | 48 from PRD plus 50 Proposed |
+| Line bank moments | 19 (14 from PRD, 4 aswang edge variants, quiet) |
+| Placeholders | [name], [unit], [object], [player], [feature], [HP], [n], [action], [target], [pangalan], [turn], [seconds] |
 | Review | 2 Filipino playtesters review every Taglish line before recording |
 | Process | Add keys with the `desktop-add-copy-key` skill |
 
@@ -212,6 +212,24 @@ English text for these is a proposal for playtester review.
 | sunrise.quit | Umalis | Quit | M7 to M8, Proposed, playtester review |
 | defeat.title | NASIRA ANG KUBO | THE KUBO FELL | M7 to M8, Proposed, playtester review |
 | defeat.retry | Subukan Ulit | Try Again | M7 to M8, Proposed, playtester review |
+| narration.mood.kalmado | Kalmado | Calm | M9, Proposed, playtester review |
+| narration.mood.kaba | Kaba | Tense | M9, Proposed, playtester review |
+| narration.mood.takot | Takot | Fear | M9, Proposed, playtester review |
+| narration.mood.tagumpay | Tagumpay | Triumph | M9, Proposed, playtester review |
+| narration.mood.umaga | Umaga | Morning | M9, Proposed, playtester review |
+| narration.hint | Payo | Hint | M9, Proposed, playtester review |
+| start.delete | Burahin | Delete | M10, Proposed, playtester review |
+| delete.confirm | Sigurado? Burahin na | Sure? Delete now | M10, Proposed, playtester review |
+| delete.done | Nabura na ang kampanya. | Campaign deleted. | M10, Proposed, playtester review |
+| delete.failed | Hindi nabura ang kampanya. Subukan ulit. | Could not delete the campaign. Try again. | M10, Proposed, playtester review |
+| start.demo_safe_sam | SAM re-anchor sa Demo Safe | SAM re-anchor in Demo Safe | M10, Proposed, playtester review |
+| summon.resume_banner | May naka-save na gabi. Itutuloy ito sa turn [turn]. | A saved night is waiting. It will continue at turn [turn]. | M10, Proposed, playtester review |
+| summon.resume_button | Ituloy ang Gabi (turn [turn]) | Resume Night (turn [turn]) | M10, Proposed, playtester review |
+| night.pause | Pause | Pause | M10, Proposed, playtester review |
+| night.resume | Ituloy | Resume | M10, Proposed, playtester review |
+| night.continue_anyway | Ituloy pa rin | Continue anyway | M10, Proposed, playtester review |
+| night.cam_hint | Maaaring mali ang mga posisyon kapag itinuloy nang hindi nag-calibrate. | Positions may be off if you continue without recalibrating. | M10, Proposed, playtester review |
+| claim.countdown | Magsasara ang pag-claim sa [seconds] segundo | Claims close in [seconds] seconds | M10, Proposed, playtester review |
 
 ## GM line bank (local fallback and Spark style reference)
 
@@ -220,7 +238,7 @@ Goes into `assets/lines.json`.
 | Moment | Taglish | English caption |
 |---|---|---|
 | night_start | Lumulubog na ang araw. Hanggang umaga, kapit lang! | The sun is setting. Hold on until morning! |
-| tabi_tabi | Narinig ka ng mga duwende. Mukhang mabait sila ngayong gabi. | The duwende heard you. They seem kind tonight. |
+| tabi_tabi | Tabi-tabi po! Narinig tayo ng mga duwende, mukhang mabait sila ngayong gabi. | Excuse us, spirits! The duwende heard us, and they seem kind tonight. |
 | spawn_aswang | May aswang na paparating mula sa hilaga. Bantayan ang nag-iisa! | An aswang is coming from the north. Watch whoever is alone! |
 | spawn_tikbalang | Ramdam mo ba 'yung yabag? Tikbalang 'yan. | Feel those footsteps? That's a tikbalang. |
 | spawn_kapre | Amoy tabako... may kapre sa puno. | Smells like tobacco... there's a kapre in the tree. |
@@ -229,12 +247,20 @@ Goes into `assets/lines.json`.
 | hit | Tinamaan! Ganyan nga! | Hit! That's it! |
 | dodge | Nakaiwas! Muntik na. | Dodged! That was close. |
 | kubo_hit | Tinamaan ang kubo! [HP] na lang. | The kubo was hit! [HP] left. |
-| unit_down | Bagsak si [unit]. Bawi tayo. | [unit] is down. Let's get it back. |
+| unit_down | Bagsak si [unit]. Bawi tayo. | [unit] is down. Let's bounce back. |
 | last_turn | Huling dilim na. Konting tiis na lang! | Last stretch of dark. Just a little longer! |
 | win | Sumikat na ang araw! Ligtas ang baryo. | The sun is up. The barrio is safe. |
 | lose | Nasira ang kubo... Subukan ulit bukas ng gabi. | The kubo fell... Try again tomorrow night. |
+| spawn_aswang_east | May aswang na paparating mula sa silangan. Bantayan ang nag-iisa! | An aswang is coming from the east. Watch whoever is alone! |
+| spawn_aswang_south | May aswang na paparating mula sa timog. Bantayan ang nag-iisa! | An aswang is coming from the south. Watch whoever is alone! |
+| spawn_aswang_west | May aswang na paparating mula sa kanluran. Bantayan ang nag-iisa! | An aswang is coming from the west. Watch whoever is alone! |
+| quiet 1 | Tahimik ang gabi. Hinga muna, tapos handa ulit. | The night is quiet. Breathe, then get ready again. |
+| quiet 2 | Umiihip ang hangin sa bukid. Abangan ang susunod. | The wind stirs over the fields. Watch for what comes next. |
+| quiet 3 | Walang gumagalaw sa dilim. Sa ngayon. | Nothing moves in the dark. For now. |
 
-The aswang spawn line names "hilaga" (north). Pick the line variant by spawn edge, or add edge variants for east, south and west before recording (Unverified, PRD gives only north).
+The three new aswang edge lines and the three quiet lines are Proposed, playtester review. In `assets/lines.json` the north line is stored as `spawn_aswang_north` and also as `spawn_aswang`. The local pick uses the edge variant. `[HP]` and `[unit]` are literal placeholders. The cultural review on 2026-10-28 changed tabi_tabi, the unit_down caption and quiet 2.
+
+Open questions for the playtesters (cultural review 2026-10-28): `last_turn` may read better as "Huling turn na bago mag-umaga. Konting tiis na lang!". `spawn_duwende` names the charm, but duwende steal any unit. The aswang edge lines may sound formal next to "galing sa north". `narration.hint` "Payo" may sound parental next to "Tip" (English shows Hint). `narration.mood.kaba` may fit "Nervous" better than "Tense". `lose` and `defeat.title` say "Nasira" (ruined) while the English says fell. `phase.check`, `sunrise.quit` and `score.bayani` may be formal. `tik.push` uses "Usugin", and usog is also a folk illness, so "Itulak" may be clearer.
 
 ## Unit card template
 

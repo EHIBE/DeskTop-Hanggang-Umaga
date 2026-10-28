@@ -45,11 +45,13 @@ DeskTop has no accounts, so the main assets are the Meta API key, the players' c
 | Full camera video | Yes | Never | Until deleted |
 | Warped single frames | Yes | Yes (Spark, SAM) | Per call |
 | Mask crops | Yes | Yes (Muse Image) | Per call |
+| GM narration input | Yes | Yes (Spark): unit names, classes, HP, game ids, events. Players appear as P1 to P4 and the names are swapped back locally | Per call, `store: false` |
+| Summon name | Yes | Yes (Spark), after the profanity filter | Per call, `store: false` |
 | Mic audio | Live only | Streamed (Voice) | Not stored locally |
 | Highlight proxy clip | Yes | With consent (Files, SAM video) | 24 h max, deleted after processing |
 | Database, sprites, recordings | Yes | Never | Until delete campaign |
 
-All calls in Standard mode, never Contributor mode.
+All calls in Standard mode, never Contributor mode. Every `responses.create` call sets `store: false` (Spark summon and narration, SAM, Muse Image), so no response is kept for chaining.
 
 ## Electron hardening checklist (ADR-0103)
 
