@@ -3,9 +3,10 @@ from pathlib import Path
 
 import pytest
 
-from db.store import Store
+from db.store import Store, StoreError
 from game.night import AppPhase, GameController, GameError
 from rules.resolve import Action
+from rules.units import Difficulty
 from tests.test_night import CONTENT
 from tests.test_tracking_flow import ConfidentSegmenter, controller_for, summon_three
 from vision.sam import TrackerOnlySegmenter
@@ -143,4 +144,87 @@ def test_begin_night_needs_a_valid_roster(tmp_path: Path) -> None:
         controller.begin_night()
     assert info.value.copy_key == "summon.need_units"
     controller.close()
+    store.close()
+
+
+def test_campaign_switch_is_refused_mid_night(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    controller = controller_for(store, ConfidentSegmenter())
+    start_night(controller)
+    with pytest.raises(GameError):
+        controller.start_new_campaign("Other", Difficulty.NORMAL)
+    assert controller.snapshot().phase is AppPhase.PLAYER_PHASE
+    controller.close()
+    store.close()
+
+
+def test_end_turn_failure_returns_to_player_phase(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    controller = controller_for(store, ConfidentSegmenter())
+    start_night(controller)
+
+    async def broken() -> dict[int, object]:
+        raise OSError("camera unplugged")
+
+    controller.reanchor_all = broken  # type: ignore[method-assign,assignment]
+    with pytest.raises(GameError) as info:
+        asyncio.run(controller.end_turn())
+    assert info.value.copy_key == "restore"
+    assert controller.snapshot().phase is AppPhase.PLAYER_PHASE
+    controller.close()
+    store.close()
+
+
+def test_autosave_failure_keeps_the_night_playing(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    controller = controller_for(store, ConfidentSegmenter())
+    start_night(controller)
+
+    def failing_autosave(*args: object, **kwargs: object) -> None:
+        raise StoreError("disk full")
+
+    store.autosave = failing_autosave  # type: ignore[method-assign]
+    asyncio.run(controller.end_turn())
+    snapshot = controller.snapshot()
+    assert snapshot.phase in (AppPhase.PLAYER_PHASE, AppPhase.DEFEAT)
+    assert ("restore", {}) in controller.drain_notices()
+    controller.close()
+    store.close()
+
+
+def test_empty_claim_does_not_take_a_player_slot(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    controller = controller_for(store, ConfidentSegmenter())
+    summon_three(controller)
+    controller.begin_night()
+    with pytest.raises(GameError) as info:
+        controller.claim("Ghost", [], CONTENT.clean_player_name)
+    assert info.value.copy_key == "claim.who"
+    controller.claim("Migs", ["u_2"], CONTENT.clean_player_name)
+    controller.claim("Bea", ["u_3"], CONTENT.clean_player_name)
+    controller.claim("Migs", [], CONTENT.clean_player_name)
+    controller.finish_claims()
+    night = controller.snapshot().night
+    assert night is not None
+    assert night.players == ("Bea",)
+    controller.close()
+    store.close()
+
+
+def test_begin_night_refuses_a_half_played_night(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    controller = controller_for(store, ConfidentSegmenter())
+    start_night(controller)
+    asyncio.run(controller.end_turn())
+    campaign = controller.snapshot().campaign
+    controller.close()
+    assert campaign is not None
+    again = controller_for(store, ConfidentSegmenter())
+    again.continue_campaign(campaign.id)
+    again.select_camera(0)
+    assert again.snapshot().phase is AppPhase.SUMMON
+    with pytest.raises(GameError) as info:
+        again.begin_night()
+    assert info.value.copy_key == "restore"
+    again.close()
     store.close()

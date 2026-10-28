@@ -675,6 +675,15 @@ class Store:
                 ),
             )
 
+    def night_turns_completed(self, night_id: str) -> int:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT turns_completed FROM night WHERE id = ?", (night_id,)
+            ).fetchone()
+        if row is None:
+            raise NotFoundError("night not found")
+        return int(row[0])
+
     def log_turn(
         self,
         night_id: str,

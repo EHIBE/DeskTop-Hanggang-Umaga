@@ -489,6 +489,8 @@ class GameController:
         block = begin_night_block_key([u.card.unit_class for u in self._units])
         if block is not None:
             raise GameError(block)
+        if self._store.night_turns_completed(night.id) > 0:
+            raise GameError("restore")
         session = NightSession(
             self._store,
             night,
@@ -551,6 +553,10 @@ class GameController:
         except GameError:
             session.cancel_end_turn()
             raise
+        except (StoreError, OSError, ValueError, cv2.error) as error:
+            logger.exception("end turn snapshot failed")
+            session.cancel_end_turn()
+            raise GameError("restore") from error
         ppc = float(self._area.px_per_cm)
         positions: dict[str, tuple[float, float]] = {}
         hulls: dict[str, Hull] = {}
@@ -625,6 +631,13 @@ class GameController:
         self._enter_campaign(self._store.get_campaign(campaign_id))
 
     def _enter_campaign(self, campaign: Campaign) -> None:
+        session = self._session
+        if session is not None and session.state not in (
+            TurnState.SUNRISE,
+            TurnState.DEFEAT,
+        ):
+            raise GameError("cmd.unknown")
+        self._session = None
         with self._lock:
             self._campaign = campaign
             self._calibration = None
@@ -1552,6 +1565,8 @@ class NightSession:
         unit_ids = [self._unit_ids.get(game_id) for game_id in game_ids]
         if any(unit_id is None for unit_id in unit_ids):
             raise SessionError("cmd.unknown")
+        if player_name not in self._players and not game_ids:
+            raise SessionError("claim.who")
         if player_name not in self._players:
             self._players.append(player_name)
         color = PLAYER_COLORS[self._players.index(player_name)]
@@ -1567,6 +1582,9 @@ class NightSession:
                 continue
             self._owners[game_id] = player_name
             self._store.set_unit_owner(unit_id, player_id)
+        self._players = [
+            name for name in self._players if name in self._owners.values()
+        ]
 
     def finish_claims(
         self, positions: Mapping[str, Point], sizes: Mapping[str, tuple[float, float]]
@@ -1656,6 +1674,11 @@ class NightSession:
     def cancel_end_turn(self) -> None:
         self._require(TurnState.END_TURN_SNAPSHOT)
         self._machine.force(TurnState.PLAYER_PHASE)
+        if (
+            self._pending_log
+            and self._pending_log[-1][1] == TurnState.END_TURN_SNAPSHOT.value
+        ):
+            self._pending_log.pop()
 
     def finish_end_turn(
         self, positions: Mapping[str, Point], hulls: Mapping[str, Hull] | None = None
@@ -1746,19 +1769,28 @@ class NightSession:
             for u in board.units
         ]
         enemies = [_enemy_save(e) for e in board.enemies]
-        self._store.autosave(
-            self._night.id,
-            min(board.turn, TURNS_PER_NIGHT),
-            units,
-            enemies,
-            result,
-            self._pending_log,
-        )
+        try:
+            self._store.autosave(
+                self._night.id,
+                min(board.turn, TURNS_PER_NIGHT),
+                units,
+                enemies,
+                result,
+                self._pending_log,
+            )
+        except (StoreError, OSError):
+            logger.exception("autosave failed and rolled back, play continues")
+            self._notify("restore", {})
         self._pending_log = []
 
     def _flush_log(self) -> None:
-        for turn, phase, event_type, payload, t_ms in self._pending_log:
-            self._store.log_turn(self._night.id, turn, phase, event_type, payload, t_ms)
+        try:
+            for turn, phase, event_type, payload, t_ms in self._pending_log:
+                self._store.log_turn(
+                    self._night.id, turn, phase, event_type, payload, t_ms
+                )
+        except (StoreError, OSError):
+            logger.exception("turn log write failed")
         self._pending_log = []
 
     def _name_of(self, game_id: str) -> str:
