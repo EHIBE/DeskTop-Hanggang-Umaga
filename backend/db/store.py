@@ -116,7 +116,11 @@ class Store:
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA foreign_keys = ON")
         self._conn.execute("PRAGMA journal_mode = WAL")
-        self._migrate()
+        try:
+            self._migrate()
+        except BaseException:
+            self._conn.close()
+            raise
 
     def close(self) -> None:
         with self._lock:
