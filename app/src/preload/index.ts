@@ -1,22 +1,19 @@
-import { contextBridge } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
+import { contextBridge, ipcRenderer } from 'electron'
 
-// Custom APIs for renderer
-const api = {}
+type DesktopConfig = Readonly<{ port: number; token: string }>
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
-  } catch (error) {
-    console.error(error)
-  }
-} else {
-  // @ts-ignore (define in dts)
-  window.electron = electronAPI
-  // @ts-ignore (define in dts)
-  window.api = api
+const CONFIG_CHANNEL = 'desktop:config'
+
+function isDesktopConfig(value: unknown): value is DesktopConfig {
+  if (typeof value !== 'object' || value === null) return false
+  const candidate = value as Record<string, unknown>
+  return typeof candidate['port'] === 'number' && typeof candidate['token'] === 'string'
 }
+
+async function getConfig(): Promise<DesktopConfig> {
+  const value: unknown = await ipcRenderer.invoke(CONFIG_CHANNEL)
+  if (!isDesktopConfig(value)) throw new Error('invalid desktop config')
+  return Object.freeze({ port: value.port, token: value.token })
+}
+
+contextBridge.exposeInMainWorld('desktop', Object.freeze({ getConfig }))

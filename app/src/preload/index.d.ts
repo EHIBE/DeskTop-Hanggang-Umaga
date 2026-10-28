@@ -1,8 +1,9 @@
-import { ElectronAPI } from '@electron-toolkit/preload'
+export type DesktopConfig = Readonly<{ port: number; token: string }>
+
+export type DesktopBridge = Readonly<{ getConfig: () => Promise<DesktopConfig> }>
 
 declare global {
   interface Window {
-    electron: ElectronAPI
-    api: unknown
+    desktop: DesktopBridge
   }
 }

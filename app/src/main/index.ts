@@ -1,19 +1,66 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron'
 import { join } from 'path'
+import { randomBytes } from 'crypto'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
+const APP_USER_MODEL_ID = 'com.ehibe.desktop'
+const BACKEND_PORT = 8765
+const TOKEN_BYTES = 32
+const CONFIG_CHANNEL = 'desktop:config'
+const EXTERNAL_URL_ALLOWLIST: readonly string[] = [
+  'https://github.com/EHIBE/DeskTop-Hanggang-Umaga',
+  'https://dev.meta.ai/'
+]
+
+type DesktopConfig = Readonly<{ port: number; token: string }>
+
+const desktopConfig: DesktopConfig = Object.freeze({
+  port: BACKEND_PORT,
+  token: randomBytes(TOKEN_BYTES).toString('hex')
+})
+
+function rendererUrl(): string | undefined {
+  if (!is.dev) return undefined
+  return process.env['ELECTRON_RENDERER_URL']
+}
+
+function isAllowedExternalUrl(rawUrl: string): boolean {
+  if (!URL.canParse(rawUrl)) return false
+  const url = new URL(rawUrl)
+  if (url.protocol !== 'https:') return false
+  return EXTERNAL_URL_ALLOWLIST.some((allowed) => url.href.startsWith(allowed))
+}
+
+function isAppUrl(rawUrl: string): boolean {
+  if (!URL.canParse(rawUrl)) return false
+  const url = new URL(rawUrl)
+  const devUrl = rendererUrl()
+  if (devUrl !== undefined) return url.origin === new URL(devUrl).origin
+  return url.protocol === 'file:'
+}
+
+function isTrustedSender(event: IpcMainInvokeEvent): boolean {
+  const frame = event.senderFrame
+  if (frame === null) return false
+  return isAppUrl(frame.url)
+}
+
 function createWindow(): void {
-  // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 1280,
+    height: 720,
     show: false,
+    title: 'DeskTop',
+    backgroundColor: '#0B0E1A',
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      webSecurity: true
     }
   })
 
@@ -22,53 +69,44 @@ function createWindow(): void {
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    if (isAllowedExternalUrl(details.url)) void shell.openExternal(details.url)
     return { action: 'deny' }
   })
 
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-  } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (isAppUrl(url)) return
+    event.preventDefault()
+  })
+
+  const devUrl = rendererUrl()
+  if (devUrl !== undefined) {
+    void mainWindow.loadURL(devUrl)
+    return
   }
+  void mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
-  // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+function handleConfigRequest(event: IpcMainInvokeEvent): DesktopConfig {
+  if (!isTrustedSender(event)) throw new Error('untrusted sender')
+  return desktopConfig
+}
 
-  // Default open or close DevTools by F12 in development
-  // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
+void app.whenReady().then(() => {
+  electronApp.setAppUserModelId(APP_USER_MODEL_ID)
+
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
+  ipcMain.handle(CONFIG_CHANNEL, handleConfigRequest)
 
   createWindow()
 
-  app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
+  app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
+  if (process.platform !== 'darwin') app.quit()
 })
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
