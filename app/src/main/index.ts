@@ -1,6 +1,6 @@
 import { app, shell, session, BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron'
-import { existsSync, readdirSync } from 'fs'
-import { join } from 'path'
+import { existsSync, lstatSync, readdirSync, realpathSync } from 'fs'
+import { join, sep } from 'path'
 import { pathToFileURL } from 'url'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -12,7 +12,7 @@ const CONFIG_CHANNEL = 'desktop:config'
 const KEY_STATUS_CHANNEL = 'desktop:key-status'
 const SAVE_KEY_CHANNEL = 'desktop:save-key'
 const SHOW_REEL_CHANNEL = 'desktop:show-reel'
-const REEL_NAME = /^reel_[A-Za-z0-9_]{1,80}.mp4$/
+const REEL_NAME = /^reel_[A-Za-z0-9_]{1,80}\.mp4$/
 const CAMPAIGN_DIR_NAME = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const MAX_KEY_INPUT = 1024
 const FILE_ORIGINS: readonly string[] = ['file://']
@@ -129,8 +129,13 @@ function findReel(userDataDir: string, name: string): string | null {
   if (!existsSync(campaigns)) return null
   for (const entry of readdirSync(campaigns, { withFileTypes: true })) {
     if (!entry.isDirectory() || !CAMPAIGN_DIR_NAME.test(entry.name)) continue
-    const candidate = join(campaigns, entry.name, 'recordings', name)
-    if (existsSync(candidate)) return candidate
+    const recordings = join(campaigns, entry.name, 'recordings')
+    const candidate = join(recordings, name)
+    if (!existsSync(candidate)) continue
+    const stats = lstatSync(candidate)
+    if (!stats.isFile() || stats.isSymbolicLink()) continue
+    if (!realpathSync(candidate).startsWith(realpathSync(recordings) + sep)) continue
+    return candidate
   }
   return null
 }

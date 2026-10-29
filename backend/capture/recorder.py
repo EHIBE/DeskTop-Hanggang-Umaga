@@ -227,8 +227,9 @@ class Recorder:
             target = self._path.resolve()
         except OSError as error:
             raise RecorderError("recording path is invalid") from error
-        if not target.parent.is_relative_to(root) or target.parent == target:
+        if target.parent == root or not target.parent.is_relative_to(root):
             raise RecorderError("recording path is outside the data root")
+        self._path = target
         try:
             target.parent.mkdir(parents=True, exist_ok=True)
         except OSError as error:

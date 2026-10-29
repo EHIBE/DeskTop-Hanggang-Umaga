@@ -7,7 +7,7 @@ const CONFIG_CHANNEL = 'desktop:config'
 const KEY_STATUS_CHANNEL = 'desktop:key-status'
 const SAVE_KEY_CHANNEL = 'desktop:save-key'
 const SHOW_REEL_CHANNEL = 'desktop:show-reel'
-const REEL_NAME = /^reel_[A-Za-z0-9_]{1,80}.mp4$/
+const REEL_NAME = /^reel_[A-Za-z0-9_]{1,80}\.mp4$/
 
 function isDesktopConfig(value: unknown): value is DesktopConfig {
   if (typeof value !== 'object' || value === null) return false

@@ -28,6 +28,7 @@ from replay.proxy import (
     Segment,
     TrackerFactory,
     build_proxy,
+    inside_root,
     nearest_anchor_boxes,
     track_highlights,
 )
@@ -544,18 +545,21 @@ def build_writer_args(
     ]
 
 
-def _check_path(out_path: Path, root: Path) -> None:
+def _check_path(out_path: Path, root: Path) -> Path:
     try:
         resolved_root = root.resolve()
         target = out_path.resolve()
     except OSError as error:
         raise ReplayError("reel path is invalid") from error
-    if not target.parent.is_relative_to(resolved_root) or target.parent == target:
+    if target.parent == resolved_root or not target.parent.is_relative_to(
+        resolved_root
+    ):
         raise ReplayError("reel path is outside the data root")
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
     except OSError as error:
         raise ReplayError("reel folder could not be created") from error
+    return target
 
 
 def render_reel(
@@ -575,16 +579,17 @@ def render_reel(
 ) -> ReelResult:
     if ffmpeg is None:
         raise ReplayError("ffmpeg was not found")
-    _check_path(out_path, root)
+    target = _check_path(out_path, root)
+    video = inside_root(meta.video_path, root)
     source: FrameSource = frame_source or FfmpegFrameSource(
-        meta.video_path, meta.width, meta.height, meta.fps, ffmpeg
+        video, meta.width, meta.height, meta.fps, ffmpeg
     )
     decoded = _decode_sprites(sprites)
     max_frames = int(MAX_REEL_S * OUTPUT_FPS)
     crossfade_frames = round(CROSSFADE_S * OUTPUT_FPS)
     stats = _Stats()
     writer = _Writer(
-        build_writer_args(ffmpeg, out_path, output_size), process_factory, output_size
+        build_writer_args(ffmpeg, target, output_size), process_factory, output_size
     )
     try:
         card = build_title_card(output_size, title_tl, title_en, night_number)

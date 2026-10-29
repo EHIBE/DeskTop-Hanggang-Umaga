@@ -215,3 +215,21 @@ def test_anchor_tracks_cover_each_segment(tmp_path: Path) -> None:
         meta, (Segment(highlight, 0, 80), Segment(highlight, 80, 80))
     )
     assert [box.frame for box in tracks["u_2"]] == [0, 79, 80, 159]
+
+
+def test_reel_paths_must_sit_below_the_root(tmp_path: Path) -> None:
+    from capture.recorder import Recorder, RecorderError
+    from replay.proxy import inside_root
+    from replay.render import _check_path
+
+    with pytest.raises(ReplayError):
+        _check_path(tmp_path / "reel.mp4", tmp_path)
+    assert (
+        _check_path(tmp_path / "rec" / "reel.mp4", tmp_path)
+        == (tmp_path / "rec" / "reel.mp4").resolve()
+    )
+    with pytest.raises(ReplayError):
+        inside_root(tmp_path.parent / "outside.mp4", tmp_path)
+    recorder = Recorder(tmp_path / "night.mp4", 8, 8, ffmpeg="ffmpeg", root=tmp_path)
+    with pytest.raises(RecorderError):
+        recorder.start()

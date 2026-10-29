@@ -61,7 +61,7 @@ def proxy_dimensions(meta: RecordingMeta) -> tuple[int, int]:
     return PROXY_WIDTH, max(2, height)
 
 
-def _inside(path: Path, root: Path) -> Path:
+def inside_root(path: Path, root: Path) -> Path:
     try:
         resolved = path.resolve()
         base = root.resolve()
@@ -156,8 +156,8 @@ def build_proxy(
         raise ReplayError("ffmpeg was not found")
     if not highlights:
         raise ReplayError("there are no highlights to cut")
-    source = _inside(meta.video_path, root)
-    work = _inside(work_dir, root)
+    source = inside_root(meta.video_path, root)
+    work = inside_root(work_dir, root)
     if not source.is_file():
         raise ReplayError("the recording file is missing")
     try:
