@@ -16,3 +16,8 @@ userdata/
 *.sqlite-shm
 *.sqlite-journal
 *.db
+*.mp4
+eval/voice/*.wav
+eval/voice/*.webm
+eval/voice/*.m4a
+eval/voice/*.mp3
