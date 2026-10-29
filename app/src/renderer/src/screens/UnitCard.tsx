@@ -7,6 +7,7 @@ type UnitCardProps = Readonly<{
   unit: UnitSummary
   send: (message: ClientMessage) => boolean
   locked?: boolean
+  docked?: boolean
   onClose: () => void
 }>
 
@@ -22,7 +23,13 @@ function initials(unit: UnitSummary): string {
   return t(classKey(unit)).tl.slice(0, 2).toUpperCase()
 }
 
-function UnitCard({ unit, send, locked = false, onClose }: UnitCardProps): React.JSX.Element {
+function UnitCard({
+  unit,
+  send,
+  locked = false,
+  docked = false,
+  onClose
+}: UnitCardProps): React.JSX.Element {
   const [renaming, setRenaming] = useState(false)
   const [draft, setDraft] = useState(unit.name)
 
@@ -49,14 +56,20 @@ function UnitCard({ unit, send, locked = false, onClose }: UnitCardProps): React
 
   return (
     <div
-      className="absolute inset-0 z-20 flex items-center justify-center bg-gabi-ink/80"
+      className={
+        docked
+          ? 'pointer-events-none absolute inset-0 z-20 flex items-start justify-end p-8'
+          : 'absolute inset-0 z-20 flex items-center justify-center bg-gabi-ink/80'
+      }
       onClick={onClose}
     >
       <section
         role="dialog"
-        aria-modal="true"
+        aria-modal={!docked}
         aria-label={unit.name}
-        className="panel flex w-[1200px] flex-col gap-6 p-8"
+        className={`panel pointer-events-auto flex flex-col gap-6 p-8 ${
+          docked ? 'w-[760px]' : 'w-[1200px]'
+        }`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex gap-8">

@@ -138,6 +138,10 @@ const entries = {
     tl: 'Walang recording ngayong gabi, kaya walang replay.',
     en: 'No recording tonight, so no replay.'
   },
+  'replay.no_ffmpeg': {
+    tl: 'Kailangan ng ffmpeg para sa replay. I-install muna.',
+    en: 'The replay needs ffmpeg. Install it first.'
+  },
   'replay.show': { tl: 'Ipakita sa folder', en: 'Show in folder' },
   'replay.missing': { tl: 'Hindi makita ang file.', en: 'Could not find the file.' },
   'net.slow': {
@@ -265,6 +269,24 @@ const entries = {
   'summon.begin': { tl: 'Begin Night', en: 'Begin Night' },
   'summon.roster': { tl: 'Mga kakampi', en: 'Allies' },
   'summon.close': { tl: 'Isara', en: 'Close' },
+  'model.spark': { tl: 'Muse Spark 1.3', en: 'Muse Spark 1.3' },
+  'model.sam': { tl: 'SAM 3.1', en: 'SAM 3.1' },
+  'model.image': { tl: 'Muse Image 1.0', en: 'Muse Image 1.0' },
+  'model.voice': { tl: 'Muse Voice Transcribe 1.0', en: 'Muse Voice Transcribe 1.0' },
+  'made.title': { tl: 'Paano ginawa ang kakampi', en: 'How the ally was made' },
+  'made.show': { tl: 'Ipakita kung paano ginawa', en: 'Show how it was made' },
+  'made.spark_step': {
+    tl: 'Nahanap ang bagay at isinulat ang card',
+    en: 'Found the object and wrote the card'
+  },
+  'made.fallback_name': { tl: 'Tap o offline', en: 'Tap or offline' },
+  'made.fallback_step': {
+    tl: 'Hindi ginamit ang Spark. Tap ang ginamit.',
+    en: 'Spark was not used. Tap or offline.'
+  },
+  'made.sam_step': { tl: 'Eksaktong balangkas', en: 'Exact outline' },
+  'made.image_step': { tl: 'Pixel sprite', en: 'Pixel sprite' },
+  'made.drawing': { tl: 'Ginuguhit...', en: 'Drawing...' },
   'card.owner_none': { tl: 'Wala pa', en: 'None yet' },
   'card.owner': { tl: 'Hawak ni', en: 'Owner' },
   'card.power': { tl: 'Kapangyarihan', en: 'Power' },

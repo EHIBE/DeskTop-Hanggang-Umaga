@@ -308,7 +308,21 @@ export type CaptionMessage = Readonly<{
 
 export type CardMessage = Readonly<{ type: 'card'; seq: number; unit: UnitSummary }>
 
+export type SummonSource = 'spark' | 'fallback'
+
+export type SummonResultMessage = Readonly<{
+  type: 'summon.result'
+  unit_id: string
+  game_id: string
+  source: SummonSource
+  spark_box: readonly [number, number, number, number] | null
+  mask_hull: readonly Point[]
+  width: number
+  height: number
+}>
+
 export type ServerMessage =
+  | SummonResultMessage
   | StateMessage
   | DevicesMessage
   | CampaignsMessage

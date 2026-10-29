@@ -96,6 +96,7 @@ function VoiceControls({ voice, send }: VoiceControlsProps): React.JSX.Element {
       >
         <span aria-hidden="true">{STATUS_GLYPH[status]}</span>
         <span>{statusText.tl}</span>
+        <span className="text-gabi-mist">{t('model.voice').en}</span>
       </span>
       <div role="group" aria-label={t('voice.mode.label').en} className="flex gap-2">
         {MODES.map((candidate) => {

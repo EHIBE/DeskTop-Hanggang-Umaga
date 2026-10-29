@@ -2,11 +2,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import SpriteView from '../canvas/SpriteView'
 import { drawSprite, useUnitImages } from '../canvas/sprites'
 import Board, { type BoardMapping } from '../canvas/Board'
+import { drawSummonOverlay } from '../canvas/made'
 import Bilingual from '../components/Bilingual'
+import MadePanel from '../components/MadePanel'
 import { isCopyKey, t, type CopyKey } from '../lib/copy'
 import { palette } from '../lib/palette'
 import type { MessageHandler } from '../lib/socket'
-import type { ClientMessage, Point, StateMessage, UnitSummary } from '../lib/types'
+import { prefersReducedMotion } from '../lib/motion'
+import type {
+  ClientMessage,
+  Point,
+  StateMessage,
+  SummonResultMessage,
+  UnitSummary
+} from '../lib/types'
 import UnitCard from './UnitCard'
 
 type SummonProps = Readonly<{
@@ -22,6 +31,8 @@ const MARKER = 32
 const BUSY_TIMEOUT_MS = 15000
 const SNAP_CM = 1
 const SNAP_MS = 200
+const MADE_MS = 6000
+const MADE_FADE_MS = 500
 
 type Anim = {
   x: number
@@ -38,7 +49,10 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
   const [busy, setBusy] = useState(false)
   const [cardUnit, setCardUnit] = useState<UnitSummary | null>(null)
   const [beginNote, setBeginNote] = useState<CopyKey | null>(null)
+  const [made, setMade] = useState<SummonResultMessage | null>(null)
+  const [madeVisible, setMadeVisible] = useState(false)
   const animsRef = useRef(new Map<string, Anim>())
+  const hiddenAtRef = useRef(0)
 
   const ordered = useMemo(
     () => [
@@ -66,11 +80,26 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
         setBusy(false)
         setCardUnit(message.unit)
         setName('')
+      } else if (message.type === 'summon.result') {
+        setMade(message)
+        setMadeVisible(true)
       } else if (message.type === 'notice') {
         setBusy(false)
       }
     })
   }, [subscribe])
+
+  useEffect(() => {
+    if (!madeVisible) return
+    const timer = setTimeout(() => setMadeVisible(false), MADE_MS)
+    return () => clearTimeout(timer)
+  }, [madeVisible, made])
+
+  useEffect(() => {
+    if (!madeVisible) hiddenAtRef.current = performance.now()
+  }, [madeVisible])
+
+  const madeUnit = made ? state.units.find((unit) => unit.unit_id === made.unit_id) : undefined
 
   useEffect(() => {
     if (!busy) return
@@ -197,9 +226,18 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
       animsRef.current.forEach((_, id) => {
         if (!live.has(id)) animsRef.current.delete(id)
       })
+      if (made) {
+        let alpha = 1
+        if (!madeVisible) {
+          const fade = prefersReducedMotion() ? 0 : MADE_FADE_MS
+          alpha = fade === 0 ? 0 : Math.max(0, 1 - (mapping.now - hiddenAtRef.current) / fade)
+          if (alpha > 0) animating = true
+        }
+        drawSummonOverlay(ctx, mapping, made, alpha)
+      }
       if (animating) mapping.requestRedraw()
     },
-    [ordered, images, state.play_w_cm]
+    [ordered, images, state.play_w_cm, made, madeVisible]
   )
 
   const begin = (): void => {
@@ -308,19 +346,33 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
           </button>
         </div>
       </aside>
-      <div className="panel min-w-0 flex-1 p-2">
+      <div className="panel relative min-w-0 flex-1 p-2">
         <Board
           subscribe={subscribe}
           onTap={state.awaiting_tap && !resuming ? handleTap : undefined}
           overlay={overlay}
           label={t(state.awaiting_tap ? 'summon.which' : 'summon.prompt').en}
         />
+        {made !== null && madeUnit !== undefined && (
+          <button
+            type="button"
+            className="btn absolute right-4 top-4 z-10"
+            aria-pressed={madeVisible}
+            onClick={() => setMadeVisible((value) => !value)}
+          >
+            {t('made.show').tl}
+          </button>
+        )}
       </div>
+      {made !== null && madeUnit !== undefined && (
+        <MadePanel unit={madeUnit} source={made.source} visible={madeVisible} />
+      )}
       {shownCard && (
         <UnitCard
           unit={shownCard}
           send={send}
           locked={resuming}
+          docked={made !== null && made.unit_id === shownCard.unit_id}
           onClose={() => setCardUnit(null)}
         />
       )}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Board, { type BoardMapping } from '../canvas/Board'
 import { drawGuideArrow, drawIntentArrow } from '../canvas/arrows'
 import { drawBadge, drawTag } from '../canvas/draw'
+import { drawReanchorFlash, type Footprint } from '../canvas/made'
 import { drawEnemy, useEnemyFrames } from '../canvas/enemies'
 import { drawFloaters, floatersFromEvents, type Floater } from '../canvas/floaters'
 import {
@@ -23,6 +24,7 @@ import VoiceControls from '../hud/VoiceControls'
 import { parseStatus, statusEntries } from '../hud/status'
 import { actionTarget, enemyLabel } from '../hud/targets'
 import { t, type CopyKey } from '../lib/copy'
+import { prefersReducedMotion } from '../lib/motion'
 import { palette } from '../lib/palette'
 import type { MessageHandler } from '../lib/socket'
 import type {
@@ -49,6 +51,9 @@ type Spot = Readonly<{ x_cm: number; y_cm: number }>
 
 const NOTE_MS = 6000
 const BOB_TICK_MS = 500
+const FLASH_DEDUPE_MS = 1500
+const REANCHOR_PHASES: ReadonlySet<string> = new Set(['END_TURN_SNAPSHOT', 'PHYSICAL_EFFECTS'])
+const FLASH_PHASES: ReadonlySet<string> = new Set(['PLAYER_PHASE', 'SUNRISE', 'DEFEAT'])
 const HIT_PX = 56
 const ARROW_PHASES: ReadonlySet<string> = new Set([
   'SPAWN_TELEGRAPH',
@@ -69,6 +74,8 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
   const noteIdRef = useRef(0)
   const pausedRef = useRef(false)
   const floatersRef = useRef<readonly Floater[]>([])
+  const flashAtRef = useRef(-1)
+  const armedRef = useRef(false)
   const knownRef = useRef(new Map<string, Spot>())
   const latestRef = useRef(state)
   const unitImages = useUnitImages(state.units)
@@ -78,9 +85,25 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
     latestRef.current = state
   })
 
+  const triggerFlash = useCallback((): void => {
+    const now = performance.now()
+    if (flashAtRef.current >= 0 && now - flashAtRef.current < FLASH_DEDUPE_MS) return
+    flashAtRef.current = now
+    setPulse((value) => value + 1)
+  }, [])
+
+  useEffect(() => {
+    if (REANCHOR_PHASES.has(state.phase)) armedRef.current = true
+    else if (FLASH_PHASES.has(state.phase) && armedRef.current) {
+      armedRef.current = false
+      triggerFlash()
+    }
+  }, [state.phase, triggerFlash])
+
   useEffect(() => {
     return subscribe((message) => {
       if (message.type === 'events') {
+        triggerFlash()
         const locate = (id: string | null): Spot | null => {
           if (id === null) return null
           const known = knownRef.current.get(id)
@@ -128,7 +151,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
         pausedRef.current = message.phase === 'PAUSED'
       }
     })
-  }, [subscribe])
+  }, [subscribe, triggerFlash])
 
   useEffect(() => {
     if (note === null) return
@@ -294,6 +317,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
       })
       unitSpot.forEach((spot, id) => knownRef.current.set(id, spot))
       night.enemies.forEach((enemy) => knownRef.current.set(enemy.id, enemy))
+      const footprints: Footprint[] = []
       const illegal = new Set(night.illegal_units)
       const nightById = new Map(night.units.map((unit) => [unit.id, unit]))
 
@@ -371,6 +395,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
           ctx.fillRect(box.left, box.top, box.width, box.height)
         }
         ctx.restore()
+        footprints.push(box)
         if (activeSelection?.unitId === unit.id) {
           ctx.strokeStyle = palette.lantern
           ctx.lineWidth = 4
@@ -444,6 +469,17 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
           ctx.strokeRect(Math.round(mx - 56), Math.round(my - 56), 112, 112)
         })
         ctx.setLineDash([])
+      }
+
+      if (flashAtRef.current >= 0) {
+        const flashing = drawReanchorFlash(
+          ctx,
+          mapping,
+          footprints,
+          mapping.now - flashAtRef.current,
+          prefersReducedMotion()
+        )
+        if (flashing) mapping.requestRedraw()
       }
 
       const alive = drawFloaters(ctx, floatersRef.current, toCanvas, mapping.now)
