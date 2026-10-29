@@ -30,7 +30,8 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 | Phase 12 physical enemies and voice claim | Built 2026-10-29. Tikbalang push and throw, duwende steal, flee, return and escape in the rules engine, PHYSICAL_EFFECTS wait with ghosts, marks, badges and Done, voice claim with ako si and hawak ko. Table run Manual: EHIBE |
 | Phase 13 code | Built 2026-10-29. Per-player recording consent, ffmpeg recorder (tested with a fake process), REC dot, narration logging, eval runner `eval/run_eval.py`. E7 50 of 50 (100%). ffmpeg, live evals, freeze tag and Playtest 2 are Manual: EHIBE |
 | Phase 14 replay | Built 2026-10-29. Highlights, 10 FPS proxy, Files upload with expiry and delete, one SAM video request, reel render with sprites, damage numbers and dawn title card, anchor box fallback, Make Replay and Show in folder controls. Real reel needs ffmpeg and the key |
-| Tests | 1217 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
+| Phase 15 code side | Done 2026-10-29. Root README with real numbers only, secret scan of history and tree (no secrets, one fake test key), raw video and voice audio ignored, summon how-it-was-made panel with model names, re-anchor flash, ffmpeg notice, `eval/run_eval.py cost`, final docs and demo audits. Video, license, freeze tag and submission are Manual: EHIBE |
+| Tests | 1219 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
 | CI, git hooks | None |
 
 ## Pending queue
@@ -47,7 +48,7 @@ Ordered. Canonical schedule: `docs/delivery/schedule.md`.
 8. Manual: EHIBE. Play a night with a tikbalang push and a duwende steal on the real table (turn 3 on Normal teaches the push)
 9. Manual: EHIBE. Install ffmpeg, play two consented nights, run `eval/run_eval.py e4 --db` and `e6 --db` on the database, record E1 to E3 data, then the freeze tag (`git tag freeze-nov3`, push) at Nov 3 6:00 PM SGT and Playtest 2
 10. Manual: EHIBE. After a consented night, tap Make the Replay, open the reel in Windows Media Player and check sprites stay on objects (FR-47 90%)
-11. Phase 15: video, README, secret scan, submission
+11. Manual: EHIBE. Choose the license, add the demo GIF and video link to README.md, record the video per docs/delivery/video-script.md, push the repo public, submit by Nov 4 11:00 PM SGT and save the confirmation
 
 ## Constraints
 

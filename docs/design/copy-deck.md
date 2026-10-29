@@ -17,7 +17,7 @@ All player-facing text, keyed. `app/src/renderer/src/lib/copy.ts` and `assets/li
 
 | Fact | Value |
 |---|---|
-| UI keys | 216 in copy.ts (48 from PRD, the rest Proposed) |
+| UI keys | 229 in copy.ts (48 from PRD, the rest Proposed) |
 | Line bank moments | 19 (14 from PRD, 4 aswang edge variants, quiet) |
 | Placeholders | [name], [unit], [object], [player], [feature], [HP], [n], [action], [target], [pangalan], [turn], [seconds] |
 | Review | 2 Filipino playtesters review every Taglish line before recording |
@@ -230,6 +230,19 @@ English text for these is a proposal for playtester review.
 | night.continue_anyway | Ituloy pa rin | Continue anyway | M10, Proposed, playtester review |
 | night.cam_hint | Baka mali ang posisyon kung hindi muna mag-calibrate. | Positions may be off if you continue without recalibrating. | M10, Proposed, playtester review |
 | claim.countdown | Sasara ang claim sa [seconds] segundo | Claims close in [seconds] seconds | M10, Proposed, playtester review |
+| replay.no_ffmpeg | Kailangan ng ffmpeg para sa replay. I-install muna. | The replay needs ffmpeg. Install it first. | Phase 15, Proposed, playtester review |
+| model.spark | Muse Spark 1.3 | Muse Spark 1.3 | Phase 15, Proposed, playtester review |
+| model.sam | SAM 3.1 | SAM 3.1 | Phase 15, Proposed, playtester review |
+| model.image | Muse Image 1.0 | Muse Image 1.0 | Phase 15, Proposed, playtester review |
+| model.voice | Muse Voice Transcribe 1.0 | Muse Voice Transcribe 1.0 | Phase 15, Proposed, playtester review |
+| made.title | Paano ginawa ang kakampi | How the ally was made | Phase 15, Proposed, playtester review |
+| made.show | Ipakita kung paano ginawa | Show how it was made | Phase 15, Proposed, playtester review |
+| made.spark_step | Nahanap ang bagay at isinulat ang card | Found the object and wrote the card | Phase 15, Proposed, playtester review |
+| made.fallback_name | Tap o offline | Tap or offline | Phase 15, Proposed, playtester review |
+| made.fallback_step | Hindi ginamit ang Spark. Tap ang ginamit. | Spark was not used. Tap or offline. | Phase 15, Proposed, playtester review |
+| made.sam_step | Eksaktong balangkas | Exact outline | Phase 15, Proposed, playtester review |
+| made.image_step | Pixel sprite | Pixel sprite | Phase 15, Proposed, playtester review |
+| made.drawing | Ginuguhit... | Drawing... | Phase 15, Proposed, playtester review |
 | replay.make | Gawin ang Replay | Make the Replay | Phase 14, Proposed, playtester review |
 | replay.done | Handa na ang replay! | The replay is ready! | Phase 14, Proposed, playtester review |
 | replay.failed | Hindi nagawa ang replay. Subukan ulit. | Could not make the replay. Try again. | Phase 14, Proposed, playtester review |
