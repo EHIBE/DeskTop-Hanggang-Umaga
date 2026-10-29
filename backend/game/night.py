@@ -9,7 +9,7 @@ import re
 import threading
 import time
 import uuid
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from decimal import Decimal
 from enum import StrEnum
@@ -79,6 +79,8 @@ from gm.narrator import (
     NarrationUnit,
 )
 from meta_client import CostMeter, MetaError
+from replay.highlights import ReplayError, TurnLogRow
+from replay.render import ReelRequest, ReelResult
 from rules.enemies import EnemyType, Part, enemy_stats
 from rules.geometry import Hull, Point, is_move_legal
 from rules.resolve import (
@@ -157,6 +159,8 @@ from voice.grammar import (
 from voice.session import Caption, VoiceMode, VoiceSession, VoiceStatus
 
 logger = logging.getLogger("desktop.game")
+
+ReplayRunner = Callable[[ReelRequest, bool], Awaitable[ReelResult]]
 
 RecorderFactory = Callable[[Path, int, int, Path], Recorder]
 
@@ -342,6 +346,9 @@ class Snapshot:
     resume_turn: int | None = None
     is_recording: bool = False
     consents: tuple[tuple[str, bool], ...] = ()
+    replay_status: str = "idle"
+    replay_file: str | None = None
+    can_replay: bool = False
     voice: VoiceView = VoiceView(VoiceStatus.OFF.value, VoiceMode.OPEN.value, False)
     night: NightView | None = None
     score: FinalScore | None = None
@@ -395,11 +402,19 @@ class GameController:
         voice_factory: VoiceFactory | None = None,
         clean_name: Callable[[str, str], str] | None = None,
         recorder_factory: RecorderFactory | None = None,
+        replay_runner: ReplayRunner | None = None,
+        ffmpeg: str | None = None,
     ) -> None:
+        self._replay_runner = replay_runner
+        self._ffmpeg = ffmpeg
         self._recorder_factory = recorder_factory
         self._recorder: Recorder | None = None
         self._sidecar: dict[str, object] | None = None
         self._sidecar_path: Path | None = None
+        self._last_sidecar: Path | None = None
+        self._replay_status = REPLAY_IDLE
+        self._replay_file: str | None = None
+        self._replay_task: asyncio.Task[None] | None = None
         self._clean_name = clean_name
         self._consents: dict[str, bool] = {}
         self._voice_players: dict[str, str] = {}
@@ -480,6 +495,10 @@ class GameController:
                 is_awaiting_tap=self._pending is not None,
                 resume_turn=self._resume_turn,
                 is_recording=self.is_recording,
+                replay_status=self._replay_status,
+                replay_file=self._replay_file,
+                can_replay=self._last_sidecar is not None
+                and self._replay_runner is not None,
                 consents=tuple(self._consents.items()),
                 voice=VoiceView(
                     self._voice_status.value, self._voice_mode.value, self._is_ptt_down
@@ -861,11 +880,18 @@ class GameController:
         self._run_session(session.resume)
         self._start_voice()
 
+    def _reset_replay(self) -> None:
+        if self._replay_status != REPLAY_WORKING:
+            self._replay_status = REPLAY_IDLE
+            self._replay_file = None
+            self._last_sidecar = None
+
     def next_night(self) -> None:
         session = self._session_or_error()
         if session.state not in (TurnState.SUNRISE, TurnState.DEFEAT):
             raise GameError("cmd.unknown")
         self._stop_narration()
+        self._reset_replay()
         self._session = None
         self._enter_summon()
 
@@ -1341,6 +1367,8 @@ class GameController:
         if self._sidecar is not None:
             self._sidecar["duration_s"] = round(result.seconds, 3)
             self._write_sidecar()
+            if result.ok:
+                self._last_sidecar = self._sidecar_path
         self._sidecar = None
         self._sidecar_path = None
 
@@ -1377,6 +1405,79 @@ class GameController:
             temp.replace(path)
         except OSError:
             logger.warning("recording sidecar write failed")
+
+    def request_replay(self, title_tl: str, title_en: str) -> None:
+        session = self._session_or_error()
+        night = self._night
+        sidecar = self._last_sidecar
+        runner = self._replay_runner
+        if session.state not in (TurnState.SUNRISE, TurnState.DEFEAT) or night is None:
+            raise GameError("cmd.unknown")
+        if (
+            sidecar is None
+            or runner is None
+            or not self._store.recording_consent(night.id)
+        ):
+            raise GameError("replay.none")
+        if self._replay_status == REPLAY_WORKING:
+            raise GameError(BUSY_KEY)
+        rows = tuple(
+            TurnLogRow(turn, phase, event_type, payload, t_ms)
+            for turn, phase, event_type, payload, t_ms in self._store.turn_log_rows(
+                night.id
+            )
+        )
+        sprites: dict[str, bytes] = {}
+        for unit in self._units:
+            if unit.sprite_id is None:
+                continue
+            try:
+                sprites[game_id_for(unit.sam_object_id)] = self._store.sprite_png(
+                    unit.sprite_id
+                )
+            except (StoreError, OSError):
+                logger.warning("sprite unavailable for the reel")
+        request = ReelRequest(
+            sidecar=sidecar,
+            rows=rows,
+            sprites=sprites,
+            out_path=sidecar.with_name(f"reel_{sidecar.stem}.mp4"),
+            work_dir=sidecar.with_name(f"work_{sidecar.stem}"),
+            root=self._store.data_root,
+            ffmpeg=self._ffmpeg,
+            title_tl=title_tl,
+            title_en=title_en,
+            night_number=night.number,
+        )
+        self._replay_status = REPLAY_WORKING
+        self._replay_file = None
+        self._notify("replay.making", {})
+        is_paid = self._demo_safe.allows_sam_video
+        task = asyncio.get_running_loop().create_task(
+            self._run_replay(runner, request, is_paid, night.id)
+        )
+        self._replay_task = task
+
+    async def _run_replay(
+        self, runner: ReplayRunner, request: ReelRequest, is_paid: bool, night_id: str
+    ) -> None:
+        try:
+            result = await runner(request, is_paid)
+            self._store.set_replay_path(night_id, result.path)
+        except (ReplayError, StoreError, OSError, ValueError) as error:
+            logger.warning("replay failed with %s", type(error).__name__)
+            self._replay_status = REPLAY_FAILED
+            self._notify("replay.failed", {})
+        else:
+            self._replay_status = REPLAY_DONE
+            self._replay_file = result.path.name
+            self._notify("replay.done", {"file": result.path.name})
+        self._push_state()
+
+    async def wait_for_replay(self) -> None:
+        task = self._replay_task
+        if task is not None:
+            await asyncio.gather(task, return_exceptions=True)
 
     @property
     def is_recording(self) -> bool:
@@ -2261,6 +2362,10 @@ STUNNED_STATUS: Final = "stunned"
 REFORM_STATUS_PREFIX: Final = "reform_"
 STATE_CHANGED: Final = "state.changed"
 RECORDINGS_DIR: Final = "recordings"
+REPLAY_IDLE: Final = "idle"
+REPLAY_WORKING: Final = "working"
+REPLAY_DONE: Final = "done"
+REPLAY_FAILED: Final = "failed"
 RECORDING_FPS: Final = 25
 SIDECAR_VERSION: Final = 1
 NARRATION_EVENT: Final = "narration"

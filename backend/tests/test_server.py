@@ -320,6 +320,8 @@ def test_pause_and_resume_need_a_night(client: TestClient) -> None:
         assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
         ws.send_text(json.dumps({"type": "effect.done"}))
         assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
+        ws.send_text(json.dumps({"type": "replay.request"}))
+        assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
         ws.send_text(
             json.dumps({"type": "consent", "player_name": "Migs", "agree": True})
         )

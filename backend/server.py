@@ -32,6 +32,7 @@ from game.night import (
     NightView,
     PipelineFactory,
     RecorderFactory,
+    ReplayRunner,
     SegmenterFactory,
     Snapshot,
     SpriteServiceFactory,
@@ -41,10 +42,11 @@ from game.night import (
 from gm.narrator import LineBank, NarrationService, SparkNarrator
 from gm.schemas import ContentFilter
 from meta_client import CostMeter, MetaClient, create_openai_client
+from replay.render import ReelRequest, ReelResult, make_reel
 from rules.resolve import Action
 from rules.units import Difficulty
 from state import Broadcast, EncodedFrame, LiveState
-from vision.sam import SamSegmenter, Segmenter, TrackerOnlySegmenter
+from vision.sam import SamSegmenter, SamVideoTracker, Segmenter, TrackerOnlySegmenter
 from vision.sprites import MuseImageGenerator, PlaceholderGenerator, SpriteService
 from vision.summon import FallbackDetector, SparkDetector, SummonPipeline
 from voice.session import (
@@ -220,6 +222,10 @@ class ConsentMessage(ClientModel):
     agree: bool
 
 
+class ReplayRequestMessage(ClientModel):
+    type: Literal["replay.request"]
+
+
 class EffectDoneMessage(ClientModel):
     type: Literal["effect.done"]
 
@@ -272,6 +278,7 @@ ClientMessage = (
     | PttMessage
     | EffectDoneMessage
     | ConsentMessage
+    | ReplayRequestMessage
     | VoiceModeMessage
     | VoiceRetryMessage
 )
@@ -299,6 +306,7 @@ def build_services(settings: AppSettings) -> Services:
     store = Store(settings.database_path)
     live = LiveState()
     content = ContentFilter.from_data_dir()
+    ffmpeg = find_ffmpeg(env=os.environ)
     sdk = None if settings.api_key is None else create_openai_client(settings.api_key)
     meta = MetaClient(sdk, CostMeter(store))
     broadcast = Broadcast()
@@ -320,7 +328,9 @@ def build_services(settings: AppSettings) -> Services:
         narration=build_narration(meta, content, log_invalid),
         voice_factory=build_voice_factory(settings.api_key, meta.meter),
         clean_name=content.clean_player_name,
-        recorder_factory=build_recorder_factory(find_ffmpeg(env=os.environ)),
+        recorder_factory=build_recorder_factory(ffmpeg),
+        replay_runner=build_replay_runner(meta),
+        ffmpeg=ffmpeg,
     )
     pump = FramePump(controller, live)
 
@@ -363,6 +373,15 @@ def build_narration(
     return NarrationService(
         line_bank, lambda: SparkNarrator(meta, content, line_bank, log_invalid)
     )
+
+
+def build_replay_runner(meta: MetaClient) -> ReplayRunner:
+    async def runner(request: ReelRequest, is_paid: bool) -> ReelResult:
+        if is_paid and meta.has_credentials:
+            return await make_reel(request, meta, SamVideoTracker)
+        return await make_reel(request, None, None)
+
+    return runner
 
 
 def build_recorder_factory(ffmpeg: str | None) -> RecorderFactory:
@@ -569,6 +588,11 @@ def state_json(snapshot: Snapshot) -> JsonObject:
         "awaiting_tap": snapshot.is_awaiting_tap,
         "resume_turn": snapshot.resume_turn,
         "recording": snapshot.is_recording,
+        "replay": {
+            "status": snapshot.replay_status,
+            "file": snapshot.replay_file,
+            "available": snapshot.can_replay,
+        },
         "consents": dict(snapshot.consents),
         "voice": {
             "status": snapshot.voice.status,
@@ -599,6 +623,8 @@ def frame_json(frame: EncodedFrame) -> JsonObject:
 
 
 COST_QUANTUM: Final = Decimal("0.000001")
+REEL_TITLE_TL: Final = "SUMIKAT NA"
+REEL_TITLE_EN: Final = "SUNRISE"
 
 
 def cost_json(meter: CostMeter) -> JsonObject:
@@ -800,6 +826,9 @@ class Connection:
             return None
         if isinstance(message, NightResumeMessage):
             await asyncio.to_thread(controller.resume_night, message.force)
+            return None
+        if isinstance(message, ReplayRequestMessage):
+            controller.request_replay(REEL_TITLE_TL, REEL_TITLE_EN)
             return None
         if isinstance(message, ConsentMessage):
             controller.give_consent(message.player_name, message.agree)

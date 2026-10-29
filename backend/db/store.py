@@ -522,6 +522,38 @@ class Store:
         if cursor.rowcount == 0:
             raise NotFoundError("night not found")
 
+    def turn_log_rows(
+        self, night_id: str
+    ) -> list[tuple[int, str, str, dict[str, object], int]]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT turn, phase, event_type, payload_json, t_ms FROM turn_log "
+                "WHERE night_id = ? ORDER BY id",
+                (night_id,),
+            ).fetchall()
+        result: list[tuple[int, str, str, dict[str, object], int]] = []
+        for row in rows:
+            payload = json.loads(row["payload_json"])
+            result.append(
+                (
+                    int(row["turn"]),
+                    str(row["phase"]),
+                    str(row["event_type"]),
+                    payload if isinstance(payload, dict) else {},
+                    int(row["t_ms"]),
+                )
+            )
+        return result
+
+    def set_replay_path(self, night_id: str, path: Path) -> None:
+        relative = path.resolve().relative_to(self._data_root).as_posix()
+        with self.transaction() as conn:
+            cursor = conn.execute(
+                "UPDATE night SET replay_path = ? WHERE id = ?", (relative, night_id)
+            )
+        if cursor.rowcount == 0:
+            raise NotFoundError("night not found")
+
     def set_recording_consent(self, night_id: str, is_given: bool) -> None:
         with self.transaction() as conn:
             cursor = conn.execute(

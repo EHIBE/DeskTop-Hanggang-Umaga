@@ -27,6 +27,10 @@ class DemoSafeMode:
         return not self.is_on
 
     @property
+    def allows_sam_video(self) -> bool:
+        return not self.is_on
+
+    @property
     def allows_voice(self) -> bool:
         return not self.is_on
 

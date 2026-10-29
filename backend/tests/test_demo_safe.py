@@ -34,6 +34,7 @@ def test_on_blocks_paid_calls_but_keeps_reanchor_by_default() -> None:
     assert not mode.allows_spark
     assert not mode.allows_image
     assert not mode.allows_voice
+    assert not mode.allows_sam_video
     assert not mode.allows_sam_recovery
     assert mode.allows_sam_reanchor
     assert not mode.with_sam_reanchor(False).allows_sam_reanchor

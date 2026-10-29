@@ -623,3 +623,25 @@ def test_version_one_database_migrates(tmp_path: Path) -> None:
     second.autosave(night.id, 1, [], [], None, [], {"enemies_defeated": 0})
     assert second.saved_night(night.id) is not None
     second.close()
+
+
+def test_turn_log_rows_and_replay_path(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    night = store.start_or_resume_night(campaign.id)
+    store.log_turn(
+        night.id, 1, "CHECK_END", "attack", {"dst": "e_aswang_1", "dmg": 2}, 50
+    )
+    store.log_turn(night.id, 1, "CHECK_END", "win", {}, 70)
+    assert store.turn_log_rows(night.id) == [
+        (1, "CHECK_END", "attack", {"dst": "e_aswang_1", "dmg": 2}, 50),
+        (1, "CHECK_END", "win", {}, 70),
+    ]
+    reel = store.campaign_dir(campaign.id) / "recordings" / "reel.mp4"
+    store.set_replay_path(night.id, reel)
+    with store.transaction() as conn:
+        row = conn.execute(
+            "SELECT replay_path FROM night WHERE id = ?", (night.id,)
+        ).fetchone()
+    assert row[0] == f"campaigns/{campaign.id}/recordings/reel.mp4"
+    with pytest.raises(ValueError):
+        store.set_replay_path(night.id, Path("C:/elsewhere/reel.mp4"))
