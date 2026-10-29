@@ -246,5 +246,6 @@ def test_narrations_are_logged_for_e4(tmp_path: Path) -> None:
     assert campaign is not None
     night = store.start_or_resume_night(campaign.id)
     assert store.turn_log_count(night.id, "narration") == 1
+    assert store.turn_log_count(night.id, "narration_request") == 1
     controller.close()
     store.close()

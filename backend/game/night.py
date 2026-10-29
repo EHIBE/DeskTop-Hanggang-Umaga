@@ -1190,25 +1190,30 @@ class GameController:
             events=tuple(events),
         )
         players = {alias: name for name, alias in aliases.items()}
+        started = self._clock()
+        self._write_narration_log(
+            request, NARRATION_REQUEST_EVENT, {"phase": request.phase}, 0
+        )
         narration.submit(
             request,
             not self._demo_safe.allows_spark,
-            lambda sent, reply: self._publish_narration(sent, reply, players),
+            lambda sent, reply: self._publish_narration(sent, reply, players, started),
         )
 
-    def _log_narration(self, request: NarrationRequest, narration: Narration) -> None:
+    def _write_narration_log(
+        self,
+        request: NarrationRequest,
+        event: str,
+        payload: dict[str, object],
+        t_ms: int,
+    ) -> None:
         night = self._night
         session = self._session
         if night is None or session is None:
             return
         try:
             self._store.log_turn(
-                night.id,
-                request.turn,
-                session.state.value,
-                NARRATION_EVENT,
-                {"source": narration.source.value, "phase": request.phase},
-                0,
+                night.id, request.turn, session.state.value, event, payload, t_ms
             )
         except StoreError:
             logger.warning("narration log write failed")
@@ -1233,8 +1238,19 @@ class GameController:
         request: NarrationRequest,
         narration: Narration,
         players: Mapping[str, str],
+        started: float,
     ) -> None:
-        self._log_narration(request, narration)
+        latency_ms = max(0, round((self._clock() - started) * 1000))
+        self._write_narration_log(
+            request,
+            NARRATION_EVENT,
+            {
+                "source": narration.source.value,
+                "phase": request.phase,
+                "latency_ms": latency_ms,
+            },
+            latency_ms,
+        )
         if self._broadcast is None:
             return
         narration = restore_player_names(narration, players)
@@ -2185,6 +2201,7 @@ REFORM_STATUS_PREFIX: Final = "reform_"
 STATE_CHANGED: Final = "state.changed"
 RECORDINGS_DIR: Final = "recordings"
 NARRATION_EVENT: Final = "narration"
+NARRATION_REQUEST_EVENT: Final = "narration_request"
 PUSH_EFFECT: Final = "push"
 STEAL_EFFECT: Final = "steal"
 EFFECT_NOTICES: Final[Mapping[EventType, str]] = {
