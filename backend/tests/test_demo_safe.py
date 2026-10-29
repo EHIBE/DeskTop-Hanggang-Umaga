@@ -1,14 +1,13 @@
 import asyncio
-import contextlib
 from pathlib import Path
 
 from db.store import Store
 from game.demo_safe import DemoSafeMode
-from game.night import AppPhase, GameError
+from game.night import AppPhase
 from gm.narrator import LineBank, NarrationService
-from rules.resolve import Action
 from state import Broadcast
 from tests.test_narration_flow import FixedNarrator, claimed, narrations
+from tests.test_night_flow import play_one_turn
 from tests.test_tracking_flow import ConfidentSegmenter, controller_for
 
 
@@ -48,7 +47,9 @@ def test_settings_round_trip() -> None:
     settings = MemorySettings()
     DemoSafeMode(is_on=True, is_sam_reanchor_on=False).save(settings)
     assert settings.values == {"demo_safe": "1", "demo_safe_sam": "0"}
-    assert DemoSafeMode.load(settings) == DemoSafeMode(is_on=True, is_sam_reanchor_on=False)
+    assert DemoSafeMode.load(settings) == DemoSafeMode(
+        is_on=True, is_sam_reanchor_on=False
+    )
 
 
 def test_demo_safe_night_runs_eight_turns_without_paid_calls(tmp_path: Path) -> None:
@@ -70,12 +71,7 @@ def test_demo_safe_night_runs_eight_turns_without_paid_calls(tmp_path: Path) -> 
     claimed(controller)
     turns = 0
     while controller.snapshot().phase is AppPhase.PLAYER_PHASE:
-        night = controller.snapshot().night
-        assert night is not None
-        if night.enemies:
-            with contextlib.suppress(GameError):
-                controller.add_intent("u_2", Action.ATTACK, night.enemies[0].id)
-        asyncio.run(controller.end_turn())
+        play_one_turn(controller)
         turns += 1
     assert controller.snapshot().phase in (AppPhase.SUNRISE, AppPhase.DEFEAT)
     assert 1 <= turns <= 8

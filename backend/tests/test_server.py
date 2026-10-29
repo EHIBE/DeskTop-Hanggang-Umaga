@@ -268,10 +268,14 @@ def test_campaign_delete_removes_it_from_the_list(tmp_path: Path) -> None:
     app = create_app(settings, frozenset({ORIGIN}), make_factory(tmp_path))
     with TestClient(app) as test_client, connect(test_client) as ws:
         receive_type(ws, "state")
-        ws.send_text(json.dumps({"type": "campaign.delete", "campaign_id": campaign.id}))
+        ws.send_text(
+            json.dumps({"type": "campaign.delete", "campaign_id": campaign.id})
+        )
         assert receive_type(ws, "campaigns")["campaigns"] == []
         assert receive_type(ws, "notice")["copy_key"] == "delete.done"
-        ws.send_text(json.dumps({"type": "campaign.delete", "campaign_id": campaign.id}))
+        ws.send_text(
+            json.dumps({"type": "campaign.delete", "campaign_id": campaign.id})
+        )
         assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
 
 
@@ -279,11 +283,15 @@ def test_campaign_delete_is_refused_outside_start(client: TestClient) -> None:
     with connect(client) as ws:
         receive_type(ws, "state")
         ws.send_text(
-            json.dumps({"type": "campaign.start", "new": {"name": "B", "difficulty": "normal"}})
+            json.dumps(
+                {"type": "campaign.start", "new": {"name": "B", "difficulty": "normal"}}
+            )
         )
         campaign = receive_type(ws, "state")["campaign"]
         assert isinstance(campaign, dict)
-        ws.send_text(json.dumps({"type": "campaign.delete", "campaign_id": campaign["id"]}))
+        ws.send_text(
+            json.dumps({"type": "campaign.delete", "campaign_id": campaign["id"]})
+        )
         assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
 
 
@@ -308,6 +316,8 @@ def test_pause_and_resume_need_a_night(client: TestClient) -> None:
     with connect(client) as ws:
         receive_type(ws, "state")
         ws.send_text(json.dumps({"type": "night.pause"}))
+        assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
+        ws.send_text(json.dumps({"type": "effect.done"}))
         assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
         ws.send_text(json.dumps({"type": "night.resume"}))
         assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"

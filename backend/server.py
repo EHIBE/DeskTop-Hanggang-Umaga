@@ -212,6 +212,10 @@ class DemoSafeMessage(ClientModel):
     on: bool
 
 
+class EffectDoneMessage(ClientModel):
+    type: Literal["effect.done"]
+
+
 class PttMessage(ClientModel):
     type: Literal["ptt"]
     down: bool
@@ -258,6 +262,7 @@ ClientMessage = (
     | DemoSafeMessage
     | DemoSafeSamMessage
     | PttMessage
+    | EffectDoneMessage
     | VoiceModeMessage
     | VoiceRetryMessage
 )
@@ -472,6 +477,7 @@ def night_json(night: NightView) -> JsonObject:
                 "move_cm": u.move_cm,
                 "range_cm": u.range_cm,
                 "owner": u.owner,
+                "status": list(u.status),
             }
             for u in night.units
         ],
@@ -505,6 +511,11 @@ def night_json(night: NightView) -> JsonObject:
         "illegal_units": list(night.illegal_units),
         "kubo_hp": night.kubo_hp,
         "kubo_hp_max": night.kubo_hp_max,
+        "effects": [
+            {"kind": e.kind, "unit_id": e.unit_id, "x_cm": e.x_cm, "y_cm": e.y_cm}
+            for e in night.effects
+        ],
+        "effect_seconds_left": night.effect_seconds_left,
     }
 
 
@@ -657,7 +668,13 @@ class Connection:
         except NotFoundError:
             await self.send(notice_json(INVALID_MESSAGE_KEY))
             return
-        except (StoreError, CalibrationError, CameraError, OSError, ValueError) as error:
+        except (
+            StoreError,
+            CalibrationError,
+            CameraError,
+            OSError,
+            ValueError,
+        ) as error:
             logger.warning("message handling failed with %s", type(error).__name__)
             await self.send(notice_json(FAILURE_KEY))
             await self.send_state()
@@ -765,6 +782,9 @@ class Connection:
         if isinstance(message, NightResumeMessage):
             await asyncio.to_thread(controller.resume_night, message.force)
             return None
+        if isinstance(message, EffectDoneMessage):
+            controller.finish_effects_now()
+            return None
         if isinstance(message, PttMessage):
             controller.set_ptt(message.down)
             return None
@@ -789,10 +809,11 @@ async def recover_forever(controller: GameController) -> None:
         await asyncio.sleep(RECOVERY_INTERVAL_S)
         try:
             controller.enforce_claim_timeout()
+            controller.enforce_effects()
         except GameError:
-            logger.warning("voice claim timeout skipped")
+            logger.warning("timed night step skipped")
         except Exception:
-            logger.exception("voice claim timeout failed, will retry")
+            logger.exception("timed night step failed, will retry")
         try:
             await controller.recover_lost_objects()
         except GameError:

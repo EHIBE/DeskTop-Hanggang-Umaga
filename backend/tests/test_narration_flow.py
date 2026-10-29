@@ -13,9 +13,9 @@ from gm.narrator import (
 )
 from gm.schemas import Mood
 from meta_client import MetaError
-from rules.resolve import Action
 from state import Broadcast
 from tests.test_night import CONTENT
+from tests.test_night_flow import play_one_turn
 from tests.test_tracking_flow import ConfidentSegmenter, controller_for, summon_three
 
 
@@ -51,7 +51,12 @@ class FixedNarrator:
         if self._error is not None:
             raise self._error
         return Narration(
-            "Galing P1!", "Nice one P1!", Mood.KABA, (Callout("u_2", "P1 bida"),), "", NarrationSource.SPARK
+            "Galing P1!",
+            "Nice one P1!",
+            Mood.KABA,
+            (Callout("u_2", "P1 bida"),),
+            "",
+            NarrationSource.SPARK,
         )
 
 
@@ -60,7 +65,10 @@ def test_line_bank_narrates_every_moment_of_a_night(tmp_path: Path) -> None:
     broadcast = Broadcast()
     queue = broadcast.subscribe()
     controller = controller_for(
-        store, ConfidentSegmenter(), narration=NarrationService(LineBank()), broadcast=broadcast
+        store,
+        ConfidentSegmenter(),
+        narration=NarrationService(LineBank()),
+        broadcast=broadcast,
     )
     claimed(controller)
     first = narrations(queue)
@@ -72,11 +80,7 @@ def test_line_bank_narrates_every_moment_of_a_night(tmp_path: Path) -> None:
     for _ in range(8):
         if controller.snapshot().phase is not AppPhase.PLAYER_PHASE:
             break
-        night = controller.snapshot().night
-        assert night is not None
-        if night.enemies:
-            controller.add_intent("u_2", Action.ATTACK, night.enemies[0].id)
-        asyncio.run(controller.end_turn())
+        play_one_turn(controller)
         phases.extend(m["phase"] for m in narrations(queue))
     final = controller.snapshot().phase
     expected_end = "sunrise" if final is AppPhase.SUNRISE else "defeat"

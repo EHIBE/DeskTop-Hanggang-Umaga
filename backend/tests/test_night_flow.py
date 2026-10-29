@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 from pathlib import Path
 
 import numpy as np
@@ -24,6 +25,17 @@ def start_night(controller: GameController) -> None:
     controller.finish_claims()
 
 
+def play_one_turn(controller: GameController) -> None:
+    night = controller.snapshot().night
+    assert night is not None
+    if night.enemies:
+        with contextlib.suppress(GameError):
+            controller.add_intent("u_2", Action.ATTACK, night.enemies[0].id)
+    asyncio.run(controller.end_turn())
+    if controller.snapshot().phase is AppPhase.PHYSICAL_EFFECTS:
+        controller.finish_effects_now()
+
+
 def test_full_night_reaches_sunrise_or_defeat(tmp_path: Path) -> None:
     store = Store(tmp_path / "db.sqlite")
     controller = controller_for(store, ConfidentSegmenter())
@@ -39,12 +51,7 @@ def test_full_night_reaches_sunrise_or_defeat(tmp_path: Path) -> None:
     for _ in range(8):
         if controller.snapshot().phase is not AppPhase.PLAYER_PHASE:
             break
-        night = controller.snapshot().night
-        assert night is not None
-        target = night.enemies[0].id if night.enemies else None
-        if target is not None:
-            controller.add_intent("u_2", Action.ATTACK, target)
-        asyncio.run(controller.end_turn())
+        play_one_turn(controller)
     final = controller.snapshot()
     assert final.phase in (AppPhase.SUNRISE, AppPhase.DEFEAT)
     assert final.score is not None
@@ -218,11 +225,7 @@ def play_turns(controller: GameController, turns: int) -> None:
     for _ in range(turns):
         if controller.snapshot().phase is not AppPhase.PLAYER_PHASE:
             return
-        night = controller.snapshot().night
-        assert night is not None
-        if night.enemies:
-            controller.add_intent("u_2", Action.ATTACK, night.enemies[0].id)
-        asyncio.run(controller.end_turn())
+        play_one_turn(controller)
 
 
 def test_restart_resumes_the_saved_turn_exactly(tmp_path: Path) -> None:
@@ -410,7 +413,7 @@ def test_recalibrate_while_paused_resumes_the_same_night(tmp_path: Path) -> None
     assert paused.night.turn == before.turn
     assert paused.night.enemies == before.enemies
     controller.resume_night(is_forced=False)
-    asyncio.run(controller.end_turn())
+    play_one_turn(controller)
     assert controller.snapshot().night.turn == before.turn + 1  # type: ignore[union-attr]
     controller.close()
     store.close()

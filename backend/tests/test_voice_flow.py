@@ -61,7 +61,9 @@ class Voices:
         return voice
 
 
-def setup(tmp_path: Path) -> tuple[Store, GameController, Voices, asyncio.Queue[dict[str, object]]]:
+def setup(
+    tmp_path: Path,
+) -> tuple[Store, GameController, Voices, asyncio.Queue[dict[str, object]]]:
     store = Store(tmp_path / "db.sqlite")
     broadcast = Broadcast()
     queue = broadcast.subscribe()
@@ -239,7 +241,8 @@ def test_spoken_claims_map_speakers_to_players(tmp_path: Path) -> None:
         chips = controller.snapshot().night.chips  # type: ignore[union-attr]
         assert chips[-1].speaker == "spk_0"
         second.say("ako si Migs", "spk_0")
-        assert [c.speaker for c in controller.snapshot().night.chips] == ["Migs", "Migs"]  # type: ignore[union-attr]
+        relabelled = controller.snapshot().night.chips  # type: ignore[union-attr]
+        assert [c.speaker for c in relabelled] == ["Migs", "Migs"]
         second.say("Hindi", "spk_0")
         remaining = controller.snapshot().night.chips  # type: ignore[union-attr]
         assert [(c.unit_id, c.speaker) for c in remaining] == [("u_2", "Migs")]

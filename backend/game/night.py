@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
+import math
 import re
 import threading
 import time
@@ -40,6 +41,8 @@ from capture.tracker import TrackedPose, TrackerSet
 from config import (
     HANDS_OFF_WAIT_S,
     NIGHT_COST_ALERT_USD,
+    PHYSICAL_EFFECT_TIMEOUT_S,
+    PUSH_COMPLIANCE_CM,
     REANCHOR_BOX_PADDING,
     SAM_ACCEPT_CONFIDENCE,
     STILL_FRAME_MEAN_DIFF_MAX,
@@ -85,15 +88,19 @@ from rules.resolve import (
     Intent,
     Outcome,
     UnitState,
+    apply_enemy_tags,
+    apply_unit_tags,
     bayani,
     begin_turn,
     check_outcome,
+    enemy_status_tags,
     illegal_moves,
     intent_error,
     moved_kubo,
     resolve_turn,
     score,
     start_night,
+    unit_status_tags,
     with_positions,
 )
 from rules.units import (
@@ -209,6 +216,7 @@ class NightUnitView:
     move_cm: float
     range_cm: float
     owner: str | None
+    status: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -247,6 +255,8 @@ class NightView:
     illegal_units: tuple[str, ...]
     kubo_hp: int
     kubo_hp_max: int
+    effects: tuple[PhysicalEffect, ...] = ()
+    effect_seconds_left: int = 0
 
 
 class GameError(Exception):
@@ -398,6 +408,8 @@ class GameController:
         self._session: NightSession | None = None
         self._resume_turn: int | None = None
         self._baseline: Image | None = None
+        self._effects_started = 0.0
+        self._effect_events: tuple[Event, ...] = ()
         self._claim_started = 0.0
         self._broadcast = broadcast
         self._crops: dict[str, Image] = {}
@@ -497,6 +509,7 @@ class GameController:
                         move_cm=0.0 if unit.is_kubo else move_cm,
                         range_cm=RANGE_CM[unit.range],
                         owner=unit.owner,
+                        status=unit_status_tags(unit),
                     )
                 )
                 if unit.is_kubo:
@@ -539,6 +552,13 @@ class GameController:
             illegal_units=session.illegal_units,
             kubo_hp=kubo_hp,
             kubo_hp_max=kubo_max,
+            effects=session.effects,
+            effect_seconds_left=max(
+                0,
+                math.ceil(PHYSICAL_EFFECT_TIMEOUT_S - (self._clock() - self._effects_started)),
+            )
+            if session.effects
+            else 0,
         )
 
     def _notify(self, copy_key: str, params: dict[str, str]) -> None:
@@ -610,6 +630,7 @@ class GameController:
         result = self._run_session(lambda: session.restore(saved, poses, sizes, owners))
         self._session = session
         self._resume_turn = None
+        self._seed_boxes_from_board(session)
         self._notify("restore", {})
         self._publish_events(result)
         self._narrate(NarrationPhase.RESOLUTION_THEN_TELEGRAPH, result.telegraph)
@@ -694,16 +715,64 @@ class GameController:
         self._publish_events(result)
         if result.is_blocked:
             return
+        if result.effects:
+            self._effects_started = self._clock()
+            self._effect_events = result.events
+            return
+        self._after_resolution(session, result.events, result.telegraph)
+
+    def _after_resolution(
+        self, session: NightSession, events: tuple[Event, ...], telegraph: tuple[Event, ...]
+    ) -> None:
         if session.state is TurnState.SUNRISE:
-            self._narrate(NarrationPhase.SUNRISE, result.events)
+            self._narrate(NarrationPhase.SUNRISE, events)
             self._stop_voice()
         elif session.state is TurnState.DEFEAT:
-            self._narrate(NarrationPhase.DEFEAT, result.events)
+            self._narrate(NarrationPhase.DEFEAT, events)
             self._stop_voice()
         else:
-            self._narrate(
-                NarrationPhase.RESOLUTION_THEN_TELEGRAPH, result.events + result.telegraph
-            )
+            self._narrate(NarrationPhase.RESOLUTION_THEN_TELEGRAPH, events + telegraph)
+
+    def enforce_effects(self) -> bool:
+        session = self._session
+        if session is None or session.state is not TurnState.PHYSICAL_EFFECTS:
+            return False
+        poses = {pose.id: pose for pose in self._pose_list()}
+        is_done = all(self._is_effect_done(effect, poses) for effect in session.effects)
+        if not is_done and self._clock() - self._effects_started < PHYSICAL_EFFECT_TIMEOUT_S:
+            return False
+        if not is_done:
+            self._notify("effect.timeout", {})
+        self._finish_effects(session, poses)
+        return True
+
+    def finish_effects_now(self) -> None:
+        session = self._session_or_error()
+        if session.state is not TurnState.PHYSICAL_EFFECTS:
+            raise GameError("cmd.unknown")
+        self._finish_effects(session, {pose.id: pose for pose in self._pose_list()})
+
+    @staticmethod
+    def _is_effect_done(effect: PhysicalEffect, poses: Mapping[str, Pose]) -> bool:
+        pose = poses.get(effect.unit_id)
+        if effect.kind == STEAL_EFFECT:
+            return pose is None or pose.uncertain
+        if pose is None or pose.uncertain:
+            return False
+        return math.hypot(pose.x_cm - effect.x_cm, pose.y_cm - effect.y_cm) <= PUSH_COMPLIANCE_CM
+
+    def _finish_effects(self, session: NightSession, poses: Mapping[str, Pose]) -> None:
+        positions = {
+            game_id: (pose.x_cm, pose.y_cm)
+            for game_id, pose in poses.items()
+            if not pose.uncertain
+        }
+        result = self._run_session(lambda: session.finish_effects(positions))
+        self._publish_events(result)
+        events = self._effect_events
+        self._effect_events = ()
+        self._after_resolution(session, events, result.telegraph)
+        self._push_state()
 
     def _publish_events(self, result: TurnResult) -> None:
         if self._broadcast is None:
@@ -949,7 +1018,11 @@ class GameController:
         )
         self._is_night_alerted = False
         self._units = self._store.night_units(self._night.id)
-        saved = None if self._session is not None else self._store.saved_night(self._night.id)
+        saved = (
+            None
+            if self._session is not None
+            else self._store.saved_night(self._night.id)
+        )
         self._resume_turn = None if saved is None else saved.turns_completed + 1
         self._boxes = {
             unit.sam_object_id: self._default_box(unit) for unit in self._units
@@ -961,6 +1034,30 @@ class GameController:
         self._is_tracker_dirty = True
         self._poses = {}
         self._uncertain = set()
+
+    def _seed_boxes_from_board(self, session: NightSession) -> None:
+        board = session.board
+        if board is None:
+            return
+        ppc = float(self._area.px_per_cm)
+        width, height = self._area.warped_size
+        by_id = {u.id: u for u in board.units}
+        with self._lock:
+            for record in self._units:
+                unit = by_id.get(game_id_for(record.sam_object_id))
+                if unit is None:
+                    continue
+                xs = [x for x, _ in unit.hull_offsets]
+                ys = [y for _, y in unit.hull_offsets]
+                x, y = unit.position
+                box = PixelBox(
+                    round((x + min(xs)) * ppc),
+                    round((y + min(ys)) * ppc),
+                    round((x + max(xs)) * ppc),
+                    round((y + max(ys)) * ppc),
+                )
+                self._boxes[record.sam_object_id] = clamp_box(box, width, height)
+            self._is_tracker_dirty = True
 
     def _default_box(self, unit: UnitRecord) -> PixelBox:
         ppc = self._area.px_per_cm
@@ -1014,7 +1111,10 @@ class GameController:
         if board is None:
             return
         names = {game_id_for(u.sam_object_id): u.card.name for u in self._units}
-        aliases = {name: f"{PLAYER_ALIAS_PREFIX}{i + 1}" for i, name in enumerate(session.players)}
+        aliases = {
+            name: f"{PLAYER_ALIAS_PREFIX}{i + 1}"
+            for i, name in enumerate(session.players)
+        }
         kubo = board.kubo
         request = NarrationRequest(
             night=night.number,
@@ -1050,7 +1150,10 @@ class GameController:
         )
 
     def _publish_narration(
-        self, request: NarrationRequest, narration: Narration, players: Mapping[str, str]
+        self,
+        request: NarrationRequest,
+        narration: Narration,
+        players: Mapping[str, str],
     ) -> None:
         if self._broadcast is None:
             return
@@ -1065,7 +1168,8 @@ class GameController:
                 "narration_en": narration.narration_en,
                 "mood": narration.mood.value,
                 "callouts": [
-                    {"entity_id": c.entity_id, "text_tl": c.text_tl} for c in narration.callouts
+                    {"entity_id": c.entity_id, "text_tl": c.text_tl}
+                    for c in narration.callouts
                 ],
                 "hint_tl": narration.hint_tl,
                 "source": narration.source.value,
@@ -1083,7 +1187,11 @@ class GameController:
 
     def _start_voice(self) -> None:
         factory = self._voice_factory
-        if factory is None or self._voice is not None or not self._demo_safe.allows_voice:
+        if (
+            factory is None
+            or self._voice is not None
+            or not self._demo_safe.allows_voice
+        ):
             return
         try:
             loop = asyncio.get_running_loop()
@@ -1111,7 +1219,9 @@ class GameController:
             if is_current():
                 self._on_voice_status(status)
 
-        voice = factory([*VOICE_KEYWORDS, *names], on_caption, on_final, on_overlap, on_status)
+        voice = factory(
+            [*VOICE_KEYWORDS, *names], on_caption, on_final, on_overlap, on_status
+        )
         owner.append(voice)
         if self._voice_players:
             self._voice_players = {}
@@ -1208,13 +1318,17 @@ class GameController:
                 self._apply_voice_claim(session, caption, is_claim_phase=True)
             elif session.state is TurnState.PLAYER_PHASE:
                 context = self._grammar_context(session)
-                command = None if context is None else parse_command(caption.text, context)
+                command = (
+                    None if context is None else parse_command(caption.text, context)
+                )
                 if command is None and self._apply_voice_claim(
                     session, caption, is_claim_phase=False
                 ):
                     self._push_state()
                     return
-                self._apply_voice_command(session, command, self._speaker_name(caption.speaker))
+                self._apply_voice_command(
+                    session, command, self._speaker_name(caption.speaker)
+                )
             else:
                 return
         except SessionError as error:
@@ -1225,7 +1339,9 @@ class GameController:
         self, session: NightSession, caption: Caption, is_claim_phase: bool
     ) -> bool:
         units = [
-            ClaimUnit(game_id_for(u.sam_object_id), u.card.name, u.card.unit_class.value)
+            ClaimUnit(
+                game_id_for(u.sam_object_id), u.card.name, u.card.unit_class.value
+            )
             for u in self._units
         ]
         command = parse_claim(caption.text, units)
@@ -1290,7 +1406,11 @@ class GameController:
         return GrammarContext(
             units=tuple(
                 GrammarUnit(
-                    u.id, names.get(u.id, u.id), u.unit_class.value, u.position[0], u.position[1]
+                    u.id,
+                    names.get(u.id, u.id),
+                    u.unit_class.value,
+                    u.position[0],
+                    u.position[1],
                 )
                 for u in board.units
             ),
@@ -1630,7 +1750,10 @@ class GameController:
                 "ascii"
             )
         except (StoreError, OSError, SpriteError) as error:
-            logger.warning("sprite job failed with %s, keeping the placeholder", type(error).__name__)
+            logger.warning(
+                "sprite job failed with %s, keeping the placeholder",
+                type(error).__name__,
+            )
             return
         if self._sprite_versions.get(job.unit_id) != version:
             return
@@ -1795,7 +1918,11 @@ class GameController:
         tracker = self._tracker
         if night is None or calibration is None or tracker is None:
             raise GameError("cmd.unknown")
-        frame = still if still is not None else await asyncio.to_thread(self.wait_for_still_frame)
+        frame = (
+            still
+            if still is not None
+            else await asyncio.to_thread(self.wait_for_still_frame)
+        )
         if frame is None:
             raise GameError("cam.busy")
         signatures = self._store.unit_signatures(night.id)
@@ -1925,6 +2052,15 @@ DOWN_STATUS: Final = "down"
 STUNNED_STATUS: Final = "stunned"
 REFORM_STATUS_PREFIX: Final = "reform_"
 STATE_CHANGED: Final = "state.changed"
+PUSH_EFFECT: Final = "push"
+STEAL_EFFECT: Final = "steal"
+EFFECT_NOTICES: Final[Mapping[EventType, str]] = {
+    EventType.PUSH: "tik.push",
+    EventType.THROWN: "tik.thrown",
+    EventType.STEAL: "duw.steal",
+    EventType.RETURN: "duw.back",
+    EventType.ESCAPE: "duw.escape",
+}
 VOICE_KEYWORDS: Final = (
     "tapos na",
     "hindi",
@@ -1950,7 +2086,8 @@ PLAYER_ALIAS_PATTERN: Final = re.compile(r"\bP[1-4]\b")
 ACTIVE_NIGHT_STATES: Final = frozenset(
     state
     for state in TurnState
-    if state not in (TurnState.SUMMON, TurnState.PAUSED, TurnState.SUNRISE, TurnState.DEFEAT)
+    if state
+    not in (TurnState.SUMMON, TurnState.PAUSED, TurnState.SUNRISE, TurnState.DEFEAT)
 )
 VOICE_STATES: Final = ACTIVE_NIGHT_STATES | {TurnState.PAUSED}
 MIN_HULL_POINTS: Final = 3
@@ -1973,10 +2110,19 @@ class Chip:
 
 
 @dataclass(frozen=True)
+class PhysicalEffect:
+    kind: str
+    unit_id: str
+    x_cm: float
+    y_cm: float
+
+
+@dataclass(frozen=True)
 class TurnResult:
     events: tuple[Event, ...]
     telegraph: tuple[Event, ...]
     is_blocked: bool
+    effects: tuple[PhysicalEffect, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -2033,6 +2179,7 @@ class NightSession:
         self._illegal: tuple[str, ...] = ()
         self._board: BoardState | None = None
         self._final: FinalScore | None = None
+        self._effects: tuple[PhysicalEffect, ...] = ()
 
     @property
     def state(self) -> TurnState:
@@ -2060,12 +2207,16 @@ class NightSession:
 
     def rename_speaker(self, label: str, name: str) -> None:
         self._chips = [
-            replace(c, speaker=name) if c.source == VOICE_SOURCE and c.speaker == label else c
+            replace(c, speaker=name)
+            if c.source == VOICE_SOURCE and c.speaker == label
+            else c
             for c in self._chips
         ]
 
     def owned_by(self, player_name: str) -> list[str]:
-        return [game_id for game_id, owner in self._owners.items() if owner == player_name]
+        return [
+            game_id for game_id, owner in self._owners.items() if owner == player_name
+        ]
 
     def owner_of(self, game_id: str) -> str | None:
         return self._owners.get(game_id)
@@ -2177,8 +2328,16 @@ class NightSession:
                 save = saved.units.get(record.unit_id)
                 cooldown = 0 if save is None else save.cooldown
                 unit = self._unit_state(record, positions, sizes, cooldown)
-                units.append(replace(unit, hull_offsets=hulls.get(unit.id, unit.hull_offsets)))
-            units.sort(key=lambda unit: self._records[self._unit_ids[unit.id]].sam_object_id)
+                if save is not None:
+                    unit = apply_unit_tags(unit, save.status)
+                    if unit.is_absent:
+                        unit = replace(unit, position=(save.x_cm, save.y_cm))
+                units.append(
+                    replace(unit, hull_offsets=hulls.get(unit.id, unit.hull_offsets))
+                )
+            units.sort(
+                key=lambda unit: self._records[self._unit_ids[unit.id]].sam_object_id
+            )
             self._board = BoardState(
                 turn=saved.turns_completed,
                 difficulty=self._difficulty,
@@ -2186,7 +2345,9 @@ class NightSession:
                 play_w_cm=self._play_size[0],
                 play_h_cm=self._play_size[1],
                 units=tuple(units),
-                enemies=tuple(_enemy_from_save(e, self._difficulty) for e in saved.enemies),
+                enemies=tuple(
+                    _enemy_from_save(e, self._difficulty) for e in saved.enemies
+                ),
                 flags=flags,
                 enemies_defeated=_meta_int(meta, "enemies_defeated", 0),
                 enemy_counter=_meta_counts(meta, "enemy_counter"),
@@ -2260,14 +2421,18 @@ class NightSession:
         error = intent_error(board, intent)
         if error is not None:
             raise SessionError(error, {"unit": self._name_of(game_id)})
-        chip = Chip(chip_id=str(uuid.uuid4()), intent=intent, source=source, speaker=speaker)
+        chip = Chip(
+            chip_id=str(uuid.uuid4()), intent=intent, source=source, speaker=speaker
+        )
         self._chips = [c for c in self._chips if c.intent.unit_id != game_id] + [chip]
         return chip
 
     def cancel_last_voice_chip(self, speaker: str | None) -> Chip:
         self._require(TurnState.PLAYER_PHASE)
         for chip in reversed(self._chips):
-            if chip.source == VOICE_SOURCE and (speaker is None or chip.speaker == speaker):
+            if chip.source == VOICE_SOURCE and (
+                speaker is None or chip.speaker == speaker
+            ):
                 self._chips = [c for c in self._chips if c.chip_id != chip.chip_id]
                 return chip
         raise SessionError("cmd.unknown")
@@ -2327,21 +2492,61 @@ class NightSession:
         self._board = resolved
         self._machine.transition(TurnEvent.PLAYER_RESOLVED)
         self._machine.transition(TurnEvent.ENEMY_RESOLVED)
-        self._machine.transition(TurnEvent.EFFECTS_DONE)
         self._announce(events)
         for event in events:
             self._pending_log.append(
                 (
                     resolved.turn,
-                    TurnState.CHECK_END.value,
+                    TurnState.PHYSICAL_EFFECTS.value,
                     event.type.value,
                     _event_payload(event),
                     self._t_ms(),
                 )
             )
-        outcome = check_outcome(resolved)
-        telegraph = self._conclude(outcome)
+        effects = self._physical_effects(resolved, events)
+        if effects:
+            self._effects = effects
+            return TurnResult(events=events, telegraph=(), is_blocked=False, effects=effects)
+        self._machine.transition(TurnEvent.EFFECTS_DONE)
+        telegraph = self._conclude(check_outcome(resolved))
         return TurnResult(events=events, telegraph=telegraph, is_blocked=False)
+
+    @property
+    def effects(self) -> tuple[PhysicalEffect, ...]:
+        return self._effects
+
+    def _physical_effects(
+        self, board: BoardState, events: Sequence[Event]
+    ) -> tuple[PhysicalEffect, ...]:
+        units = {u.id: u for u in board.units}
+        effects: list[PhysicalEffect] = []
+        for event in events:
+            unit = units.get(event.dst or "")
+            if unit is None:
+                continue
+            if event.type is EventType.PUSH and event.pos is not None:
+                effects.append(PhysicalEffect(PUSH_EFFECT, unit.id, event.pos[0], event.pos[1]))
+            elif event.type is EventType.STEAL:
+                effects.append(
+                    PhysicalEffect(STEAL_EFFECT, unit.id, unit.position[0], unit.position[1])
+                )
+        return tuple(effects)
+
+    def finish_effects(self, positions: Mapping[str, Point]) -> TurnResult:
+        self._require(TurnState.PHYSICAL_EFFECTS)
+        board = self._board
+        if board is None:
+            raise SessionError("cmd.unknown")
+        pushed = {e.unit_id for e in self._effects if e.kind == PUSH_EFFECT}
+        units = tuple(
+            replace(u, position=positions[u.id]) if u.id in pushed and u.id in positions else u
+            for u in board.units
+        )
+        self._board = replace(board, units=units)
+        self._effects = ()
+        self._machine.transition(TurnEvent.EFFECTS_DONE)
+        telegraph = self._conclude(check_outcome(self._board))
+        return TurnResult(events=(), telegraph=telegraph, is_blocked=False)
 
     def _conclude(self, outcome: Outcome) -> tuple[Event, ...]:
         board = self._board
@@ -2386,7 +2591,7 @@ class NightSession:
                 x_cm=u.position[0],
                 y_cm=u.position[1],
                 cooldown=u.cooldown,
-                status=(DOWN_STATUS,) if u.is_down else (),
+                status=((DOWN_STATUS,) if u.is_down else ()) + unit_status_tags(u),
             )
             for u in board.units
         ]
@@ -2439,11 +2644,18 @@ class NightSession:
                 self._notify("unit.down", {"unit": self._name_of(event.dst)})
             elif event.type is EventType.SPLIT:
                 self._notify("mana.split", {})
+            elif event.dst is not None and event.dst in self._unit_ids:
+                key = EFFECT_NOTICES.get(event.type)
+                if key is not None:
+                    name = self._name_of(event.dst)
+                    self._notify(key, {"unit": name, "object": name})
 
 
 def restore_player_names(narration: Narration, players: Mapping[str, str]) -> Narration:
     def swap(text: str) -> str:
-        return PLAYER_ALIAS_PATTERN.sub(lambda m: players.get(m.group(0), m.group(0)), text)
+        return PLAYER_ALIAS_PATTERN.sub(
+            lambda m: players.get(m.group(0), m.group(0)), text
+        )
 
     return replace(
         narration,
@@ -2487,7 +2699,7 @@ def _enemy_status(enemy: EnemyState) -> tuple[str, ...]:
         status.append(STUNNED_STATUS)
     if enemy.reform_in is not None:
         status.append(f"{REFORM_STATUS_PREFIX}{enemy.reform_in}")
-    return tuple(status)
+    return tuple(status) + enemy_status_tags(enemy)
 
 
 def _board_meta(board: BoardState, players: Sequence[str]) -> dict[str, object]:
@@ -2545,7 +2757,7 @@ def _enemy_from_save(save: EnemySave, difficulty: Difficulty) -> EnemyState:
     for status in save.status:
         if status.startswith(REFORM_STATUS_PREFIX):
             reform_in = int(status.removeprefix(REFORM_STATUS_PREFIX))
-    return EnemyState(
+    enemy = EnemyState(
         id=save.id,
         type=enemy_type,
         part=part,
@@ -2560,6 +2772,7 @@ def _enemy_from_save(save: EnemySave, difficulty: Difficulty) -> EnemyState:
         is_stunned=STUNNED_STATUS in save.status,
         reform_in=reform_in,
     )
+    return apply_enemy_tags(enemy, save.status)
 
 
 def event_json(event: Event) -> dict[str, object]:
