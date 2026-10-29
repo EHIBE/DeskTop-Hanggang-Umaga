@@ -209,3 +209,48 @@ def test_demo_safe_off_restarts_voice(tmp_path: Path) -> None:
 
     asyncio.run(play())
     store.close()
+
+
+def test_spoken_claims_map_speakers_to_players(tmp_path: Path) -> None:
+    store, controller, voices, queue = setup(tmp_path)
+    controller._clean_name = CONTENT.clean_player_name
+
+    async def play() -> None:
+        controller.begin_night()
+        voice = voices.made[0]
+        voice.say("ako si Migs, hawak ko ang Stapler at Phone", "spk_0")
+        night = controller.snapshot().night
+        assert night is not None
+        assert night.players == ("Migs",)
+        voice.say("hawak ko ang Mug", "spk_1")
+        assert "claim.who" in notices(controller)
+        voice.say("ako si Bea", "spk_1")
+        voice.say("akin ang Mug", "spk_1")
+        controller.finish_claims()
+        owners = {u.game_id: u.owner for u in controller.snapshot().night.units}  # type: ignore[union-attr]
+        assert owners == {"u_kubo": "Bea", "u_2": "Migs", "u_3": "Migs"}
+        voice.say("Stapler, atake ang aswang!", "spk_0")
+        chips = controller.snapshot().night.chips  # type: ignore[union-attr]
+        assert [c.speaker for c in chips] == ["Migs"]
+        controller.retry_voice()
+        assert "voice.reclaim" in notices(controller)
+        second = voices.made[1]
+        second.say("Phone, atake ang aswang!", "spk_0")
+        chips = controller.snapshot().night.chips  # type: ignore[union-attr]
+        assert chips[-1].speaker == "spk_0"
+        second.say("ako si Migs", "spk_0")
+        assert [c.speaker for c in controller.snapshot().night.chips] == ["Migs", "Migs"]  # type: ignore[union-attr]
+        second.say("Hindi", "spk_0")
+        remaining = controller.snapshot().night.chips  # type: ignore[union-attr]
+        assert [(c.unit_id, c.speaker) for c in remaining] == [("u_2", "Migs")]
+        controller.close()
+        await controller.wait_for_voice()
+
+    asyncio.run(play())
+    captions = []
+    while not queue.empty():
+        message = queue.get_nowait()
+        if message["type"] == "caption":
+            captions.append(message["speaker"])
+    assert "Migs" in captions
+    store.close()

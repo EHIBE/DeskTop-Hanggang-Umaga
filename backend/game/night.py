@@ -135,6 +135,7 @@ from vision.summon import (
     SummonPipeline,
     SummonRequest,
 )
+from voice.claim import ClaimUnit, parse_claim
 from voice.grammar import (
     Command,
     CommandKind,
@@ -375,7 +376,10 @@ class GameController:
         tracker_factory: TrackerFactory = default_tracker,
         narration: NarrationService | None = None,
         voice_factory: VoiceFactory | None = None,
+        clean_name: Callable[[str, str], str] | None = None,
     ) -> None:
+        self._clean_name = clean_name
+        self._voice_players: dict[str, str] = {}
         self._narration = narration
         self._voice_factory = voice_factory
         self._voice: VoiceSession | None = None
@@ -578,6 +582,7 @@ class GameController:
         self._session = session
         self._claim_started = self._clock()
         self._notify("night.start", {})
+        self._start_voice()
 
     def enforce_claim_timeout(self) -> bool:
         session = self._session
@@ -1108,6 +1113,9 @@ class GameController:
 
         voice = factory([*VOICE_KEYWORDS, *names], on_caption, on_final, on_overlap, on_status)
         owner.append(voice)
+        if self._voice_players:
+            self._voice_players = {}
+            self._notify("voice.reclaim", {})
         voice.set_mode(self._voice_mode)
         self._voice = voice
         self._track_voice_task(loop.create_task(voice.run()))
@@ -1168,7 +1176,7 @@ class GameController:
                 "turn_id": caption.turn_id,
                 "text": caption.text,
                 "is_final": caption.is_final,
-                "speaker": caption.speaker,
+                "speaker": self._speaker_name(caption.speaker),
             }
         )
 
@@ -1186,17 +1194,60 @@ class GameController:
         self._notify("cmd.overlap", {})
         self._push_state()
 
+    def _speaker_name(self, label: str | None) -> str | None:
+        if label is None:
+            return None
+        return self._voice_players.get(label, label)
+
     def _on_voice_final(self, caption: Caption) -> None:
         session = self._session
-        if session is None or session.state is not TurnState.PLAYER_PHASE:
+        if session is None:
             return
-        context = self._grammar_context(session)
-        command = None if context is None else parse_command(caption.text, context)
         try:
-            self._apply_voice_command(session, command, caption.speaker)
+            if session.state is TurnState.VOICE_CLAIM:
+                self._apply_voice_claim(session, caption, is_claim_phase=True)
+            elif session.state is TurnState.PLAYER_PHASE:
+                context = self._grammar_context(session)
+                command = None if context is None else parse_command(caption.text, context)
+                if command is None and self._apply_voice_claim(
+                    session, caption, is_claim_phase=False
+                ):
+                    self._push_state()
+                    return
+                self._apply_voice_command(session, command, self._speaker_name(caption.speaker))
+            else:
+                return
         except SessionError as error:
             self._notify(error.copy_key, error.params)
         self._push_state()
+
+    def _apply_voice_claim(
+        self, session: NightSession, caption: Caption, is_claim_phase: bool
+    ) -> bool:
+        units = [
+            ClaimUnit(game_id_for(u.sam_object_id), u.card.name, u.card.unit_class.value)
+            for u in self._units
+        ]
+        command = parse_claim(caption.text, units)
+        if command is None:
+            return False
+        label = caption.speaker
+        name = None
+        if command.player_name is not None and self._clean_name is not None:
+            name = self._clean_name(command.player_name, "") or None
+        if name is not None and label is not None:
+            self._voice_players[label] = name
+            session.rename_speaker(label, name)
+        player = name or (None if label is None else self._voice_players.get(label))
+        if not is_claim_phase:
+            return name is not None
+        if command.unit_ids and player is None:
+            self._notify("claim.who", {})
+            return True
+        if player is not None and command.unit_ids:
+            owned = [g for g in session.owned_by(player) if g not in command.unit_ids]
+            session.claim(player, [*owned, *command.unit_ids])
+        return True
 
     def _apply_voice_command(
         self, session: NightSession, command: Command | None, speaker: str | None
@@ -2006,6 +2057,15 @@ class NightSession:
     @property
     def final_score(self) -> FinalScore | None:
         return self._final
+
+    def rename_speaker(self, label: str, name: str) -> None:
+        self._chips = [
+            replace(c, speaker=name) if c.source == VOICE_SOURCE and c.speaker == label else c
+            for c in self._chips
+        ]
+
+    def owned_by(self, player_name: str) -> list[str]:
+        return [game_id for game_id, owner in self._owners.items() if owner == player_name]
 
     def owner_of(self, game_id: str) -> str | None:
         return self._owners.get(game_id)

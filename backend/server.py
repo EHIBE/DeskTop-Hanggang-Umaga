@@ -305,6 +305,7 @@ def build_services(settings: AppSettings) -> Services:
         broadcast=broadcast,
         narration=build_narration(meta, content, log_invalid),
         voice_factory=build_voice_factory(settings.api_key, meta.meter),
+        clean_name=content.clean_player_name,
     )
     pump = FramePump(controller, live)
 

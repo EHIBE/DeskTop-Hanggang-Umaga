@@ -289,7 +289,7 @@ def _unit_aliases(unit: GrammarUnit) -> list[tuple[str, int]]:
     return aliases
 
 
-def _find_unit_mentions(
+def find_unit_mentions(
     tokens: list[str], blocked: set[int], units: tuple[GrammarUnit, ...]
 ) -> list[_UnitMention]:
     candidates: list[tuple[float, int, int, int, int]] = []
@@ -429,7 +429,7 @@ def _parse_order(tokens: list[str], context: GrammarContext) -> Command | None:
         blocked.add(mention.index)
         if mention.number is not None:
             blocked.add(mention.index + 1)
-    unit_mentions = _find_unit_mentions(tokens, blocked, context.units)
+    unit_mentions = find_unit_mentions(tokens, blocked, context.units)
     for unit_mention in unit_mentions:
         blocked.update(
             range(unit_mention.index, unit_mention.index + unit_mention.width)
