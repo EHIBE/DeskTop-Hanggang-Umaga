@@ -1,0 +1,21 @@
+{
+  "box_unit": "grid",
+  "px_per_cm": 20,
+  "difficulty": "normal",
+  "items": [
+    {
+      "snapshot": "EXAMPLE_FAKE_snapshot_not_a_real_file.jpg",
+      "spoken_name": "EXAMPLE_FAKE_NAME",
+      "condition": "EXAMPLE plain mat",
+      "known": [
+        {
+          "sam_id": 1,
+          "label": "EXAMPLE_FAKE_LABEL",
+          "unit_class": "fighter",
+          "box": [0, 0, 100, 100]
+        }
+      ],
+      "expected_box": [500, 500, 600, 600]
+    }
+  ]
+}
