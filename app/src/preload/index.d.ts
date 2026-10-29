@@ -6,6 +6,7 @@ export type DesktopBridge = Readonly<{
   getConfig: () => Promise<DesktopConfig>
   getKeyStatus: () => Promise<KeyStatus>
   saveKey: (key: string) => Promise<KeyStatus>
+  showReel: (name: string) => Promise<boolean>
 }>
 
 declare global {

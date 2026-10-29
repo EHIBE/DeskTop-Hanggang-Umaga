@@ -6,6 +6,8 @@ type KeyStatus = 'stored' | 'missing'
 const CONFIG_CHANNEL = 'desktop:config'
 const KEY_STATUS_CHANNEL = 'desktop:key-status'
 const SAVE_KEY_CHANNEL = 'desktop:save-key'
+const SHOW_REEL_CHANNEL = 'desktop:show-reel'
+const REEL_NAME = /^reel_[A-Za-z0-9_]{1,80}.mp4$/
 
 function isDesktopConfig(value: unknown): value is DesktopConfig {
   if (typeof value !== 'object' || value === null) return false
@@ -34,4 +36,12 @@ async function saveKey(key: string): Promise<KeyStatus> {
   return toKeyStatus(await ipcRenderer.invoke(SAVE_KEY_CHANNEL, key))
 }
 
-contextBridge.exposeInMainWorld('desktop', Object.freeze({ getConfig, getKeyStatus, saveKey }))
+async function showReel(name: string): Promise<boolean> {
+  if (typeof name !== 'string' || !REEL_NAME.test(name)) return false
+  return (await ipcRenderer.invoke(SHOW_REEL_CHANNEL, name)) === true
+}
+
+contextBridge.exposeInMainWorld(
+  'desktop',
+  Object.freeze({ getConfig, getKeyStatus, saveKey, showReel })
+)

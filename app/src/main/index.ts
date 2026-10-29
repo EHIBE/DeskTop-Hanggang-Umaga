@@ -1,4 +1,5 @@
 import { app, shell, session, BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron'
+import { existsSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -10,6 +11,9 @@ const APP_USER_MODEL_ID = 'com.ehibe.desktop'
 const CONFIG_CHANNEL = 'desktop:config'
 const KEY_STATUS_CHANNEL = 'desktop:key-status'
 const SAVE_KEY_CHANNEL = 'desktop:save-key'
+const SHOW_REEL_CHANNEL = 'desktop:show-reel'
+const REEL_NAME = /^reel_[A-Za-z0-9_]{1,80}.mp4$/
+const CAMPAIGN_DIR_NAME = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const MAX_KEY_INPUT = 1024
 const FILE_ORIGINS: readonly string[] = ['file://']
 const EXTERNAL_URL_ALLOWLIST: readonly Readonly<{ origin: string; path: string }>[] = [
@@ -120,7 +124,26 @@ function requireTrusted(event: IpcMainInvokeEvent): void {
   if (!isTrustedSender(event)) throw new Error('untrusted sender')
 }
 
-function registerIpc(keystore: Keystore, backend: BackendProcess): void {
+function findReel(userDataDir: string, name: string): string | null {
+  const campaigns = join(userDataDir, 'campaigns')
+  if (!existsSync(campaigns)) return null
+  for (const entry of readdirSync(campaigns, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !CAMPAIGN_DIR_NAME.test(entry.name)) continue
+    const candidate = join(campaigns, entry.name, 'recordings', name)
+    if (existsSync(candidate)) return candidate
+  }
+  return null
+}
+
+function registerIpc(keystore: Keystore, backend: BackendProcess, userDataDir: string): void {
+  ipcMain.handle(SHOW_REEL_CHANNEL, (event, rawName: unknown) => {
+    requireTrusted(event)
+    if (typeof rawName !== 'string' || !REEL_NAME.test(rawName)) return false
+    const path = findReel(userDataDir, rawName)
+    if (path === null) return false
+    shell.showItemInFolder(path)
+    return true
+  })
   ipcMain.handle(CONFIG_CHANNEL, (event) => {
     requireTrusted(event)
     return backend.config() ?? null
@@ -154,7 +177,7 @@ async function startApp(): Promise<void> {
     isDev: is.dev,
     apiKey: () => keystore.load()
   })
-  registerIpc(keystore, backend)
+  registerIpc(keystore, backend, userDataDir)
   app.on('before-quit', () => void backend.stop())
 
   app.on('browser-window-created', (_, window) => {
