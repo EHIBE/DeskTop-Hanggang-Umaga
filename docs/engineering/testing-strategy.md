@@ -20,7 +20,7 @@ All automated tests run offline against recorded fixtures, so they cost nothing 
 | Framework | pytest (backend). No frontend test framework configured |
 | Command | `backend\.venv\Scripts\python -m pytest backend/tests -q` |
 | Coverage target | 90%+ of rules functions (NFR-31). Measure with `cd backend` then `.venv\Scripts\python -m pytest tests -q --cov=rules` |
-| Python static checks | ruff and mypy --strict (ADR-0101). Both clean on 2026-10-28 |
+| Python static checks | ruff check, ruff format and mypy --strict (ADR-0101). All clean on 2026-10-29 with 1,219 backend tests passing |
 | Fixtures | `fixtures/` from Phase 1 smoke tests and later recordings |
 | Determinism | E7 must be 100% |
 | CI | NONE yet. PRD plans GitHub Actions with pytest and TypeScript typecheck |
@@ -36,7 +36,16 @@ All automated tests run offline against recorded fixtures, so they cost nothing 
 | `test_resolve.py` | Damage with shields, each power P01 to P12, order, win, lose, determinism E7 |
 | `test_state_machine.py` | Every transition, illegal move loop, pause and resume, crash restore |
 | `test_grammar.py` | 100 written Taglish and English orders with expected intents |
-| `test_schemas.py` | Good and bad fixtures for gm_turn, unit_card, command_parse, recap |
+| `test_schemas.py` | Good and bad fixtures for unit_card and the content filter |
+| `test_narrator.py`, `test_narration_flow.py` | gm_turn schema, repair, safety checks, line bank, background narration, timeout, logging |
+| `test_night_flow.py`, `test_tracking_flow.py`, `test_effects_flow.py` | A full night, restore, pause, camera moved, consent, physical effects |
+| `test_voice_session.py`, `test_voice_flow.py`, `test_claim.py` | Realtime session with fakes, voice orders and chips, voice claim |
+| `test_physical_effects.py` | Tikbalang push and throw, duwende steal, flee, return, escape, returning units |
+| `test_demo_safe.py` | Demo Safe switches and a full night with no paid calls |
+| `test_recorder.py`, `test_recording_flow.py` | ffmpeg recorder with a fake process, consent gate, sidecar |
+| `test_highlights.py`, `test_proxy.py`, `test_sam_video.py`, `test_render.py`, `test_replay_flow.py` | Replay highlights, proxy, upload and delete, SAM video parsing, reel render, orchestration |
+| `test_run_eval.py` | Eval runner E1 to E7 and cost, not-run paths |
+| `test_store.py`, `test_server.py`, `test_meta_client.py` | Persistence and migration, WebSocket protocol, Meta client retries, breaker and cost meter |
 
 Also required: model integration tests on fixtures (Spark, SAM image, SAM video, Muse Image, voice event streams, Files), sprite pipeline on 20 saved outputs, cost meter sums with $90 and $120, privacy (delete campaign leaves no files, proxy gets DELETE), and token checks (missing or wrong token rejected).
 

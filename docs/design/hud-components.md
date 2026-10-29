@@ -5,7 +5,7 @@ read_when: [building app/src/renderer/src/hud or canvas components]
 canonical_for: [HUD layout, component states, component to file map]
 sources: [docs/DeskTop_PRD.md#hud-layout-1920x1080, docs/DeskTop_PRD.md#12-technical-architecture, docs/DeskTop_Build_Guide.md#74-hud]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-10-29
 related: [docs/design/DESIGN.md, docs/design/screens.md, docs/architecture/websocket-protocol.md]
 ---
 
@@ -18,7 +18,7 @@ The night HUD frames the warped desk feed with a top band for status and a botto
 | Fact | Value |
 |---|---|
 | Canvas | `canvas/Board.tsx`, `sprites.ts`, `rings.ts`, `arrows.ts` |
-| DOM HUD | `hud/TopBar.tsx`, `UnitStrip.tsx`, `Captions.tsx`, `OrderChips.tsx`, `SpeakerChip.tsx`, `TapMenu.tsx` |
+| DOM HUD | `hud/TopBar.tsx`, `UnitStrip.tsx`, `Captions.tsx`, `OrderChips.tsx`, `TapMenu.tsx`, `Narration.tsx`, `VoiceControls.tsx`, `RecIndicator.tsx`, `StatusBadge.tsx` |
 | Screen | `screens/Night.tsx` combines Board and HUD |
 | Data | WebSocket messages, see `architecture/websocket-protocol.md` |
 

@@ -5,7 +5,7 @@ read_when: [implementing backend/game/state_machine.py, adding a phase, writing 
 canonical_for: [game states, transitions, state timeouts, turn order]
 sources: [docs/DeskTop_PRD.md#turn-state-machine, docs/DeskTop_Build_Guide.md#72-turn-order-from-prd-section-7-and-8]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-10-29
 related: [docs/game/core-loop.md, docs/architecture/backend-modules.md, docs/design/hud-components.md]
 ---
 

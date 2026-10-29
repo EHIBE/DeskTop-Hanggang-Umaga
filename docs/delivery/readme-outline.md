@@ -5,13 +5,13 @@ read_when: [writing the root README.md]
 canonical_for: [README outline, license default]
 sources: [docs/DeskTop_PRD.md#readme-outline, docs/DeskTop_Build_Guide.md#152-readme]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-10-29
 related: [docs/delivery/submission-checklist.md, docs/product/product-brief.md]
 ---
 
 # README outline
 
-The root README does not exist yet and is written in Phase 15. Each section below names the doc to pull from, so the README summarizes rather than duplicates.
+The root README was written on 2026-10-29 (Phase 15). The demo GIF, video link and license wait on EHIBE. Each section below names the doc to pull from, so the README summarizes rather than duplicates.
 
 ## Key facts
 

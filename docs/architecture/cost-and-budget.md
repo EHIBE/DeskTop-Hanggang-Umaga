@@ -5,7 +5,7 @@ read_when: [adding a paid call, implementing the cost meter, checking spend]
 canonical_for: [unit prices, cost model, budget, spend guardrails]
 sources: [docs/DeskTop_PRD.md#cost-model, docs/DeskTop_PRD.md#full-cost-table]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-10-29
 related: [docs/architecture/meta-api-integration.md, docs/decisions/ADR-0107-money-precision.md, docs/product/goals-and-metrics.md]
 ---
 
@@ -85,6 +85,8 @@ With F12 cut, the command fallback line mostly disappears. Recompute from api_us
 | Headroom of $150 | $107.40 | $51.12 |
 
 ## Cost meter rules
+
+SAM video is metered from the distinct frames returned, with a 50 frame minimum per request (built Phase 14). `eval/run_eval.py cost --db` reports the measured mean cost per finished night.
 
 Voice is metered in 60 s slices plus the remainder at each connection end, logged as kind `voice`. A hard stop ends the session, and voice stops while the night is paused (built M11).
 

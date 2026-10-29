@@ -5,7 +5,7 @@ read_when: [starting any engineering work, placing a new responsibility]
 canonical_for: [component map, process model, data flow, trust boundaries]
 sources: [docs/DeskTop_PRD.md#12-technical-architecture, docs/DeskTop_PRD.md#system-at-a-glance]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-10-29
 related: [docs/architecture/backend-modules.md, docs/architecture/frontend-modules.md, docs/architecture/websocket-protocol.md, docs/engineering/security-and-privacy.md]
 ---
 
@@ -22,7 +22,7 @@ DeskTop is an Electron app with a React renderer and a Python FastAPI backend th
 | External | api.meta.ai/v1 (Responses, Files), wss://api.meta.ai/v1/asr/realtime |
 | Database | SQLite in the Electron user data folder (`%APPDATA%\DeskTop\`) |
 | Authoritative logic | `backend/rules` (pure Python) |
-| Current code | Scaffold only (2026-10-28) |
+| Current code | M0 to M11 and Phases 12 to 14 built and tested offline (2026-10-29) |
 
 ## Components
 
@@ -71,7 +71,7 @@ flowchart TB
 | Renderer to backend | Untrusted input. Token on every request, Pydantic validation, state checks |
 | Backend to Meta | Key in env only. Standard mode. Only frames, crops, live audio, consented proxy leave the laptop |
 | Meta to backend | Untrusted output. Strict schemas, enum IDs from live state, clamps, repair then fallback |
-| Main to renderer | Preload exposes port and token only (ADR-0103) |
+| Main to renderer | Preload exposes `getConfig`, `getKeyStatus`, `saveKey` and `showReel` only (ADR-0103) |
 
 ## Key decisions
 

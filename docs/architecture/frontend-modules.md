@@ -5,7 +5,7 @@ read_when: [creating or changing any file under app/]
 canonical_for: [frontend module responsibilities, Electron process roles, renderer folder map]
 sources: [docs/DeskTop_PRD.md#project-setup-and-folder-structure, app/src/main/index.ts, app/src/preload/index.ts, app/package.json, app/electron.vite.config.ts]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-10-29
 related: [docs/architecture/overview.md, docs/engineering/security-and-privacy.md, docs/design/hud-components.md]
 ---
 
@@ -26,8 +26,8 @@ The app is an electron-vite React TypeScript project. Main spawns the backend an
 
 | Process | Files | Responsibility |
 |---|---|---|
-| Main | `src/main/index.ts`, planned `backend.ts`, `keystore.ts` | Window, spawn and restart backend with key and token in env, safeStorage key, health check, restart on crash |
-| Preload | `src/preload/index.ts`, `index.d.ts` | Expose a typed object with port and token only |
+| Main | `src/main/index.ts`, `backend.ts`, `keystore.ts` | Window, spawn and restart backend with key and token in env, safeStorage key, health check, restart on crash |
+| Preload | `src/preload/index.ts`, `index.d.ts` | Expose `getConfig`, `getKeyStatus`, `saveKey` and `showReel` only. The key is never returned |
 | Renderer | `src/renderer/src/**` | Screens, canvas board, HUD, WebSocket client, copy |
 
 ## Renderer map
@@ -50,7 +50,7 @@ The app is an electron-vite React TypeScript project. Main spawns the backend an
 | `hud/OrderChips.tsx` | Order chips |
 | `hud/SpeakerChip.tsx` | Not built. The speaker label shows inline in captions and voice chips |
 | `hud/TapMenu.tsx` | Tap controls (FR-25) |
-| `screens/*.tsx` | Start, KeySetup, Calibration, Summon, UnitCard, VoiceClaim, Night, Sunrise, Defeat, Replay, Settings |
+| `screens/*.tsx` | Start, KeySetup, Calibration, Summon, UnitCard, VoiceClaim, Night, Sunrise, Defeat. Replay lives in `components/ReplayPanel.tsx` on Sunrise and Defeat. Settings is a Could and not built |
 
 ## Scaffold gaps (fixed 2026-10-28, ADR-0102, ADR-0103, ADR-0108)
 

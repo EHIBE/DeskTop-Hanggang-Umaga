@@ -5,7 +5,7 @@ read_when: [writing backend/db/schema.sql or store.py, adding a column, delete c
 canonical_for: [SQLite schema, ID schemes, autosave transaction, data lifecycle]
 sources: [docs/DeskTop_PRD.md#sqlite-schema, docs/DeskTop_PRD.md#sam-usage-spec]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-10-29
 related: [docs/architecture/backend-modules.md, docs/engineering/security-and-privacy.md, docs/decisions/ADR-0107-money-precision.md]
 ---
 

@@ -5,7 +5,7 @@ read_when: [implementing backend/vision/sprites.py, tuning sprite quality]
 canonical_for: [sprite steps, sprite prompt template, cache key, sprite validation, recording and replay pipeline]
 sources: [docs/DeskTop_PRD.md#sprite-pipeline, docs/DeskTop_Build_Guide.md#phase-5-sprite-pipeline-oct-29-to-30-4-h-f03, docs/DeskTop_PRD.md#flow-f8-replay, docs/DeskTop_Build_Guide.md#phase-14-replay-reel-nov-4-morning-4-h-f15]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-10-29
 related: [docs/design/art-direction.md, docs/decisions/ADR-0005-chroma-key-sprites.md, docs/architecture/meta-api-integration.md]
 ---
 
@@ -91,4 +91,4 @@ PRD specifies HSV distance 40. The Build Guide sample uses an RGB absolute-sum t
 | 7 | DELETE the uploaded file right away | NFR-22 |
 | 8 | Render locally at 1080p 30 FPS: real footage, sprites pinned to SAM tracks (interpolate between 10 FPS frames), damage numbers from turn_log, dawn title card, 60 s max | FR-48 |
 
-Fallback: if SAM video fails, keep one 10 s SAM-tracked clip. Red REC dot shows while recording.
+Fallback: if SAM video fails, sprites pin to the saved anchor boxes (ADR-0012). Red REC dot shows while recording.

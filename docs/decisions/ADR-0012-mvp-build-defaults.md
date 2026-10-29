@@ -5,7 +5,7 @@ read_when: [implementing damage, enemy movement, targeting, waves, voice claim, 
 canonical_for: [ADR-0012, damage with shields rule, duwende pre-steal hit, wall blocking rule, target tie-break, fail-closed token startup]
 sources: [docs/MVP_BUILD_PROMPT.md#2-clarify-gate, docs/game/combat-math.md, docs/game/enemies.md, docs/game/waves-and-difficulty.md]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-10-29
 related: [docs/decisions/README.md, docs/game/combat-math.md, docs/game/waves-and-difficulty.md, docs/game/powers.md]
 ---
 
@@ -30,11 +30,11 @@ The PRD and derived docs leave several rules and runtime details open or contrad
 | Topic | Decision |
 |---|---|
 | Damage with shields | Raw damage is `max(1, ATK + bonuses)`. Shield pools (P02, P06) absorb first, the rest reduces HP. A shield can block a hit fully. Event `dmg` is the HP actually lost |
-| Duwende before Phase 12 | A duwende hit deals 1 damage (the cut-list "fast weak hitter"). Phase 12 replaces it with a steal and 0 damage |
+| Duwende hit | A hit steals and deals 0 damage (Phase 12). Before Phase 12 it dealt 1 damage, the cut-list "fast weak hitter" |
 | Walls | Enemies move in a straight line toward their target, no pathfinding. A non-flying enemy stops at first contact with a Wall unit footprint |
 | Ties | Target and spawn ties break by nearest edge distance, then lowest SAM object ID |
 | Unverified game defaults | Accepted as written: edges chosen North then clockwise and farthest apart, extra Aswang at the edge farthest from the kubo, spawn at the edge midpoint offset 5 cm per extra enemy, 1 player uses the 2-player table, P10 bonus ignores the ATK cap, P08 stays valid, tied Bayani players all shown, tracker-loss SAM delay 5 s |
-| Voice claim before F11 | VOICE_CLAIM ships in the MVP with typed player names, tap-to-assign units, Skip and the 60 s timeout. Spoken claim arrives with F11 |
+| Voice claim before F11 | VOICE_CLAIM ships in the MVP with typed player names, tap-to-assign units, Skip and the 60 s timeout. Spoken claim was added in Phase 12 (see below) |
 | Pixel font | Press Start 2P (SIL OFL 1.1) bundled in `assets/fonts/` with its license |
 | Content filter lists | LDNOOBW English and Filipino lists (CC BY 4.0) and a PSGC province and city list in `backend/gm/data/`, with attribution |
 | Placeholder, enemy and tile art | Generated with Muse Image in Phase 5.1 once the key is present |

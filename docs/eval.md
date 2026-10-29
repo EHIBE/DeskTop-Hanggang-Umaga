@@ -5,7 +5,7 @@ read_when: [after an eval run, writing the README or video, tuning thresholds]
 canonical_for: [eval results]
 sources: [docs/engineering/testing-strategy.md]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-10-29
 related: [docs/engineering/testing-strategy.md, docs/game/balance-and-tuning.md, docs/delivery/readme-outline.md]
 ---
 

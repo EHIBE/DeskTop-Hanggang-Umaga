@@ -46,7 +46,7 @@ Twelve screens, each a component in `app/src/renderer/src/screens/`, routed by `
 | Night | Play | Board plus full HUD (see `hud-components.md`) | Voice claim done | Sunrise or Defeat |
 | Sunrise | End of night | Dawn sky, score, Bayani ng Gabi, badges (Could), Replay (consent only), Next Night, Quit, `win` | Turn 8 survived | Replay, Next Night, Quit |
 | Defeat | Lost night | Fallen kubo art, score, Try Again, `lose` | Kubo HP 0 or no units | Try Again, Quit |
-| Replay | Watch and export | Player with the reel, Export MP4, Delete clip, `replay.making` while rendering | Replay tapped | Close |
+| Replay | Make and find the reel | `components/ReplayPanel.tsx` on Sunrise and Defeat: Make the Replay, `replay.making` while rendering, Show in folder when done, Try again on failure | Night ended with consent | Next Night or Quit |
 | Campaign menu | Manage saves | Campaign list, nights survived, units, Delete campaign with confirm | Continue | Select or back |
 | Settings (Could) | Preferences | Camera, mic, caption language, difficulty, replay on or off, TTS on or off (default off), show real objects, recalibrate | Start | Back |
 
@@ -74,7 +74,9 @@ Twelve screens, each a component in `app/src/renderer/src/screens/`, routed by `
 
 ## Consent screen
 
-Shown before Start Night when replay is on (FR-44). Copy `rec.consent`. Each claimed player taps Payag. Host confirm only when voice claim was skipped (Q6 default). No consent: night plays without recording, Replay hidden.
+Built 2026-10-29 as a section of the VoiceClaim screen after Begin Night, not a separate screen. Each claimed player taps Payag or Hindi.
+
+Copy `rec.consent`. Every claimed player must answer Payag for recording to start (FR-44). No answer counts as no. No consent: the night plays without recording and the replay panel stays hidden.
 
 ## Design review
 

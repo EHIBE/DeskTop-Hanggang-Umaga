@@ -5,13 +5,13 @@ read_when: [adding or changing any player-facing text, building lib/copy.ts or a
 canonical_for: [copy keys, line bank, unit card template]
 sources: [docs/DeskTop_PRD.md#copy-deck, docs/DeskTop_PRD.md#content-list, docs/DeskTop_PRD.md#14-edge-cases-and-failure-handling]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-10-29
 related: [docs/design/cultural-care.md, docs/architecture/ai-contracts.md]
 ---
 
 # Copy deck
 
-All player-facing text, keyed. This file is canonical until `app/src/renderer/src/lib/copy.ts` and `assets/lines.json` exist, then those files are canonical and this file mirrors them.
+All player-facing text, keyed. `app/src/renderer/src/lib/copy.ts` and `assets/lines.json` are canonical, and this file mirrors them for review.
 
 ## Key facts
 

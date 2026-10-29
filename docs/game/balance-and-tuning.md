@@ -5,7 +5,7 @@ read_when: [tuning after evals or playtests, writing backend/config.py]
 canonical_for: [tunable constants list, tuning log]
 sources: [docs/DeskTop_PRD.md#re-anchor-and-drift-logic-per-object-at-end-turn, docs/DeskTop_PRD.md#unit-system, docs/DeskTop_PRD.md#10-non-functional-requirements, docs/DeskTop_Build_Guide.md]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-10-29
 related: [docs/engineering/environment-and-config.md, docs/architecture/tracking-and-reanchor.md, docs/playtests.md]
 ---
 

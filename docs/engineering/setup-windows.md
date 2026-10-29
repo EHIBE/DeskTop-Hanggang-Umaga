@@ -11,7 +11,7 @@ related: [docs/engineering/environment-and-config.md, docs/decisions/ADR-0101-py
 
 # Windows setup
 
-The scaffold commit exists, but the Python venv is missing and requirements are empty. These steps reach a running app and backend from today's repo state.
+These steps take a fresh Windows machine to a running app and backend. The venv, pins and Tailwind are already set up in the repo.
 
 ## Key facts
 
@@ -38,9 +38,9 @@ npm --prefix app install
 npm --prefix app run dev
 ```
 
-A window opens. Then wire Tailwind (ADR-0102): add `import tailwindcss from '@tailwindcss/vite'` and `tailwindcss()` to the renderer `plugins` in `app/electron.vite.config.ts`, and `@import "tailwindcss";` at the top of `app/src/renderer/src/assets/main.css`.
+A window opens. Tailwind is already wired (ADR-0102).
 
-## Backend (needs approval, ADR-0101)
+## Backend (ADR-0101)
 
 ```powershell
 py -3.13 -m venv backend\.venv

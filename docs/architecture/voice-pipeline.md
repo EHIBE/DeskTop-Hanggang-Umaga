@@ -5,7 +5,7 @@ read_when: [implementing voice/session.py, voice/grammar.py, voice/claim.py, cap
 canonical_for: [voice handshake, audio format, voice events, enrollment, local grammar, voice fallbacks, close codes]
 sources: [docs/DeskTop_PRD.md#voice-spec, docs/DeskTop_Build_Guide.md#phase-11-voice-nov-2-4-h-f10, docs/DeskTop_Build_Guide.md#121-voice-claim-fr-18-fr-23]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-10-29
 related: [docs/decisions/ADR-0007-voice-diarization-enrollment.md, docs/design/copy-deck.md, docs/architecture/reliability-and-fallbacks.md]
 ---
 
@@ -39,7 +39,7 @@ Built in M11 (2026-10-28): the night DIARIZATION session only, in `backend/voice
   "partialMode": "CUMULATIVE",
   "emitAudioProgress": false,
   "languageBias": ["English", "Tagalog"],
-  "keywords": ["tapos", "hindi", "kubo", "anting-anting", "albularyo", "aswang", "tikbalang", "kapre", "manananggal", "duwende", "<unit names>", "<player names>"]
+  "keywords": ["tapos", "hindi", "kubo", "anting-anting", "albularyo", "aswang", "tikbalang", "kapre", "manananggal", "duwende", "<order verbs>", "<unit names>"]
 }
 ```
 

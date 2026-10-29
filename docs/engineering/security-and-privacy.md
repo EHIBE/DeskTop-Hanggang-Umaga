@@ -5,7 +5,7 @@ read_when: [touching main, preload, server.py, meta_client, recording, uploads, 
 canonical_for: [threat model, data inventory, hardening checklist, privacy rules]
 sources: [docs/FEATURE_PROMPT.md#5-security-guardrails-mapped-to-owasp-top-102025, docs/DeskTop_PRD.md#10-non-functional-requirements, app/src/main/index.ts, app/src/preload/index.ts, app/src/renderer/index.html]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-10-29
 related: [docs/decisions/ADR-0103-electron-hardening.md, docs/architecture/websocket-protocol.md, docs/architecture/data-model.md]
 ---
 
@@ -56,7 +56,7 @@ All calls in Standard mode, never Contributor mode. Every `responses.create` cal
 ## Electron hardening checklist (ADR-0103)
 
 - [x] `sandbox: true`, `contextIsolation: true`, `nodeIntegration: false`, `webSecurity: true`
-- [x] Preload exposes only `getConfig()` returning `{ port, token }`. No `electronAPI`, no raw `ipcRenderer`
+- [x] Preload exposes only `getConfig()`, `getKeyStatus()`, `saveKey()` and `showReel()`. No `electronAPI`, no raw `ipcRenderer`. `desktop:show-reel` accepts only `reel_<name>.mp4`, checks the sender and refuses links and paths outside the recordings folders
 - [x] `ipcMain` handlers validate the sender (main frame and exact renderer URL)
 - [x] `setWindowOpenHandler` denies, `shell.openExternal` only for allowlisted https origin and path
 - [x] CSP keeps `default-src 'self'`, adds `connect-src` for the backend only, plus `object-src`, `base-uri`, `form-action` and `frame-src` set to none

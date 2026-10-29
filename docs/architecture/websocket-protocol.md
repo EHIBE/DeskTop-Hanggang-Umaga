@@ -5,13 +5,13 @@ read_when: [adding or changing a message, building lib/socket.ts or the /ws hand
 canonical_for: [local message types, envelope, handshake, event schema]
 sources: [docs/DeskTop_Build_Guide.md#33-fastapi-frame-stream, docs/DeskTop_PRD.md#12-technical-architecture, docs/DeskTop_PRD.md#gm-contract]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-10-29
 related: [docs/architecture/overview.md, docs/engineering/security-and-privacy.md, docs/design/hud-components.md]
 ---
 
 # WebSocket protocol
 
-The renderer and backend talk over one WebSocket at `ws://127.0.0.1:8765/ws`. Only the `frame` message is established by the Build Guide. Every other message here is Proposed and must be confirmed when first built, using the `desktop-add-ws-message` skill.
+The renderer and backend talk over one WebSocket at `ws://127.0.0.1:8765/ws`. Messages marked Established are built and tested. Only `uncertain.tap` and the envelope fields `seq` and `turn` are still Proposed. New messages go through the `desktop-add-ws-message` skill.
 
 ## Key facts
 
@@ -23,7 +23,7 @@ The renderer and backend talk over one WebSocket at `ws://127.0.0.1:8765/ws`. On
 | HTTP auth | `X-Desktop-Token` header on every route, 401 when missing or wrong |
 | Encoding | JSON text frames with a `type` field |
 | Frame rate | About 25 per second |
-| Established | Server: `state`, `devices`, `campaigns`, `frame`, `notice`, `sprite`, `events`, `narration`, `caption`, `cost` (dev). Renderer: `campaign.list`, `campaign.start`, `campaign.delete`, `devices.list`, `camera.select`, `calibrate.*`, `summon.*`, `unit.*`, `night.*`, `claim.*`, `intent.tap`, `chip.cancel`, `end_turn`, `demo_safe`, `demo_safe.sam`, `ptt`, `voice.mode`, `voice.retry` (2026-10-28). Types in `app/src/renderer/src/lib/types.ts`, Pydantic models in `backend/server.py` |
+| Established | Server: `state`, `devices`, `campaigns`, `frame`, `notice`, `sprite`, `events`, `narration`, `caption`, `card`, `summon.result`, `cost` (dev). Renderer: `campaign.list`, `campaign.start`, `campaign.delete`, `devices.list`, `camera.select`, `calibrate.*`, `summon.*`, `unit.*`, `night.*`, `claim.*`, `intent.tap`, `chip.cancel`, `end_turn`, `demo_safe`, `demo_safe.sam`, `ptt`, `voice.mode`, `voice.retry`, `consent`, `effect.done`, `replay.request` (2026-10-29). Types in `app/src/renderer/src/lib/types.ts`, Pydantic models in `backend/server.py` |
 | Size limit | 16 KiB per renderer message. Larger or invalid messages get `notice` `cmd.unknown` |
 | HTTP | `GET /health` returns `{"ok": true}` |
 
@@ -42,8 +42,9 @@ Every message is a JSON object with `type` plus fields. Proposed shared fields: 
 | `events` | Established | `turn`, `events` (type, src, dst, dmg, edge, pos). Types include `push`, `thrown`, `steal`, `return` (pos is where the object goes back) and `escape` | Resolution events, then the next turn's spawn and intent events, as two messages |
 | `caption` | Established | `turn_id`, `text`, `is_final`, `speaker` | Live transcript. Partials replace. A dropped turn ends with an empty final |
 | `narration` | Established | `night`, `turn`, `phase` (night_start, resolution_then_telegraph, sunrise, defeat), `narration_tl`, `narration_en`, `mood`, `callouts`, `hint_tl`, `source` (spark or line_bank) | GM caption, sent in the background after claims, each resolved turn, sunrise or defeat. A newer request drops an older pending one |
+| `summon.result` | Established | `unit_id`, `game_id`, `source` (spark or fallback), `spark_box` (warped pixels or null), `mask_hull`, `width`, `height` | After each summon, for the how-it-was-made panel |
 | `chip` | Not used | none | Chips ride in `state.night.chips` with `source` (tap or voice) and `speaker` |
-| `card` | Established | `unit` (id, unit_id, sam_id, name, class, hp, hp_max, atk, move, range, power_id, power_name_tl, card_text_tl, card_text_en, x_cm, y_cm, rerolls_left). `sprite_url` arrives in M5 | New or changed unit card |
+| `card` | Established | `unit` (id, unit_id, sam_id, name, class, hp, hp_max, atk, move, range, power_id, power_name_tl, card_text_tl, card_text_en, x_cm, y_cm, rerolls_left). `sprite_png` (base64 or null until the sprite is ready) | New or changed unit card |
 | `sprite` | Established | `unit_id` (UUID), `sprite_png` (base64 48x48 PNG). `state.units[].sprite_png` carries it afterwards | Swap placeholder for real sprite. Pushed from the background job through a broadcast queue |
 | `notice` | Established | `copy_key`, `params` | Banner or prompt by copy key (never raw text) |
 | `cost` | Established, dev only (`DESKTOP_DEV=1`) | `spent_usd` (decimal string, 6 places), `warn`, `stopped` | Credit meter. Sent on connect and after every handled message |
@@ -90,7 +91,7 @@ The backend validates every message with a Pydantic model (`extra="forbid"`), ch
 
 | Field | Type | Notes |
 |---|---|---|
-| `type` | enum | attack, dodge, spawn, intent, heal, power, shield, down, push, steal, return, escape, split, reform, kubo_hit, win, lose |
+| `type` | enum | attack, dodge, spawn, intent, heal, power, shield, down, push, thrown, steal, return, escape, split, reform, kubo_hit, defeat_enemy, win, lose |
 | `src` | string or null | Unit or enemy ID |
 | `dst` | string or null | Unit or enemy ID |
 | `dmg` | integer or null | Damage after shields |

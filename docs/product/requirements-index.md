@@ -5,7 +5,7 @@ read_when: [starting or finishing any feature, checking what is built, writing t
 canonical_for: [requirement status, FR to module map, NFR targets list, F01 to F24 feature groups]
 sources: [docs/DeskTop_PRD.md#9-functional-requirements, docs/DeskTop_PRD.md#10-non-functional-requirements, docs/DeskTop_PRD.md#203-feature-prioritization-rice, docs/DeskTop_Build_Guide.md]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-10-29
 related: [docs/product/scope-and-cuts.md, docs/engineering/testing-strategy.md, docs/architecture/backend-modules.md]
 ---
 
@@ -29,7 +29,7 @@ Update the Status column when a requirement is built (code merged) and tested (t
 
 | F | Feature | MoSCoW | RICE | Hours | FRs | Status |
 |---|---|---|---|---|---|---|
-| F01 | Calibration and play area | Must | 4.50 | 2 | FR-01 to FR-04 | Planned |
+| F01 | Calibration and play area | Must | 4.50 | 2 | FR-01 to FR-04 | Built (real camera and ruler checks Manual: EHIBE) |
 | F02 | Summon: detection, masks, cards, caps | Must | 4.20 | 5 | FR-06 to FR-10, FR-14 to FR-16 | Built (live Spark and SAM runs wait on the key) |
 | F03 | Sprite pipeline | Must | 5.25 | 4 | FR-11 to FR-13 | Built (placeholder and enemy art wait on the key) |
 | F04 | Tracker overlay and occlusion freeze | Must | 5.25 | 4 | FR-26, FR-27 | Tested (offline) |
@@ -39,7 +39,7 @@ Update the Status column when a requirement is built (code merged) and tested (t
 | F08 | Tikbalang, Duwende, Kapre effects | Should | 2.80 | 3 | FR-36 | Tested (Kapre smoke cut. Table run Manual: EHIBE) |
 | F09 | GM narration and line bank | Must | 5.67 | 3 | FR-38, FR-39 | Built (live Spark check Manual: EHIBE) |
 | F10 | Voice, grammar, captions, chips, PTT | Must | 4.20 | 4 | FR-17, FR-19, FR-20, FR-22, FR-24 | Built (live Taglish run and E3 Manual: EHIBE) |
-| F11 | Voice claim and overlap | Should | 3.00 | 2 | FR-18, FR-23 | Built (live voice run Manual: EHIBE) |
+| F11 | Voice claim and overlap | Should | 3.00 | 2 | FR-18, FR-23 | Tested (live voice run Manual: EHIBE) |
 | F12 | Spark fallback parser | Should | 2.80 | 1 | FR-21 | Cut |
 | F13 | Tap controls | Must (guardrail) | 2.53 | 1.5 | FR-25 | Built |
 | F14 | Autosave and restore | Must (guardrail) | 1.90 | 1 | FR-41 | Tested |
