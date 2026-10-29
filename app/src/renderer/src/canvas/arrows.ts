@@ -55,3 +55,39 @@ export function drawIntentArrow(
   ctx.fillStyle = palette.moon
   ctx.fillText(label, Math.round(midX), Math.round(midY) + 1)
 }
+
+export function drawGuideArrow(
+  ctx: CanvasRenderingContext2D,
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+  color: string
+): void {
+  const dx = toX - fromX
+  const dy = toY - fromY
+  const length = Math.hypot(dx, dy)
+  if (length < STOP_SHORT + HEAD) return
+  const ux = dx / length
+  const uy = dy / length
+  const tipX = toX - ux * STOP_SHORT
+  const tipY = toY - uy * STOP_SHORT
+  const baseX = tipX - ux * HEAD
+  const baseY = tipY - uy * HEAD
+  ctx.strokeStyle = color
+  ctx.fillStyle = color
+  ctx.lineWidth = 6
+  ctx.lineCap = 'butt'
+  ctx.setLineDash([16, 10])
+  ctx.beginPath()
+  ctx.moveTo(fromX + ux * 40, fromY + uy * 40)
+  ctx.lineTo(baseX, baseY)
+  ctx.stroke()
+  ctx.setLineDash([])
+  ctx.beginPath()
+  ctx.moveTo(tipX, tipY)
+  ctx.lineTo(baseX - uy * HEAD * 0.7, baseY + ux * HEAD * 0.7)
+  ctx.lineTo(baseX + uy * HEAD * 0.7, baseY - ux * HEAD * 0.7)
+  ctx.closePath()
+  ctx.fill()
+}

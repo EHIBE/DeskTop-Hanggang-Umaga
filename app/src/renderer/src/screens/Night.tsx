@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Board, { type BoardMapping } from '../canvas/Board'
-import { drawIntentArrow } from '../canvas/arrows'
-import { drawTag } from '../canvas/draw'
+import { drawGuideArrow, drawIntentArrow } from '../canvas/arrows'
+import { drawBadge, drawTag } from '../canvas/draw'
 import { drawEnemy, useEnemyFrames } from '../canvas/enemies'
 import { drawFloaters, floatersFromEvents, type Floater } from '../canvas/floaters'
-import { drawMoveRing, drawStartGhost } from '../canvas/rings'
+import {
+  drawMoveRing,
+  drawPushGhost,
+  drawRemoveMark,
+  drawReturnMark,
+  drawStartGhost
+} from '../canvas/rings'
 import { MIN_SCALE, drawSprite, useUnitImages } from '../canvas/sprites'
 import Bilingual from '../components/Bilingual'
 import Captions from '../hud/Captions'
@@ -14,12 +20,14 @@ import TapMenu from '../hud/TapMenu'
 import TopBar from '../hud/TopBar'
 import UnitStrip from '../hud/UnitStrip'
 import VoiceControls from '../hud/VoiceControls'
+import { parseStatus, statusEntries } from '../hud/status'
 import { actionTarget, enemyLabel } from '../hud/targets'
-import { t } from '../lib/copy'
+import { t, type CopyKey } from '../lib/copy'
 import { palette } from '../lib/palette'
 import type { MessageHandler } from '../lib/socket'
 import type {
   ClientMessage,
+  CopyParams,
   IntentAction,
   NarrationMessage,
   Point,
@@ -35,8 +43,11 @@ type NightProps = Readonly<{
 
 type Selection = Readonly<{ turnKey: string; unitId: string; pending: IntentAction | null }>
 
+type EventNote = Readonly<{ id: number; key: CopyKey; params: CopyParams }>
+
 type Spot = Readonly<{ x_cm: number; y_cm: number }>
 
+const NOTE_MS = 6000
 const BOB_TICK_MS = 500
 const HIT_PX = 56
 const ARROW_PHASES: ReadonlySet<string> = new Set([
@@ -53,6 +64,9 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
   const [blockedHeard, setBlockedHeard] = useState(false)
   const [pulse, setPulse] = useState(0)
   const [camMoved, setCamMoved] = useState(false)
+  const [returns, setReturns] = useState<Readonly<Record<string, Spot>>>({})
+  const [note, setNote] = useState<EventNote | null>(null)
+  const noteIdRef = useRef(0)
   const pausedRef = useRef(false)
   const floatersRef = useRef<readonly Floater[]>([])
   const knownRef = useRef(new Map<string, Spot>())
@@ -76,16 +90,34 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
           if (enemy) return enemy
           return current.units.find((candidate) => candidate.id === id) ?? null
         }
-        const made = floatersFromEvents(
-          message.events,
-          locate,
-          performance.now(),
-          t('enemy.dodge').tl
-        )
+        const made = floatersFromEvents(message.events, locate, performance.now(), {
+          dodge: t('enemy.dodge').tl,
+          thrown: t('effect.thrown_float').tl,
+          escape: t('effect.escape_float').tl
+        })
         floatersRef.current = [...floatersRef.current, ...made]
         if (message.events.some((event) => event.type === 'kubo_hit')) {
           setHitCount((count) => count + 1)
         }
+        const unitName = (id: string | null): string =>
+          latestRef.current.units.find((candidate) => candidate.id === id)?.name ?? ''
+        message.events.forEach((event) => {
+          if (event.type === 'return' && event.dst !== null && event.pos !== null) {
+            const dst = event.dst
+            const pos = event.pos
+            const stolen = latestRef.current.night?.units.some(
+              (unit) => unit.id === dst && parseStatus(unit.status).stolen
+            )
+            if (stolen) setReturns((current) => ({ ...current, [dst]: pos }))
+          } else if (event.type === 'thrown' || event.type === 'escape') {
+            noteIdRef.current += 1
+            setNote({
+              id: noteIdRef.current,
+              key: event.type === 'thrown' ? 'tik.thrown' : 'duw.escape',
+              params: { unit: unitName(event.dst) }
+            })
+          }
+        })
         setPulse((value) => value + 1)
       } else if (message.type === 'notice' && message.copy_key === 'endturn.blocked') {
         setBlockedHeard(true)
@@ -97,6 +129,30 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
       }
     })
   }, [subscribe])
+
+  useEffect(() => {
+    if (note === null) return
+    const timer = setTimeout(() => setNote(null), NOTE_MS)
+    return () => clearTimeout(timer)
+  }, [note])
+
+  const nightUnitsKey = night
+    ? night.units.map((unit) => `${unit.id}:${unit.status.join('|')}`).join(',')
+    : ''
+  useEffect(() => {
+    const stolenIds = new Set(
+      (latestRef.current.night?.units ?? [])
+        .filter((unit) => parseStatus(unit.status).stolen)
+        .map((unit) => unit.id)
+    )
+    setReturns((current) => {
+      const ids = Object.keys(current)
+      if (ids.every((id) => stolenIds.has(id))) return current
+      return Object.fromEntries(
+        ids.filter((id) => stolenIds.has(id)).map((id) => [id, current[id]])
+      )
+    })
+  }, [nightUnitsKey])
 
   const hasEnemies = night !== null && night.enemies.length > 0
   useEffect(() => {
@@ -116,7 +172,8 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
     activeSelection !== null &&
     selectedNight !== undefined &&
     selectedUnit !== undefined &&
-    !selectedNight.is_down
+    !selectedNight.is_down &&
+    !parseStatus(selectedNight.status).unavailable
   const pending = selectionValid ? activeSelection.pending : null
   const targetKind =
     pending !== null && selectedUnit ? actionTarget(pending, selectedUnit.power_id) : null
@@ -165,7 +222,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
         return best
       }
       const allies = night.units
-        .filter((unit) => !unit.is_down)
+        .filter((unit) => !unit.is_down && !parseStatus(unit.status).unavailable)
         .map((unit) => {
           const summary = state.units.find((candidate) => candidate.id === unit.id)
           const pose = poseById.get(unit.id)
@@ -301,6 +358,8 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
         const image = unitImages.get(unit.unit_id)
         let box = { left: Math.round(ux - 24), top: Math.round(uy - 24), width: 48, height: 48 }
         ctx.save()
+        const unitStatus = parseStatus(nu.status)
+        if (unitStatus.unavailable && !nu.is_down) ctx.globalAlpha = 0.4
         if (nu.is_down) {
           ctx.filter = 'grayscale(1)'
           ctx.globalAlpha = 0.6
@@ -318,8 +377,55 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
           ctx.setLineDash([])
           ctx.strokeRect(box.left - 4, box.top - 4, box.width + 8, box.height + 8)
         }
-        const label = nu.is_down ? `${unit.name} ${t('hud.down').tl}` : unit.name
-        drawTag(ctx, label, ux, box.top + box.height + 4, nu.is_down ? palette.mist : palette.moon)
+        const badges = statusEntries(unitStatus)
+        const label = nu.is_down
+          ? `${unit.name} ${t('hud.down').tl}`
+          : [unit.name, ...badges.map((entry) => entry.text)].join(' ')
+        const dim = nu.is_down || unitStatus.unavailable
+        drawTag(ctx, label, ux, box.top + box.height + 4, dim ? palette.mist : palette.moon)
+        if (unitStatus.stolen) drawBadge(ctx, box.left + box.width, box.top, palette.sindak, 'bang')
+        else if (unitStatus.lost)
+          drawBadge(ctx, box.left + box.width, box.top, palette.mist, 'cross')
+        else if (unitStatus.outTurns !== null) {
+          drawBadge(ctx, box.left + box.width, box.top, palette.ember, 'zz')
+        }
+      })
+
+      if (phase === 'PHYSICAL_EFFECTS') {
+        night.effects.forEach((effect) => {
+          const unit = state.units.find((candidate) => candidate.id === effect.unit_id)
+          const spot = unitSpot.get(effect.unit_id)
+          if (!unit || !spot) return
+          const [ux, uy] = toCanvas(spot.x_cm, spot.y_cm)
+          if (effect.kind === 'push') {
+            const [gx, gy] = toCanvas(effect.x_cm, effect.y_cm)
+            drawGuideArrow(ctx, ux, uy, gx, gy, palette.lantern)
+            drawPushGhost(
+              ctx,
+              unitImages.get(unit.unit_id) ?? null,
+              gx,
+              gy,
+              MIN_SCALE,
+              t('effect.slide_here').tl
+            )
+          } else {
+            drawRemoveMark(ctx, ux, uy, t('effect.remove').tl)
+          }
+        })
+      }
+
+      Object.entries(returns).forEach(([unitId, spot]) => {
+        const unit = state.units.find((candidate) => candidate.id === unitId)
+        if (!unit) return
+        const [rx, ry] = toCanvas(spot.x_cm, spot.y_cm)
+        drawReturnMark(
+          ctx,
+          unitImages.get(unit.unit_id) ?? null,
+          rx,
+          ry,
+          MIN_SCALE,
+          t('effect.put_back').tl
+        )
       })
 
       if (targetKind !== null && targetKind !== 'none') {
@@ -330,7 +436,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
           targetKind === 'enemy'
             ? night.enemies.map((enemy) => enemy)
             : night.units
-                .filter((nu) => !nu.is_down)
+                .filter((nu) => !nu.is_down && !parseStatus(nu.status).unavailable)
                 .map((nu) => unitSpot.get(nu.id))
                 .filter((spot): spot is Spot => spot !== undefined)
         marks.forEach((spot) => {
@@ -353,7 +459,8 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
       unitImages,
       enemyFrames,
       activeSelection,
-      targetKind
+      targetKind,
+      returns
     ]
   )
 
@@ -365,6 +472,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
     )
   }
 
+  const effecting = phase === 'PHYSICAL_EFFECTS'
   const checking = phase === 'END_TURN_SNAPSHOT' || phase === 'VALIDATE'
   const blocked = blockedHeard && night.illegal_units.length > 0 && playerPhase
 
@@ -386,6 +494,16 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
             overlay={overlay}
             label={t('hud.board').en}
           />
+          {note !== null && (
+            <div
+              key={note.id}
+              role="status"
+              aria-live="polite"
+              className="banner absolute left-1/2 top-4 w-[720px] -translate-x-1/2 p-3"
+            >
+              <Bilingual copyKey={note.key} params={note.params} />
+            </div>
+          )}
           {phase === 'PAUSED' && (
             <div className="absolute inset-0 flex items-center justify-center bg-gabi-ink/80">
               <div
@@ -430,6 +548,46 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
           )}
         </div>
         <div className="flex min-h-0 w-[440px] shrink-0 flex-col gap-4">
+          {effecting && (
+            <section aria-label={t('effect.title').en} className="panel flex flex-col gap-3 p-3">
+              <h2 className="text-[24px] leading-[32px]">{t('effect.title').tl}</h2>
+              {night.effects.map((effect) => {
+                const name = state.units.find((unit) => unit.id === effect.unit_id)?.name ?? ''
+                const text =
+                  effect.kind === 'push'
+                    ? t('tik.push', { unit: name, object: name })
+                    : t('duw.steal', { unit: name })
+                return (
+                  <div key={`${effect.kind}:${effect.unit_id}`} role="status">
+                    <p className="caption-tl">{text.tl}</p>
+                    <p className="caption-en">{text.en}</p>
+                  </div>
+                )
+              })}
+              <p
+                role="timer"
+                className={night.effect_seconds_left <= 5 ? 'text-gabi-lantern' : 'caption-en'}
+              >
+                {night.effect_seconds_left <= 5 ? '! ' : ''}
+                {t('effect.seconds', { seconds: night.effect_seconds_left }).tl}
+              </p>
+              <button
+                type="button"
+                className="btn btn-primary h-[72px] w-full text-[24px]"
+                onClick={() => send({ type: 'effect.done' })}
+              >
+                {t('effect.done').tl}
+              </button>
+            </section>
+          )}
+          {Object.keys(returns).map((unitId) => {
+            const name = state.units.find((unit) => unit.id === unitId)?.name ?? ''
+            return (
+              <div key={unitId} role="status" className="banner p-3">
+                <Bilingual copyKey="duw.back" params={{ unit: name }} />
+              </div>
+            )
+          })}
           {selectionValid && selectedUnit && selectedNight && (
             <TapMenu
               unit={selectedUnit}

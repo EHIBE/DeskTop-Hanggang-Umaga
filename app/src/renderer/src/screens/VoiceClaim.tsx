@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import SpriteView from '../canvas/SpriteView'
 import Bilingual from '../components/Bilingual'
+import Captions from '../hud/Captions'
 import { t } from '../lib/copy'
+import type { MessageHandler } from '../lib/socket'
 import type { ClientMessage, StateMessage } from '../lib/types'
 
 type VoiceClaimProps = Readonly<{
   state: StateMessage
   send: (message: ClientMessage) => boolean
+  subscribe: (handler: MessageHandler) => () => void
 }>
 
 const CLAIM_SECONDS = 60
@@ -31,11 +34,30 @@ function initialNames(state: StateMessage): readonly string[] {
   return Array.from({ length: SLOTS }, (_, index) => players[index] ?? '')
 }
 
-function VoiceClaim({ state, send }: VoiceClaimProps): React.JSX.Element {
+function VoiceClaim({ state, send, subscribe }: VoiceClaimProps): React.JSX.Element {
   const [names, setNames] = useState<readonly string[]>(() => initialNames(state))
   const [claims, setClaims] = useState<Claims>(() => initialClaims(state))
   const [selected, setSelected] = useState<string | null>(null)
   const [secondsLeft, setSecondsLeft] = useState(CLAIM_SECONDS)
+
+  const serverKey = [
+    (state.night?.players ?? []).join('|'),
+    (state.night?.units ?? []).map((unit) => `${unit.id}=${unit.owner ?? ''}`).join('|')
+  ].join('#')
+
+  const latestRef = useRef(state)
+  useEffect(() => {
+    latestRef.current = state
+  })
+
+  useEffect(() => {
+    const latest = latestRef.current
+    const players = latest.night?.players ?? []
+    setNames((current) =>
+      current.map((name, index) => (players[index] !== undefined ? players[index] : name))
+    )
+    setClaims(initialClaims(latest))
+  }, [serverKey])
 
   useEffect(() => {
     const timer = setInterval(() => setSecondsLeft((value) => Math.max(0, value - 1)), 1000)
@@ -87,6 +109,8 @@ function VoiceClaim({ state, send }: VoiceClaimProps): React.JSX.Element {
     <main className="flex h-full w-full gap-8 p-8">
       <section className="panel flex min-w-0 flex-1 flex-col gap-6 p-6">
         <Bilingual copyKey="claim.prompt" />
+        <Bilingual copyKey="claim.voice_hint" />
+        <Captions subscribe={subscribe} className="flex-none" />
         <p role="timer" className={secondsLeft <= 10 ? 'text-gabi-lantern' : 'caption-en'}>
           {secondsLeft <= 10 ? '! ' : ''}
           {t('claim.countdown', { seconds: secondsLeft }).tl}

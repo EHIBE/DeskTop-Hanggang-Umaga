@@ -1,5 +1,7 @@
 import SpriteView from '../canvas/SpriteView'
 import { t } from '../lib/copy'
+import StatusBadge from './StatusBadge'
+import { parseStatus, statusEntries } from './status'
 import type { NightUnit, UnitSummary } from '../lib/types'
 
 type UnitStripProps = Readonly<{
@@ -29,6 +31,8 @@ function UnitStrip({
     >
       {rows.map(({ night, unit }) => {
         const isKubo = unit.class === 'kubo'
+        const status = parseStatus(night.status)
+        const badges = statusEntries(status)
         const selected = selectedId === unit.id
         const detail = [isKubo ? null : `${t('hud.cd').tl} ${night.cooldown}`, night.owner].filter(
           (part): part is string => part !== null && part !== ''
@@ -39,9 +43,9 @@ function UnitStrip({
             type="button"
             className={`btn flex w-full items-center gap-3 px-3 py-1 text-left ${
               isKubo ? 'border-gabi-lantern' : ''
-            } ${night.is_down ? 'opacity-70' : ''}`}
+            } ${night.is_down || status.unavailable ? 'opacity-70' : ''}`}
             aria-pressed={selected}
-            disabled={!interactive || night.is_down || isKubo}
+            disabled={!interactive || night.is_down || isKubo || status.unavailable}
             onClick={() => onSelect(unit.id)}
           >
             <span className={night.is_down ? 'grayscale' : ''}>
@@ -58,8 +62,13 @@ function UnitStrip({
                   {t('hud.hp').tl} {night.hp}/{night.hp_max}
                 </span>
               </span>
-              <span className="caption-en truncate">
-                {night.is_down ? t('hud.down').tl : detail.join(' · ')}
+              <span className="caption-en flex flex-wrap gap-x-3 truncate">
+                {badges.map((entry) => (
+                  <StatusBadge key={entry.kind} entry={entry} />
+                ))}
+                <span className="truncate">
+                  {night.is_down ? t('hud.down').tl : detail.join(' · ')}
+                </span>
               </span>
             </span>
           </button>

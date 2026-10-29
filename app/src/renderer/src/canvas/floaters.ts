@@ -13,12 +13,14 @@ const POOF_OFFSETS: readonly (readonly [number, number])[] = [
 ]
 
 export type Floater = Readonly<{
-  kind: 'damage' | 'heal' | 'dodge' | 'poof'
+  kind: 'damage' | 'heal' | 'dodge' | 'poof' | 'note'
   text: string
   x_cm: number
   y_cm: number
   start: number
 }>
+
+export type FloaterLabels = Readonly<{ dodge: string; thrown: string; escape: string }>
 
 export type Locator = (id: string | null) => Readonly<{ x_cm: number; y_cm: number }> | null
 
@@ -26,7 +28,7 @@ export function floatersFromEvents(
   events: readonly GameEvent[],
   locate: Locator,
   now: number,
-  dodgeText: string
+  labels: FloaterLabels
 ): readonly Floater[] {
   const out: Floater[] = []
   const attackTargets = new Set(
@@ -37,9 +39,13 @@ export function floatersFromEvents(
     if (at === null) return
     const base = { x_cm: at.x_cm, y_cm: at.y_cm, start: now }
     if (event.type === 'dodge') {
-      out.push({ ...base, kind: 'dodge', text: dodgeText })
+      out.push({ ...base, kind: 'dodge', text: labels.dodge })
     } else if (event.type === 'heal' && event.dmg !== null && event.dmg > 0) {
       out.push({ ...base, kind: 'heal', text: `+${event.dmg}` })
+    } else if (event.type === 'thrown') {
+      out.push({ ...base, kind: 'note', text: labels.thrown })
+    } else if (event.type === 'escape') {
+      out.push({ ...base, kind: 'note', text: labels.escape })
     } else if (event.type === 'defeat_enemy') {
       out.push({ ...base, kind: 'poof', text: '' })
     } else if (
@@ -88,7 +94,7 @@ export function drawFloaters(
     const color =
       floater.kind === 'heal'
         ? palette.dahon
-        : floater.kind === 'dodge'
+        : floater.kind === 'dodge' || floater.kind === 'note'
           ? palette.moon
           : palette.ember
     ctx.globalAlpha = progress < 0.6 ? 1 : 1 - (progress - 0.6) / 0.4

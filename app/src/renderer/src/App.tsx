@@ -124,7 +124,7 @@ function App(): React.JSX.Element {
   } else if (state.phase === 'CALIBRATE') {
     screen = <Calibration state={state} send={send} subscribe={subscribe} />
   } else if (state.phase === 'VOICE_CLAIM') {
-    screen = <VoiceClaim state={state} send={send} />
+    screen = <VoiceClaim state={state} send={send} subscribe={subscribe} />
   } else if (NIGHT_PHASES.has(state.phase)) {
     screen = <Night state={state} send={send} subscribe={subscribe} narration={narration} />
   } else if (state.phase === 'SUNRISE') {

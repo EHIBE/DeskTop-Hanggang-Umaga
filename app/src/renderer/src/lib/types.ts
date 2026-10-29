@@ -31,6 +31,7 @@ export type EventType =
   | 'shield'
   | 'down'
   | 'push'
+  | 'thrown'
   | 'steal'
   | 'return'
   | 'escape'
@@ -74,6 +75,16 @@ export type NightUnit = Readonly<{
   move_cm: number
   range_cm: number
   owner: string | null
+  status: readonly string[]
+}>
+
+export type EffectKind = 'push' | 'steal'
+
+export type NightEffect = Readonly<{
+  kind: EffectKind
+  unit_id: string
+  x_cm: number
+  y_cm: number
 }>
 
 export type ChipSource = 'tap' | 'voice'
@@ -98,6 +109,8 @@ export type NightSummary = Readonly<{
   illegal_units: readonly string[]
   kubo_hp: number
   kubo_hp_max: number
+  effects: readonly NightEffect[]
+  effect_seconds_left: number
 }>
 
 export type ScoreSummary = Readonly<{
@@ -321,6 +334,7 @@ export type ClientMessage =
   | Readonly<{ type: 'night.begin' }>
   | Readonly<{ type: 'claim.tap'; player_name: string; unit_ids: readonly string[] }>
   | Readonly<{ type: 'claim.done' }>
+  | Readonly<{ type: 'effect.done' }>
   | Readonly<{
       type: 'intent.tap'
       unit_id: string

@@ -357,7 +357,22 @@ const entries = {
   },
   'voice.ptt_held': { tl: 'Nakikinig... (Space)', en: 'Listening... (Space)' },
   'voice.chip_mic': { tl: 'Mic', en: 'Mic' },
-  'voice.caption_label': { tl: 'Live na caption', en: 'Live caption' }
+  'voice.caption_label': { tl: 'Live na caption', en: 'Live caption' },
+  'claim.voice_hint': {
+    tl: 'Sabihin: ako si [pangalan], hawak ko ang [piyesa]',
+    en: "Say: I'm [name], I'll take [piece]"
+  },
+  'effect.done': { tl: 'Tapos na', en: 'Done' },
+  'effect.seconds': { tl: '[seconds] segundo', en: '[seconds] seconds' },
+  'effect.title': { tl: 'Galaw sa mesa', en: 'Table move' },
+  'effect.slide_here': { tl: 'Dito', en: 'Here' },
+  'effect.remove': { tl: 'Alisin', en: 'Remove' },
+  'effect.put_back': { tl: 'Ibalik dito', en: 'Put back here' },
+  'status.out': { tl: 'Labas [turns]', en: 'Out [turns]' },
+  'status.stolen': { tl: 'Ninakaw', en: 'Stolen' },
+  'effect.thrown_float': { tl: 'Itinapon!', en: 'Thrown!' },
+  'effect.escape_float': { tl: 'Nakatakas!', en: 'Escaped!' },
+  'status.lost': { tl: 'Nawala', en: 'Lost' }
 } as const satisfies Record<string, CopyEntry>
 
 export type CopyKey = keyof typeof entries
