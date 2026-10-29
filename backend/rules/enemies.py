@@ -82,7 +82,7 @@ def enemy_stats(
 
 
 def _living(state: BoardState) -> list[UnitState]:
-    return [u for u in state.units if not u.is_down]
+    return [u for u in state.units if u.is_targetable]
 
 
 def _gap(enemy: EnemyState, unit: UnitState) -> float:
@@ -135,6 +135,8 @@ def _aswang_target(enemy: EnemyState, living: list[UnitState]) -> UnitState | No
 
 
 def pick_target(enemy: EnemyState, state: BoardState) -> str | None:
+    if enemy.carrying is not None:
+        return None
     living = _living(state)
     pick: UnitState | None
     if enemy.type is EnemyType.ASWANG:
@@ -187,12 +189,18 @@ def _boundary(
 
 def _wall_hulls(state: BoardState) -> list[Hull]:
     return [
-        u.hull for u in state.units if u.unit_class is UnitClass.WALL and not u.is_down
+        u.hull
+        for u in state.units
+        if u.unit_class is UnitClass.WALL and not u.is_down and not u.is_absent
     ]
 
 
 def _aura_hulls(state: BoardState) -> list[Hull]:
-    return [u.hull for u in state.units if u.power_id is PowerId.P07 and not u.is_down]
+    return [
+        u.hull
+        for u in state.units
+        if u.power_id is PowerId.P07 and not u.is_down and not u.is_absent
+    ]
 
 
 def move_toward(enemy: EnemyState, target: Point | Hull, state: BoardState) -> Point:
@@ -241,3 +249,35 @@ def move_toward(enemy: EnemyState, target: Point | Hull, state: BoardState) -> P
             return at(_boundary(reached, previous, current)[1])
         previous = current
     return at(max_s)
+
+
+def _edge_candidates(
+    position: Point, width: float, height: float
+) -> list[tuple[float, Point]]:
+    return [
+        (position[1], (0.0, -1.0)),
+        (width - position[0], (1.0, 0.0)),
+        (height - position[1], (0.0, 1.0)),
+        (position[0], (-1.0, 0.0)),
+    ]
+
+
+def _nearest_edge(position: Point, width: float, height: float) -> tuple[float, Point]:
+    candidates = _edge_candidates(position, width, height)
+    ranked = min(
+        enumerate(candidates),
+        key=lambda item: (round(item[1][0], DISTANCE_KEY_DIGITS), item[0]),
+    )
+    return ranked[1]
+
+
+def at_edge(position: Point, width: float, height: float) -> bool:
+    return _nearest_edge(position, width, height)[0] <= ENEMY_RADIUS_CM
+
+
+def flee_point(enemy: EnemyState, width: float, height: float) -> Point:
+    distance, (dx, dy) = _nearest_edge(enemy.position, width, height)
+    step = min(enemy.move_cm, max(0.0, distance))
+    return clamp_point(
+        (enemy.position[0] + dx * step, enemy.position[1] + dy * step), width, height
+    )

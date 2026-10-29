@@ -216,6 +216,7 @@ def test_event_type_members() -> None:
         "shield",
         "down",
         "push",
+        "thrown",
         "steal",
         "return",
         "escape",
@@ -1074,14 +1075,15 @@ def test_kubo_hit_event_follows_attack() -> None:
     assert events[1].dmg == 3
 
 
-def test_duwende_hits_for_one() -> None:
+def test_duwende_steals_instead_of_damaging() -> None:
     state = cd_state(
         [unit("a", pos=(10.0, 10.0))],
         [enemy("d", EnemyType.DUWENDE, pos=(14.0, 10.0), target="a")],
     )
     new, events = run(state)
-    assert events[0].dmg == 1
-    assert find_unit(new, "a").hp == 5
+    assert types(events) == [EventType.STEAL]
+    assert find_unit(new, "a").hp == 6
+    assert find_unit(new, "a").stolen_by == "d"
 
 
 def test_mahirap_enemy_hits_harder() -> None:
@@ -1350,9 +1352,9 @@ def test_begin_turn_duwende_telegraphs_one() -> None:
     state = board([kubo(), unit("c", UnitClass.CHARM, (10.0, 20.0))], turn=1)
     new, events = begin_turn(state)
     duwende = find_enemy(new, "e_duwende_1")
-    assert duwende.intent_dmg == 1 and duwende.target_id == "c"
+    assert duwende.intent_dmg == 0 and duwende.target_id == "c"
     intents = [e for e in of_type(events, EventType.INTENT) if e.src == "e_duwende_1"]
-    assert intents[0].dmg == 1
+    assert intents[0].dmg == 0
 
 
 def test_begin_turn_manananggal_split_and_lower_has_no_intent() -> None:
@@ -1448,15 +1450,22 @@ def random_state(seed: int) -> tuple[BoardState, list[Intent]]:
     for i in range(rng.randint(0, 8)):
         kind = rng.choice(list(EnemyType))
         part = rng.choice(list(Part)) if kind is EnemyType.MANANANGGAL else None
-        enemies.append(
-            enemy(
-                f"e{i}",
-                kind,
-                (rng.uniform(2, 58), rng.uniform(2, 38)),
-                part,
-                target=rng.choice([u.id for u in units]),
-            )
-        )
+        goal = rng.choice(units)
+        spot = (rng.uniform(2, 58), rng.uniform(2, 38))
+        if rng.random() < 0.5:
+            spot = (goal.position[0] + rng.uniform(-4, 4), goal.position[1] + 3.0)
+        enemies.append(enemy(f"e{i}", kind, spot, part, target=goal.id))
+    if enemies and rng.random() < 0.4:
+        units = [
+            replace(u, out_turns=1) if i == 1 and not u.is_kubo else u
+            for i, u in enumerate(units)
+        ]
+    if len(enemies) > 1 and rng.random() < 0.5:
+        enemies[0] = replace(enemies[0], type=EnemyType.DUWENDE, atk=0, carrying="u_2")
+        units = [replace(u, stolen_by="e0") if u.id == "u_2" else u for u in units]
+    if len(enemies) > 2:
+        enemies[1] = replace(enemies[1], type=EnemyType.TIKBALANG, atk=1)
+        enemies[2] = replace(enemies[2], type=EnemyType.DUWENDE, atk=0)
     state = board(
         units,
         enemies,

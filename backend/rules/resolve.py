@@ -4,7 +4,15 @@ from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from typing import Final
 
-from rules.enemies import EnemyType, Part, enemy_stats, move_toward, pick_target
+from rules.enemies import (
+    EnemyType,
+    Part,
+    at_edge,
+    enemy_stats,
+    flee_point,
+    move_toward,
+    pick_target,
+)
 from rules.geometry import (
     ENEMY_RADIUS_CM,
     KUBO_MOVED_WARN_CM,
@@ -13,6 +21,7 @@ from rules.geometry import (
     Point,
     clamp_point,
     displacement,
+    hull_centroid,
     hull_hull_distance,
     hull_point_distance,
     in_range,
@@ -44,15 +53,19 @@ __all__ = [
     "Outcome",
     "Part",
     "UnitState",
+    "apply_enemy_tags",
+    "apply_unit_tags",
     "bayani",
     "begin_turn",
     "check_outcome",
+    "enemy_status_tags",
     "illegal_moves",
     "intent_error",
     "moved_kubo",
     "resolve_turn",
     "score",
     "start_night",
+    "unit_status_tags",
     "with_positions",
 ]
 
@@ -60,6 +73,11 @@ TURNS_PER_NIGHT: Final = 8
 HEAL_AMOUNT: Final = 2
 ALLY_POWER_RADIUS_CM: Final = 10.0
 PUSH_CM: Final = 8.0
+THROWN_TURNS: Final = 1
+OUT_PREFIX: Final = "out_"
+STOLEN_PREFIX: Final = "stolen_by:"
+CARRYING_PREFIX: Final = "carrying:"
+LOST_TAG: Final = "lost"
 HAMPAS_RADIUS_CM: Final = 6.0
 HAMPAS_DAMAGE: Final = 1
 TUSOK_BEHIND_CM: Final = 5.0
@@ -114,6 +132,7 @@ class EventType(StrEnum):
     SHIELD = "shield"
     DOWN = "down"
     PUSH = "push"
+    THROWN = "thrown"
     STEAL = "steal"
     RETURN = "return"
     ESCAPE = "escape"
@@ -148,10 +167,29 @@ class UnitState:
     owner: str | None = None
     shield: int = 0
     atk_bonus: int = 0
+    out_turns: int = 0
+    stolen_by: str | None = None
+    is_lost: bool = False
 
     @property
     def is_down(self) -> bool:
         return self.hp <= 0
+
+    @property
+    def is_absent(self) -> bool:
+        return self.stolen_by is not None or self.is_lost
+
+    @property
+    def is_out(self) -> bool:
+        return self.out_turns > 0 or self.is_absent
+
+    @property
+    def can_act(self) -> bool:
+        return not self.is_down and not self.is_out
+
+    @property
+    def is_targetable(self) -> bool:
+        return not self.is_down and not self.is_out
 
     @property
     def is_kubo(self) -> bool:
@@ -179,6 +217,7 @@ class EnemyState:
     intent_dmg: int | None = None
     is_stunned: bool = False
     reform_in: int | None = None
+    carrying: str | None = None
 
     @property
     def is_alive(self) -> bool:
@@ -255,7 +294,9 @@ def with_positions(
 ) -> BoardState:
     offsets = hull_offsets or {}
     units = tuple(
-        replace(
+        u
+        if u.is_out
+        else replace(
             u,
             position=positions.get(u.id, u.position),
             hull_offsets=offsets.get(u.id, u.hull_offsets),
@@ -270,7 +311,7 @@ def illegal_moves(state: BoardState) -> tuple[str, ...]:
         u.id
         for u in state.units
         if not u.is_kubo
-        and not u.is_down
+        and u.can_act
         and not is_move_legal(u.start, u.position, MOVE_CM[u.move])
     )
 
@@ -292,7 +333,7 @@ def _power_target_error(
     enemies = {e.id: e for e in state.enemies if e.is_alive}
     if power in _ALLY_TARGET_POWERS:
         target = units.get(target_id) if target_id else None
-        ok = target is not None and not target.is_down
+        ok = target is not None and target.is_targetable
     elif power in _ENEMY_TARGET_POWERS:
         ok = target_id in enemies
     elif power is PowerId.P06:
@@ -314,7 +355,7 @@ def _power_target_error(
 
 def intent_error(state: BoardState, intent: Intent) -> str | None:
     unit = _unit_map(state).get(intent.unit_id)
-    if unit is None or unit.is_down:
+    if unit is None or not unit.can_act:
         return "cmd.unknown"
     if intent.action is Action.ATTACK:
         if unit.atk <= 0 or unit.range is RangeClass.NONE:
@@ -334,6 +375,11 @@ def _damage_to_unit(unit: UnitState, raw: int) -> tuple[UnitState, int]:
     return replace(unit, shield=unit.shield - absorbed, hp=unit.hp - lost), lost
 
 
+def _inside(point: Point, width: float, height: float) -> bool:
+    x, y = round(point[0], 6), round(point[1], 6)
+    return 0.0 <= x <= width and 0.0 <= y <= height
+
+
 def _unit_damage(unit: UnitState) -> int:
     return max(MIN_DAMAGE, unit.atk + unit.atk_bonus)
 
@@ -347,6 +393,7 @@ class _Round:
         self.damage = dict(state.damage_by_owner)
         self.defeated = state.enemies_defeated
         self.used: dict[str, int] = {}
+        self.thrown: set[str] = set()
 
     def emit(self, event: Event) -> None:
         self.events.append(event)
@@ -364,6 +411,16 @@ class _Round:
         if enemy.hp - lost <= 0:
             self.defeated += 1
             self.emit(Event(EventType.DEFEAT_ENEMY, unit.id, enemy_id))
+            self.release(enemy)
+
+    def release(self, enemy: EnemyState) -> None:
+        captive = self.units.get(enemy.carrying) if enemy.carrying else None
+        if captive is None or captive.stolen_by != enemy.id:
+            return
+        self.units[captive.id] = replace(
+            captive, stolen_by=None, position=enemy.position
+        )
+        self.emit(Event(EventType.RETURN, enemy.id, captive.id, pos=enemy.position))
 
     def dodge(self, src: str, dst: str | None) -> None:
         self.emit(Event(EventType.DODGE, src, dst))
@@ -374,7 +431,7 @@ class _Round:
 
     def living_unit(self, unit_id: str | None) -> UnitState | None:
         unit = self.units.get(unit_id) if unit_id else None
-        return unit if unit is not None and not unit.is_down else None
+        return unit if unit is not None and unit.is_targetable else None
 
     def ally_in_reach(self, unit: UnitState, target_id: str | None) -> UnitState | None:
         target = self.living_unit(target_id)
@@ -483,7 +540,7 @@ class _Round:
     def p_shout(self, unit: UnitState, target_id: str | None) -> None:
         self.announce(unit, target_id)
         for other in list(self.units.values()):
-            if other.id == unit.id or other.is_down:
+            if other.id == unit.id or not other.is_targetable:
                 continue
             if in_range(
                 hull_hull_distance(unit.hull, other.hull), ALLY_POWER_RADIUS_CM
@@ -555,11 +612,19 @@ class _Round:
 
     def enemy_attack(self, enemy: EnemyState) -> None:
         target = self.living_unit(enemy.target_id)
-        if not enemy.is_alive or enemy.is_stunned or target is None:
+        if (
+            not enemy.is_alive
+            or enemy.is_stunned
+            or enemy.carrying is not None
+            or target is None
+        ):
             return
         gap = hull_point_distance(target.hull, enemy.position)
         if not in_range(gap, enemy.range_cm):
             self.dodge(enemy.id, target.id)
+            return
+        if enemy.type is EnemyType.DUWENDE:
+            self.steal(enemy, target)
             return
         hurt, lost = _damage_to_unit(target, max(MIN_DAMAGE, enemy.atk))
         self.units[target.id] = hurt
@@ -568,6 +633,32 @@ class _Round:
             self.emit(Event(EventType.KUBO_HIT, enemy.id, target.id, lost))
         if hurt.is_down:
             self.emit(Event(EventType.DOWN, enemy.id, target.id))
+        elif enemy.type is EnemyType.TIKBALANG and not hurt.is_kubo:
+            self.knock_back(enemy, hurt)
+
+    def steal(self, enemy: EnemyState, target: UnitState) -> None:
+        if target.is_kubo:
+            return
+        self.units[target.id] = replace(target, stolen_by=enemy.id)
+        self.enemies[enemy.id] = replace(
+            enemy, carrying=target.id, target_id=None, intent_dmg=None
+        )
+        self.emit(Event(EventType.STEAL, enemy.id, target.id))
+
+    def knock_back(self, enemy: EnemyState, target: UnitState) -> None:
+        centre = hull_centroid(target.hull)
+        dx = centre[0] - enemy.position[0]
+        dy = centre[1] - enemy.position[1]
+        length = math.hypot(dx, dy)
+        ux, uy = (dx / length, dy / length) if length > 0 else (0.0, -1.0)
+        spot = (target.position[0] + ux * PUSH_CM, target.position[1] + uy * PUSH_CM)
+        if not _inside(spot, self.state.play_w_cm, self.state.play_h_cm):
+            self.units[target.id] = replace(target, out_turns=THROWN_TURNS)
+            self.thrown.add(target.id)
+            self.emit(Event(EventType.THROWN, enemy.id, target.id))
+            return
+        self.units[target.id] = replace(target, position=spot)
+        self.emit(Event(EventType.PUSH, enemy.id, target.id, pos=spot))
 
 
 def _first_valid_intents(state: BoardState, intents: Sequence[Intent]) -> list[Intent]:
@@ -630,7 +721,10 @@ def _tick_units(rnd: _Round) -> tuple[UnitState, ...]:
             cooldown = rnd.used[unit.id]
         else:
             cooldown = max(0, unit.cooldown - 1)
-        ticked.append(replace(unit, cooldown=cooldown))
+        out_turns = (
+            unit.out_turns if unit.id in rnd.thrown else max(0, unit.out_turns - 1)
+        )
+        ticked.append(replace(unit, cooldown=cooldown, out_turns=out_turns))
     return tuple(ticked)
 
 
@@ -661,7 +755,7 @@ def check_outcome(state: BoardState) -> Outcome:
     kubo = state.kubo
     others = [u for u in state.units if not u.is_kubo]
     kubo_down = kubo is not None and kubo.is_down
-    all_down = bool(others) and all(u.is_down for u in others)
+    all_down = bool(others) and all(u.is_down or u.is_lost for u in others)
     if kubo_down or all_down:
         return Outcome.LOSE
     if state.turn >= TURNS_PER_NIGHT:
@@ -670,7 +764,9 @@ def check_outcome(state: BoardState) -> Outcome:
 
 
 def score(state: BoardState) -> int:
-    alive = sum(1 for u in state.units if not u.is_kubo and not u.is_down)
+    alive = sum(
+        1 for u in state.units if not u.is_kubo and not u.is_down and not u.is_absent
+    )
     kubo = state.kubo
     kubo_hp = max(0, kubo.hp) if kubo is not None else 0
     return (
@@ -790,13 +886,30 @@ def begin_turn(state: BoardState) -> tuple[BoardState, tuple[Event, ...]]:
         if not enemy.is_alive:
             moved.append(enemy)
             continue
+        if enemy.carrying is not None:
+            if at_edge(enemy.position, current.play_w_cm, current.play_h_cm):
+                captive = by_id.get(enemy.carrying)
+                if captive is not None:
+                    by_id[captive.id] = replace(captive, stolen_by=None, is_lost=True)
+                    events.append(
+                        Event(
+                            EventType.ESCAPE,
+                            enemy.id,
+                            captive.id,
+                            pos=enemy.position,
+                        )
+                    )
+                continue
+            fled = flee_point(enemy, current.play_w_cm, current.play_h_cm)
+            moved.append(replace(enemy, position=fled, target_id=None, intent_dmg=None))
+            continue
         target_id = pick_target(enemy, current)
         if target_id is None:
             moved.append(replace(enemy, target_id=None, intent_dmg=None))
             continue
         target = by_id[target_id]
         position = move_toward(enemy, target.hull, current)
-        intent = max(MIN_DAMAGE, enemy.atk)
+        intent = 0 if enemy.type is EnemyType.DUWENDE else max(MIN_DAMAGE, enemy.atk)
         moved.append(
             replace(enemy, position=position, target_id=target_id, intent_dmg=intent)
         )
@@ -804,6 +917,48 @@ def begin_turn(state: BoardState) -> tuple[BoardState, tuple[Event, ...]]:
             Event(EventType.INTENT, enemy.id, target_id, intent, pos=position)
         )
     new_state = replace(
-        current, enemies=tuple(moved), enemy_counter=tuple(counter.items())
+        current,
+        units=tuple(by_id[u.id] for u in current.units),
+        enemies=tuple(moved),
+        enemy_counter=tuple(counter.items()),
     )
     return new_state, tuple(events)
+
+
+def unit_status_tags(unit: UnitState) -> tuple[str, ...]:
+    tags: list[str] = []
+    if unit.out_turns > 0:
+        tags.append(f"{OUT_PREFIX}{unit.out_turns}")
+    if unit.stolen_by is not None:
+        tags.append(f"{STOLEN_PREFIX}{unit.stolen_by}")
+    if unit.is_lost:
+        tags.append(LOST_TAG)
+    return tuple(tags)
+
+
+def apply_unit_tags(unit: UnitState, tags: Sequence[str]) -> UnitState:
+    out_turns = 0
+    stolen_by: str | None = None
+    is_lost = False
+    for tag in tags:
+        if tag.startswith(OUT_PREFIX) and tag[len(OUT_PREFIX) :].isdigit():
+            out_turns = int(tag[len(OUT_PREFIX) :])
+        elif tag.startswith(STOLEN_PREFIX) and len(tag) > len(STOLEN_PREFIX):
+            stolen_by = tag[len(STOLEN_PREFIX) :]
+        elif tag == LOST_TAG:
+            is_lost = True
+    return replace(unit, out_turns=out_turns, stolen_by=stolen_by, is_lost=is_lost)
+
+
+def enemy_status_tags(enemy: EnemyState) -> tuple[str, ...]:
+    if enemy.carrying is None:
+        return ()
+    return (f"{CARRYING_PREFIX}{enemy.carrying}",)
+
+
+def apply_enemy_tags(enemy: EnemyState, tags: Sequence[str]) -> EnemyState:
+    carrying: str | None = None
+    for tag in tags:
+        if tag.startswith(CARRYING_PREFIX) and len(tag) > len(CARRYING_PREFIX):
+            carrying = tag[len(CARRYING_PREFIX) :]
+    return replace(enemy, carrying=carrying)
