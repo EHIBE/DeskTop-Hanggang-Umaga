@@ -63,6 +63,8 @@ backend\.venv\Scripts\python -m pip install -r backend\requirements.txt
 npm --prefix app run dev
 ```
 
+New here? The friendly walkthrough is in [docs/how-to-run.md](docs/how-to-run.md).
+
 On first launch the app asks for your API key and stores it with Windows safeStorage. The key never reaches the renderer, the logs or the repo. Choose Play offline to use Demo Safe Mode instead.
 
 ## How to play

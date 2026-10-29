@@ -30,6 +30,7 @@ This file maps every document in `docs/` and says which ones to read for each ki
 | `DeskTop_PRD.md` | Full product requirements, 22 sections. Historical source of truth |
 | `DeskTop_Build_Guide.md` | Phase 0 to 15 build plan, schedule, cut order |
 | `FEATURE_PROMPT.md` | Master prompt every feature run follows |
+| `how-to-run.md` | Friendly guide to install, launch and play the game. Start here if you just want to play |
 | `eval.md` | Eval results E1 to E7 (real runs only) |
 | `playtests.md` | Playtest logs (real sessions only) |
 | `rules-notes.md` | Official Rules answers and smoke-test findings |
