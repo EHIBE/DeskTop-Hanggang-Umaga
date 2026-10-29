@@ -79,6 +79,8 @@ TARGETS: Final = {
     "e4_non_blocking": 1.0,
     "e7": 1.0,
 }
+COST_UNITS: Final = 100_000_000
+COST_TARGET_USD: Final = 1.0
 FULL_SET: Final = {"e1": 60, "e2": 100, "e3": 50, "e4": 200, "e7": 50}
 MIN_SET: Final = {"e1": 20, "e2": 50, "e3": 50, "e4": 200, "e7": 50}
 
@@ -1195,6 +1197,57 @@ def emit(outcome: Outcome, deps: Deps) -> int:
     return 0 if outcome.target_met is not False else 1
 
 
+def run_cost(args: argparse.Namespace, deps: Deps) -> Outcome:
+    conn = open_db(args.db)
+    try:
+        nights = conn.execute(
+            "SELECT id, number, started_at, ended_at, result FROM night "
+            "WHERE ended_at IS NOT NULL ORDER BY started_at"
+        ).fetchall()
+        per_night: list[JsonObject] = []
+        for night in nights:
+            row = conn.execute(
+                "SELECT COUNT(*), COALESCE(SUM(CAST(ROUND(cost_usd * ?) AS INTEGER)), 0) "
+                "FROM api_usage WHERE ts >= ? AND ts <= ?",
+                (COST_UNITS, night["started_at"], night["ended_at"]),
+            ).fetchone()
+            per_night.append(
+                {
+                    "night": int(night["number"]),
+                    "result": night["result"],
+                    "calls": int(row[0]),
+                    "cost_usd": int(row[1]) / COST_UNITS,
+                }
+            )
+    finally:
+        conn.close()
+    if not per_night:
+        raise NotRun("no finished night in the database")
+    costs = [float(str(entry["cost_usd"])) for entry in per_night]
+    mean = sum(costs) / len(costs)
+    target_met = mean <= COST_TARGET_USD
+    payload: JsonObject = {
+        "eval": "cost",
+        "inputs": {"db": str(args.db)},
+        "counts": {"nights": len(per_night)},
+        "per_night": per_night,
+        "metric_name": "mean cost per finished night (USD)",
+        "metric": mean,
+        "max_cost_usd": max(costs),
+        "target": COST_TARGET_USD,
+        "target_met": target_met,
+        "conditions": {
+            "formula": "sum of api_usage cost_usd with ts between night started_at and ended_at",
+            "note": "the window starts when the night row is created, so summon and sprite calls count",
+        },
+    }
+    summary = (
+        f"cost: mean ${mean:.4f} per night over {len(per_night)} finished nights, "
+        f"max ${max(costs):.4f} (target under ${COST_TARGET_USD:.2f}), {verdict(target_met)}"
+    )
+    return Outcome("cost", summary, payload, target_met)
+
+
 RUNNERS: Final[dict[str, Callable[[argparse.Namespace, Deps], Outcome]]] = {
     "e1": run_e1,
     "e2": run_e2,
@@ -1202,6 +1255,7 @@ RUNNERS: Final[dict[str, Callable[[argparse.Namespace, Deps], Outcome]]] = {
     "e4": run_e4,
     "e6": run_e6,
     "e7": run_e7,
+    "cost": run_cost,
 }
 
 
@@ -1221,6 +1275,7 @@ def run_all(args: argparse.Namespace, deps: Deps) -> int:
         "e4": argparse.Namespace(db=args.db),
         "e6": argparse.Namespace(db=args.db),
         "e7": argparse.Namespace(boards=args.boards),
+        "cost": argparse.Namespace(db=args.db),
     }
     for name, namespace in plan.items():
         codes[name] = execute(name, namespace, deps)
@@ -1267,6 +1322,8 @@ def build_parser() -> argparse.ArgumentParser:
     e4.add_argument("--db", type=Path, default=None)
     e6 = add("e6", "E6 latency from api_usage and turn_log, offline", E6_FORMAT)
     e6.add_argument("--db", type=Path, default=None)
+    cost = add("cost", "Mean cost per finished night from api_usage, offline", "")
+    cost.add_argument("--db", type=Path, default=None)
     e7 = add("e7", "E7 determinism on seeded boards, offline", "")
     e7.add_argument("--boards", type=int, default=FULL_SET["e7"])
     every = add("all", "every offline eval that has inputs (not e1, not e2)", "")

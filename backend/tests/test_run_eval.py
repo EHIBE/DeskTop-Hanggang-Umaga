@@ -610,3 +610,22 @@ def test_all_runs_only_offline_evals_with_inputs(
     assert results(tmp_path, "e1") == []
     assert results(tmp_path, "e2") == []
     assert len(results(tmp_path, "e7")) == 1
+
+
+def test_cost_per_finished_night(tmp_path: Path) -> None:
+    path, night = build_db(tmp_path)
+    assert run_cli(["cost", "--db", str(path)], make_deps(tmp_path)) == 2
+    store = Store(path)
+    store.record_api_usage(
+        ApiUsageRecord("muse-spark-1.3", "spark", Decimal("0.25"), True)
+    )
+    store.record_api_usage(
+        ApiUsageRecord("sam-3.1", "sam_image", Decimal("0.0025"), True)
+    )
+    store.autosave(night, 8, [], [], "win", [])
+    store.close()
+    assert run_cli(["cost", "--db", str(path)], make_deps(tmp_path)) == 0
+    data = read_result(tmp_path, "cost")
+    assert data["counts"] == {"nights": 1}
+    assert data["metric"] == pytest.approx(0.2525)
+    assert data["target_met"] is True
