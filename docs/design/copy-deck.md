@@ -17,7 +17,7 @@ All player-facing text, keyed. This file is canonical until `app/src/renderer/sr
 
 | Fact | Value |
 |---|---|
-| UI keys | 204 in copy.ts (48 from PRD, the rest Proposed) |
+| UI keys | 210 in copy.ts (48 from PRD, the rest Proposed) |
 | Line bank moments | 19 (14 from PRD, 4 aswang edge variants, quiet) |
 | Placeholders | [name], [unit], [object], [player], [feature], [HP], [n], [action], [target], [pangalan], [turn], [seconds] |
 | Review | 2 Filipino playtesters review every Taglish line before recording |
@@ -230,6 +230,11 @@ English text for these is a proposal for playtester review.
 | night.continue_anyway | Ituloy pa rin | Continue anyway | M10, Proposed, playtester review |
 | night.cam_hint | Baka mali ang posisyon kung hindi muna mag-calibrate. | Positions may be off if you continue without recalibrating. | M10, Proposed, playtester review |
 | claim.countdown | Sasara ang claim sa [seconds] segundo | Claims close in [seconds] seconds | M10, Proposed, playtester review |
+| rec.agree | Payag | I agree | Phase 13, Proposed, playtester review |
+| rec.decline | Hindi | No | Phase 13, Proposed, playtester review |
+| rec.unavailable | Walang recording ngayon, tuloy pa rin ang laro. | No recording tonight, the game goes on. | Phase 13, Proposed, playtester review |
+| rec.no_ok | Okay lang ang Hindi. Tuloy pa rin ang gabi, walang recording. | Saying no is fine. The night still plays, just without recording. | Phase 13, Proposed, playtester review |
+| rec.waiting | Wala pang sagot | No answer yet | Phase 13, Proposed, playtester review |
 | effect.done | Tapos na | Done | M11 and Phase 12, Proposed, playtester review |
 | effect.seconds | [seconds] segundo | [seconds] seconds | M11 and Phase 12, Proposed, playtester review |
 | effect.title | Galaw sa mesa | Table move | M11 and Phase 12, Proposed, playtester review |

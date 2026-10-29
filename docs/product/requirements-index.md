@@ -21,7 +21,7 @@ Every functional and non-functional requirement with where it lives and its buil
 | Non-functional | NFR-01 to NFR-31 |
 | Demo-critical (★) | 31 FRs |
 | Status values | Planned, Built, Tested, Cut, Could |
-| Status on 2026-10-29 | M0 to M11 and Phase 12 built offline. Phase 13 (recording, evals, freeze) is next. Rows below give each test |
+| Status on 2026-10-29 | M0 to M11, Phase 12 and the Phase 13 code built offline. Live runs, evals with real data, freeze and Playtest 2 are Manual: EHIBE. Rows below give each test |
 
 Update the Status column when a requirement is built (code merged) and tested (test green). Use the `desktop-docs-sync` skill.
 
@@ -103,8 +103,8 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | FR-41 | | Autosave each turn, restore after crash | F14 | JS-10 | game/night.py, db/store.py | test_night_flow.py (restart resumes the saved turn exactly, interrupted night scores like a straight one, corrupt board refused), test_store.py (saved_night, v1 to v2 migration) | Tested |
 | FR-42 | | Recognize returning objects | F16 | JS-09 | vision/signature.py | n/a | Could |
 | FR-43 | | "Kagabi..." recap next night | F16 | JS-09 | gm/narrator.py | n/a | Could |
-| FR-44 | | Recording consent from every player | F15 | JS-08 | screens/*, game/night.py | unit test | Planned |
-| FR-45 | | Record warped feed to H.264 MP4 | F15 | JS-08 | backend/capture/recorder.py | manual | Planned |
+| FR-44 | | Recording consent from every player | F15 | JS-08 | game/night.py (give_consent), screens/VoiceClaim.tsx | test_night_flow.py (every claimed player, no consent still plays), test_recording_flow.py | Tested |
+| FR-45 | | Record warped feed to H.264 MP4 | F15 | JS-08 | backend/capture/recorder.py, game/night.py | test_recorder.py (fake ffmpeg), test_recording_flow.py. Real ffmpeg run Manual: EHIBE (not installed) | Built |
 | FR-46 | | Pick 4 to 6 highlights from turn_log | F15 | JS-08 | backend/replay/highlights.py | unit test | Planned |
 | FR-47 | | SAM video tracking on 10 FPS proxy, reel render | F15 | JS-08 | replay/proxy.py, replay/render.py | manual | Planned |
 | FR-48 | | Export 1080p MP4, 60 s max, dawn title card | F15 | JS-08 | replay/render.py | manual | Planned |
@@ -140,7 +140,7 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | NFR-17 | Reliability | Crash resume within 15 s | manual | Planned |
 | NFR-18 | Cost | Per night $0.50 expected, $1.40 worst | api_usage | Planned |
 | NFR-19 | Cost | Warn $90, stop $120 | unit test (test_meta_client.py) | Tested |
-| NFR-20 | Privacy | Consent each night, REC dot | manual | Planned |
+| NFR-20 | Privacy | Consent each night, REC dot | test_recording_flow.py. REC dot in hud/RecIndicator.tsx, display Manual: EHIBE | Built |
 | NFR-21 | Privacy | Local-first data boundary | security review | Planned |
 | NFR-22 | Privacy | Proxy expires 86,400 s, deleted after processing, delete campaign | unit test | Planned |
 | NFR-23 | Privacy | Standard mode only | config review | Planned |

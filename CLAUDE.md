@@ -28,7 +28,8 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 | M10 safety | Built 2026-10-28. Delete campaign (rows, files, orphan sprites), autosave restore at the saved turn (schema v2 `night.board_json`), Demo Safe module with SAM re-anchor toggle, pause, camera check at End Turn, 60 s claim timeout, renderer controls |
 | M11 voice | Built 2026-10-28. Taglish grammar, realtime DIARIZATION night session, live captions, voice chips with spoken cancel and End Turn, push-to-talk, voice off in Demo Safe and while paused. Live run Manual: EHIBE (key, mic). MVP scope complete offline |
 | Phase 12 physical enemies and voice claim | Built 2026-10-29. Tikbalang push and throw, duwende steal, flee, return and escape in the rules engine, PHYSICAL_EFFECTS wait with ghosts, marks, badges and Done, voice claim with ako si and hawak ko. Table run Manual: EHIBE |
-| Tests | 1064 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
+| Phase 13 code | Built 2026-10-29. Per-player recording consent, ffmpeg recorder (tested with a fake process), REC dot, narration logging, eval runner `eval/run_eval.py`. E7 50 of 50 (100%). ffmpeg, live evals, freeze tag and Playtest 2 are Manual: EHIBE |
+| Tests | 1113 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
 | CI, git hooks | None |
 
 ## Pending queue
@@ -43,7 +44,8 @@ Ordered. Canonical schedule: `docs/delivery/schedule.md`.
 6. Manual: EHIBE. Voice smoke script, then a spoken night (captions, chips, "hindi", "tapos na", hold Space) and record a DIARIZATION fixture so the event field names are verified
 7. Manual: EHIBE. Play a Demo Safe night with Wi-Fi off, kill the app at turn 5 and resume, delete a test campaign and check `%APPDATA%\DeskTop` (Playtest 1)
 8. Manual: EHIBE. Play a night with a tikbalang push and a duwende steal on the real table (turn 3 on Normal teaches the push)
-9. Phase 13 to 15: recording, evals, freeze, replay, video, submission
+9. Manual: EHIBE. Install ffmpeg, play two consented nights, run `eval/run_eval.py e4 --db` and `e6 --db` on the database, record E1 to E3 data, then the freeze tag (`git tag freeze-nov3`, push) at Nov 3 6:00 PM SGT and Playtest 2
+10. Phase 14 and 15: replay reel, video, README, submission
 
 ## Constraints
 

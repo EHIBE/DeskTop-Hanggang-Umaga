@@ -11,7 +11,7 @@ related: [docs/engineering/testing-strategy.md, docs/game/balance-and-tuning.md,
 
 # Eval results
 
-Real results only, from real runs. No eval has run yet as of 2026-10-28. Definitions and targets: `engineering/testing-strategy.md`.
+Real results only, from real runs. As of 2026-10-29 only E7 has run. The others need the API key, recorded nights or labelled data. Definitions and targets: `engineering/testing-strategy.md`.
 
 ## Key facts
 
@@ -23,11 +23,11 @@ Real results only, from real runs. No eval has run yet as of 2026-10-28. Definit
 | E4 GM validity | 97% first try, 100% non-blocking | Not run | |
 | E5 Sprites | 80%+ first try | Not run | |
 | E6 Latency | NFR-01, 03, 05, 08 p90 met | Not run | |
-| E7 Determinism | 100% | Not run | |
+| E7 Determinism | 100% | 50 of 50 identical (100%) | 2026-10-29 |
 
 ## How to record a run
 
-1. Run the eval (`eval/run_eval.py` or pytest for E7).
+1. Run the eval from the repo root: `backend\.venv\Scripts\python eval\run_eval.py <e1|e2|e3|e4|e6|e7|all>` (see `--help`). Each run writes `eval/results/<eval>-<UTC time>.json`. A missing input or key gives "not run" and no score. e1 and e2 make paid calls, print an estimate and need `--yes`. e3 only scores rows with a `recording` field, so typed phrases never count. e4 and e6 read `desktop.sqlite` with `--db`.
 2. Add a row to the run log below with exact numbers and conditions.
 3. Update the Key facts table.
 4. If a target is missed, note the decision (tune, cut, fallback) and link the tuning log in `game/balance-and-tuning.md`.
@@ -36,9 +36,11 @@ Real results only, from real runs. No eval has run yet as of 2026-10-28. Definit
 
 | Date (SGT) | Eval | Set size | Conditions | Result | Target met | Commit | Notes |
 |---|---|---|---|---|---|---|---|
-| | | | | | | | |
+| 2026-10-29 11:41 | E7 | 50 seeded boards resolved twice | Offline, seeded generator from backend/tests, includes push, steal and carry cases | 50 of 50 identical (100%) | Yes | ea8de41 | eval/results/e7-20261029T034135Z.json |
 
 ## Latency samples (E6)
+
+Sources: NFR-01 from `summon` turn_log rows, NFR-03 from End Turn transition rows, NFR-08 from `narration` rows (request to caption publish). NFR-05 and NFR-07 have no logged timing yet and report as unmeasured until a live voice fixture confirms the speech end events.
 
 | Date | Night | NFR-01 p90 | NFR-03 p90 | NFR-05 p90 | NFR-07 p90 | NFR-08 p90 |
 |---|---|---|---|---|---|---|

@@ -36,7 +36,7 @@ Every message is a JSON object with `type` plus fields. Proposed shared fields: 
 | Type | Status | Fields | Purpose |
 |---|---|---|---|
 | `frame` | Established | `view` (raw or warped), `width` and `height` (source pixels, the JPEG is downscaled to 960 px wide, quality 70), `jpg`, `poses` | Desk feed and sprite positions |
-| `state` | Established (M3 and M4 fields, plus `units`, `begin_block_key`, `awaiting_tap`) | `phase` (any AppPhase), `campaign`, `camera`, `calibrated`, `calibration_preview`, `play_w_cm`, `play_h_cm`, `demo_safe`, `demo_safe_sam`, `has_api_key`, `voice` (`status` off, connecting, listening or down, `mode` open or ptt, `ptt_down`), `resume_turn` (turn a saved night resumes at, or null), `night` (turn, units with `status` tags `out_<n>`, `stolen_by:<enemy>`, `lost`, `returning`, enemies, chips, illegal units, kubo HP, `effects` with kind push or steal, unit id and target spot, `effect_seconds_left`), `score` | Full snapshot on connect and after every handled message |
+| `state` | Established (M3 and M4 fields, plus `units`, `begin_block_key`, `awaiting_tap`) | `phase` (any AppPhase), `campaign`, `camera`, `calibrated`, `calibration_preview`, `play_w_cm`, `play_h_cm`, `demo_safe`, `demo_safe_sam`, `has_api_key`, `voice` (`status` off, connecting, listening or down, `mode` open or ptt, `ptt_down`), `resume_turn` (turn a saved night resumes at, or null), `recording` (bool), `consents` (player name to bool), `night` (turn, units with `status` tags `out_<n>`, `stolen_by:<enemy>`, `lost`, `returning`, enemies, chips, illegal units, kubo HP, `effects` with kind push or steal, unit id and target spot, `effect_seconds_left`), `score` | Full snapshot on connect and after every handled message |
 | `devices` | Established | `cameras` (index, width, height), `microphones` (index, name) | Device picker (FR-01) |
 | `campaigns` | Established | `campaigns` (id, name, difficulty, nights_survived, created_at), newest first, 20 per page | Continue list (FR-05) |
 | `events` | Established | `turn`, `events` (type, src, dst, dmg, edge, pos). Types include `push`, `thrown`, `steal`, `return` (pos is where the object goes back) and `escape` | Resolution events, then the next turn's spawn and intent events, as two messages |
@@ -68,7 +68,7 @@ Every message is a JSON object with `type` plus fields. Proposed shared fields: 
 | `claim.done` | Established | none (Done and Skip) | VOICE_CLAIM |
 | `night.next` | Established | none | SUNRISE or DEFEAT, starts a fresh summon |
 | `night.quit` | Established | none | SUNRISE or DEFEAT, back to START |
-| `consent` | Proposed | `player_id`, `agree` | Before Start Night |
+| `consent` | Established | `player_name`, `agree` (bool). Recording starts after claims only when every claimed player agreed | VOICE_CLAIM |
 | `intent.tap` | Established | `unit_id` (game id), `action` (attack, power, heal), `target_id` (game id or null). Validated by `rules.resolve.intent_error` | PLAYER_PHASE |
 | `chip.cancel` | Established | `chip_id` | PLAYER_PHASE |
 | `end_turn` | Established | none. Re-anchor, validate, resolve, autosave | PLAYER_PHASE |

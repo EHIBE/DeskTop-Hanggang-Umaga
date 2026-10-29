@@ -142,7 +142,7 @@ One transaction at CHECK_END writes `night_unit`, `enemy`, `night` (with `board_
 | DB rows | SQLite | Delete campaign (cascade) |
 | Sprites made in play | `%APPDATA%\DeskTop\` | Delete campaign |
 | Baseline and reference crops | `%APPDATA%\DeskTop\` | Delete campaign |
-| Recordings and reels | `%APPDATA%\DeskTop\` | Delete clip or delete campaign |
+| Recordings and reels | `%APPDATA%\DeskTop\campaigns\<campaign id>\recordings\night_<n>_<ms>.mp4` (built Phase 13), `night.recording_consent` set when claims finish | Delete clip or delete campaign (the campaign folder is removed) |
 | Uploaded replay proxy | Meta Files API | Explicit DELETE after processing, `expires_after` 86,400 s backup |
 | api_usage | SQLite | Kept (cost audit) |
 
