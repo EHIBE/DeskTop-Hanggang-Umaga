@@ -310,7 +310,7 @@ def test_interrupted_night_ends_like_an_uninterrupted_one(tmp_path: Path) -> Non
     store = Store(tmp_path / "b" / "db.sqlite")
     first = controller_for(store, ConfidentSegmenter())
     start_night(first)
-    play_turns(first, 3)
+    play_turns(first, 1)
     assert first.snapshot().phase is AppPhase.PLAYER_PHASE
     campaign = first.snapshot().campaign
     first.close()
@@ -319,7 +319,7 @@ def test_interrupted_night_ends_like_an_uninterrupted_one(tmp_path: Path) -> Non
     second.continue_campaign(campaign.id)
     second.select_camera(0)
     second.begin_night()
-    assert second.snapshot().night.turn == 4  # type: ignore[union-attr]
+    assert second.snapshot().night.turn == 2  # type: ignore[union-attr]
     play_turns(second, 8)
     final = second.snapshot()
     assert final.phase is expected.phase

@@ -1046,6 +1046,18 @@ class GameController:
         self._poses = {}
         self._uncertain = set()
 
+    def _absent_sam_ids(self) -> set[int]:
+        session = self._session
+        board = None if session is None else session.board
+        if board is None:
+            return set()
+        absent = {u.id for u in board.units if u.is_absent}
+        return {
+            u.sam_object_id
+            for u in self._units
+            if game_id_for(u.sam_object_id) in absent
+        }
+
     def _seed_boxes_from_board(self, session: NightSession) -> None:
         board = session.board
         if board is None:
@@ -1362,6 +1374,9 @@ class GameController:
         name = None
         if command.player_name is not None and self._clean_name is not None:
             name = self._clean_name(command.player_name, "") or None
+        if name is not None:
+            known = {player.casefold(): player for player in session.players}
+            name = known.get(name.casefold(), None if not is_claim_phase else name)
         if name is not None and label is not None:
             self._voice_players[label] = name
             session.rename_speaker(label, name)
@@ -1888,7 +1903,8 @@ class GameController:
         calibration = self._calibration
         if tracker is None or calibration is None or not self._is_calibrated:
             return 0
-        candidates = tracker.recovery_candidates()
+        absent = self._absent_sam_ids()
+        candidates = [c for c in tracker.recovery_candidates() if c not in absent]
         if not candidates:
             return 0
         segmenter = self._segmenter(self._demo_safe.allows_sam_recovery)
@@ -1939,6 +1955,7 @@ class GameController:
         signatures = self._store.unit_signatures(night.id)
         tracker.new_turn()
         tracked = tracker.boxes()
+        absent = self._absent_sam_ids()
         targets = [
             ReanchorTarget(
                 sam_id=unit.sam_object_id,
@@ -1949,6 +1966,7 @@ class GameController:
                 histogram=signatures.get(unit.unit_id, ("", ()))[1],
             )
             for unit in self._units
+            if unit.sam_object_id not in absent
         ]
         segmenter = self._segmenter(self._demo_safe.allows_sam_reanchor)
         anchors = await reanchor(
@@ -2410,6 +2428,11 @@ class NightSession:
         if board is None:
             return ()
         self._board, events = begin_turn(board)
+        if check_outcome(self._board) is Outcome.LOSE:
+            self._announce(events)
+            self._machine.force(TurnState.CHECK_END)
+            self._conclude(Outcome.LOSE)
+            return events
         self._machine.transition(TurnEvent.TELEGRAPHED)
         self._chips = []
         self._illegal = ()
@@ -2532,22 +2555,23 @@ class NightSession:
         self, board: BoardState, events: Sequence[Event]
     ) -> tuple[PhysicalEffect, ...]:
         units = {u.id: u for u in board.units}
-        effects: list[PhysicalEffect] = []
+        effects: dict[str, PhysicalEffect] = {}
         for event in events:
             unit = units.get(event.dst or "")
             if unit is None:
                 continue
+            current = effects.get(unit.id)
             if event.type is EventType.PUSH and event.pos is not None:
-                effects.append(
-                    PhysicalEffect(PUSH_EFFECT, unit.id, event.pos[0], event.pos[1])
+                if current is not None and current.kind == STEAL_EFFECT:
+                    continue
+                effects[unit.id] = PhysicalEffect(
+                    PUSH_EFFECT, unit.id, event.pos[0], event.pos[1]
                 )
             elif event.type is EventType.STEAL:
-                effects.append(
-                    PhysicalEffect(
-                        STEAL_EFFECT, unit.id, unit.position[0], unit.position[1]
-                    )
+                effects[unit.id] = PhysicalEffect(
+                    STEAL_EFFECT, unit.id, unit.position[0], unit.position[1]
                 )
-        return tuple(effects)
+        return tuple(effects.values())
 
     def finish_effects(self, positions: Mapping[str, Point]) -> TurnResult:
         self._require(TurnState.PHYSICAL_EFFECTS)
@@ -2592,7 +2616,11 @@ class NightSession:
     def _score(self, board: BoardState) -> FinalScore:
         kubo = board.kubo
         return FinalScore(
-            units_alive=sum(1 for u in board.units if not u.is_kubo and not u.is_down),
+            units_alive=sum(
+                1
+                for u in board.units
+                if not u.is_kubo and not u.is_down and not u.is_absent
+            ),
             kubo_hp=0 if kubo is None else max(0, kubo.hp),
             enemies_defeated=board.enemies_defeated,
             score=score(board),

@@ -6,7 +6,7 @@ import pytest
 
 from db.store import Store
 from game.night import AppPhase, GameController, GameError, PhysicalEffect
-from rules.resolve import Action
+from rules.resolve import Action, Event, EventType
 from state import Pose
 from tests.test_night_flow import start_night
 from tests.test_tracking_flow import ConfidentSegmenter, controller_for
@@ -92,3 +92,25 @@ def test_effect_compliance_rules() -> None:
     assert done(steal, {})
     assert done(steal, {"u_3": Pose("u_3", 5.0, 5.0, True)})
     assert not done(steal, {"u_3": Pose("u_3", 5.0, 5.0, False)})
+
+
+def test_one_effect_per_unit_and_steal_wins(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    controller = controller_for(store, ConfidentSegmenter())
+    start_night(controller)
+    session = controller._session
+    assert session is not None and session.board is not None
+    events = (
+        Event(EventType.PUSH, "e_tikbalang_1", "u_2", pos=(5.0, 5.0)),
+        Event(EventType.PUSH, "e_tikbalang_2", "u_2", pos=(9.0, 9.0)),
+        Event(EventType.STEAL, "e_duwende_1", "u_3"),
+        Event(EventType.PUSH, "e_tikbalang_1", "u_3", pos=(1.0, 1.0)),
+        Event(EventType.PUSH, "u_2", "e_aswang_1", pos=(3.0, 3.0)),
+    )
+    effects = session._physical_effects(session.board, events)
+    assert [(e.kind, e.unit_id, e.x_cm) for e in effects] == [
+        ("push", "u_2", 9.0),
+        ("steal", "u_3", effects[1].x_cm),
+    ]
+    controller.close()
+    store.close()

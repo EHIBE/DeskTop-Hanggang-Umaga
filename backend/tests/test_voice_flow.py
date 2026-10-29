@@ -234,6 +234,10 @@ def test_spoken_claims_map_speakers_to_players(tmp_path: Path) -> None:
         voice.say("Stapler, atake ang aswang!", "spk_0")
         chips = controller.snapshot().night.chips  # type: ignore[union-attr]
         assert [c.speaker for c in chips] == ["Migs"]
+        voice.say("I'm thinking", "spk_7")
+        voice.say("Phone, atake ang aswang!", "spk_7")
+        assert controller.snapshot().night.chips[-1].speaker == "spk_7"  # type: ignore[union-attr]
+        voice.say("Hindi", "spk_7")
         controller.retry_voice()
         assert "voice.reclaim" in notices(controller)
         second = voices.made[1]
