@@ -555,7 +555,9 @@ class GameController:
             effects=session.effects,
             effect_seconds_left=max(
                 0,
-                math.ceil(PHYSICAL_EFFECT_TIMEOUT_S - (self._clock() - self._effects_started)),
+                math.ceil(
+                    PHYSICAL_EFFECT_TIMEOUT_S - (self._clock() - self._effects_started)
+                ),
             )
             if session.effects
             else 0,
@@ -722,7 +724,10 @@ class GameController:
         self._after_resolution(session, result.events, result.telegraph)
 
     def _after_resolution(
-        self, session: NightSession, events: tuple[Event, ...], telegraph: tuple[Event, ...]
+        self,
+        session: NightSession,
+        events: tuple[Event, ...],
+        telegraph: tuple[Event, ...],
     ) -> None:
         if session.state is TurnState.SUNRISE:
             self._narrate(NarrationPhase.SUNRISE, events)
@@ -739,7 +744,10 @@ class GameController:
             return False
         poses = {pose.id: pose for pose in self._pose_list()}
         is_done = all(self._is_effect_done(effect, poses) for effect in session.effects)
-        if not is_done and self._clock() - self._effects_started < PHYSICAL_EFFECT_TIMEOUT_S:
+        if (
+            not is_done
+            and self._clock() - self._effects_started < PHYSICAL_EFFECT_TIMEOUT_S
+        ):
             return False
         if not is_done:
             self._notify("effect.timeout", {})
@@ -759,7 +767,10 @@ class GameController:
             return pose is None or pose.uncertain
         if pose is None or pose.uncertain:
             return False
-        return math.hypot(pose.x_cm - effect.x_cm, pose.y_cm - effect.y_cm) <= PUSH_COMPLIANCE_CM
+        return (
+            math.hypot(pose.x_cm - effect.x_cm, pose.y_cm - effect.y_cm)
+            <= PUSH_COMPLIANCE_CM
+        )
 
     def _finish_effects(self, session: NightSession, poses: Mapping[str, Pose]) -> None:
         positions = {
@@ -2506,7 +2517,9 @@ class NightSession:
         effects = self._physical_effects(resolved, events)
         if effects:
             self._effects = effects
-            return TurnResult(events=events, telegraph=(), is_blocked=False, effects=effects)
+            return TurnResult(
+                events=events, telegraph=(), is_blocked=False, effects=effects
+            )
         self._machine.transition(TurnEvent.EFFECTS_DONE)
         telegraph = self._conclude(check_outcome(resolved))
         return TurnResult(events=events, telegraph=telegraph, is_blocked=False)
@@ -2525,10 +2538,14 @@ class NightSession:
             if unit is None:
                 continue
             if event.type is EventType.PUSH and event.pos is not None:
-                effects.append(PhysicalEffect(PUSH_EFFECT, unit.id, event.pos[0], event.pos[1]))
+                effects.append(
+                    PhysicalEffect(PUSH_EFFECT, unit.id, event.pos[0], event.pos[1])
+                )
             elif event.type is EventType.STEAL:
                 effects.append(
-                    PhysicalEffect(STEAL_EFFECT, unit.id, unit.position[0], unit.position[1])
+                    PhysicalEffect(
+                        STEAL_EFFECT, unit.id, unit.position[0], unit.position[1]
+                    )
                 )
         return tuple(effects)
 
@@ -2539,7 +2556,9 @@ class NightSession:
             raise SessionError("cmd.unknown")
         pushed = {e.unit_id for e in self._effects if e.kind == PUSH_EFFECT}
         units = tuple(
-            replace(u, position=positions[u.id]) if u.id in pushed and u.id in positions else u
+            replace(u, position=positions[u.id])
+            if u.id in pushed and u.id in positions
+            else u
             for u in board.units
         )
         self._board = replace(board, units=units)

@@ -232,7 +232,9 @@ def test_delete_campaign_removes_files_and_owned_sprites(store: Store) -> None:
     night = store.start_or_resume_night(campaign.id)
     other_night = store.start_or_resume_night(other.id)
     unit = store.add_unit(night, card_fields(), SIGNATURE, UnitPlacement(1, 30.0, 20.0))
-    other_unit = store.add_unit(other_night, card_fields(), SIGNATURE, UnitPlacement(1, 30.0, 20.0))
+    other_unit = store.add_unit(
+        other_night, card_fields(), SIGNATURE, UnitPlacement(1, 30.0, 20.0)
+    )
     owned = store.save_sprite("owned", b"a", "p", "v", None)
     shared = store.save_sprite("shared", b"b", "p", "v", None)
     store.set_unit_sprite(unit.unit_id, owned.id)
@@ -571,8 +573,20 @@ def test_saved_night_round_trips_the_autosave(store: Store) -> None:
     night = store.start_or_resume_night(campaign.id)
     unit = store.add_unit(night, card_fields(), SIGNATURE, UnitPlacement(1, 30.0, 20.0))
     assert store.saved_night(night.id) is None
-    enemy = EnemySave("e_aswang_1", "aswang", None, 3, 30.0, 2.5, 1, {"target_id": "u_kubo", "dmg": 2}, ())
-    upper = EnemySave("e_manananggal_2", "manananggal", "upper", 0, 5.0, 5.0, 2, None, ("reform_2",))
+    enemy = EnemySave(
+        "e_aswang_1",
+        "aswang",
+        None,
+        3,
+        30.0,
+        2.5,
+        1,
+        {"target_id": "u_kubo", "dmg": 2},
+        (),
+    )
+    upper = EnemySave(
+        "e_manananggal_2", "manananggal", "upper", 0, 5.0, 5.0, 2, None, ("reform_2",)
+    )
     board = {"enemies_defeated": 1, "enemy_counter": {"aswang": 1}}
     store.autosave(
         night.id,

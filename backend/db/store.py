@@ -233,7 +233,9 @@ class Store:
         if version == 0:
             script = SCHEMA_PATH.read_text(encoding="utf-8")
         else:
-            script = "\n".join(MIGRATIONS[step] for step in range(version, SCHEMA_VERSION))
+            script = "\n".join(
+                MIGRATIONS[step] for step in range(version, SCHEMA_VERSION)
+            )
         with self._lock:
             try:
                 self._conn.executescript(
@@ -318,7 +320,8 @@ class Store:
             sprite_paths = [self._sprite_file(str(row["path"])) for row in sprite_rows]
             cursor = conn.execute("DELETE FROM campaign WHERE id = ?", (campaign_id,))
             conn.executemany(
-                "DELETE FROM sprite WHERE id = ?", [(str(row["id"]),) for row in sprite_rows]
+                "DELETE FROM sprite WHERE id = ?",
+                [(str(row["id"]),) for row in sprite_rows],
             )
         with self._lock:
             self._conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
@@ -792,7 +795,9 @@ class Store:
                     x_cm=float(row["x_cm"]),
                     y_cm=float(row["y_cm"]),
                     spawn_turn=int(row["spawn_turn"]),
-                    intent=None if row["intent_json"] is None else json.loads(row["intent_json"]),
+                    intent=None
+                    if row["intent_json"] is None
+                    else json.loads(row["intent_json"]),
                     status=tuple(str(s) for s in json.loads(row["status_json"])),
                 )
                 for row in enemy_rows

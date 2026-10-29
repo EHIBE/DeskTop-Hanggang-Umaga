@@ -369,7 +369,9 @@ class NarrationService:
         self._sequence = 0
         self._tasks: set[asyncio.Task[None]] = set()
 
-    def submit(self, request: NarrationRequest, is_offline: bool, publish: Publish) -> None:
+    def submit(
+        self, request: NarrationRequest, is_offline: bool, publish: Publish
+    ) -> None:
         self._sequence += 1
         sequence = self._sequence
         if is_offline or self._live_factory is None:
@@ -380,7 +382,9 @@ class NarrationService:
         except RuntimeError:
             publish(request, self._line_bank.pick(request))
             return
-        task = loop.create_task(self._run(self._live_narrator(), request, sequence, publish))
+        task = loop.create_task(
+            self._run(self._live_narrator(), request, sequence, publish)
+        )
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
 
@@ -392,15 +396,30 @@ class NarrationService:
         return self._live
 
     async def _run(
-        self, narrator: Narrator, request: NarrationRequest, sequence: int, publish: Publish
+        self,
+        narrator: Narrator,
+        request: NarrationRequest,
+        sequence: int,
+        publish: Publish,
     ) -> None:
         try:
-            narration = await asyncio.wait_for(narrator.narrate(request), self._timeout_s)
+            narration = await asyncio.wait_for(
+                narrator.narrate(request), self._timeout_s
+            )
         except TimeoutError:
             logger.warning("narration timed out, using the line bank")
             narration = self._line_bank.pick(request)
-        except (MetaError, openai.OpenAIError, ValueError, TypeError, KeyError, OSError) as error:
-            logger.warning("narration failed with %s, using the line bank", type(error).__name__)
+        except (
+            MetaError,
+            openai.OpenAIError,
+            ValueError,
+            TypeError,
+            KeyError,
+            OSError,
+        ) as error:
+            logger.warning(
+                "narration failed with %s, using the line bank", type(error).__name__
+            )
             narration = self._line_bank.pick(request)
         if sequence == self._sequence:
             publish(request, narration)
