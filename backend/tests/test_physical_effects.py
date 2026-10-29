@@ -581,3 +581,108 @@ def test_chained_night_with_both_enemy_kinds_is_deterministic() -> None:
     assert EventType.THROWN in kinds or EventType.PUSH in kinds
     assert EventType.STEAL in kinds
     assert of_type(runs[0][1], EventType.STEAL)
+
+
+def test_thrown_unit_flagged_returning_when_it_comes_back() -> None:
+    state, uid = tik_board((4.0, 10.0), (8.0, 10.0))
+    after, _ = run(state)
+    assert not find_unit(after, uid).is_returning
+    out_turn, _ = begin_turn(after)
+    done, _ = run(out_turn)
+    assert find_unit(done, uid).out_turns == 0
+    assert find_unit(done, uid).is_returning
+
+
+def test_thrown_unit_placed_far_away_does_not_block_end_turn() -> None:
+    state, uid = tik_board((4.0, 10.0), (8.0, 10.0))
+    after, _ = run(state)
+    out_turn, _ = begin_turn(after)
+    done, _ = run(out_turn)
+    back, _ = begin_turn(done)
+    placed = with_positions(back, {uid: (50.0, 30.0)})
+    unit_after = find_unit(placed, uid)
+    assert unit_after.position == (50.0, 30.0)
+    assert unit_after.start == (50.0, 30.0)
+    assert illegal_moves(placed) == ()
+
+
+def test_returned_unit_placed_away_from_the_mark_does_not_block() -> None:
+    state = board(
+        [
+            kubo((55.0, 35.0)),
+            unit("a", pos=(10.0, 10.0), stolen_by="d"),
+            unit("b", pos=(18.0, 10.0)),
+        ],
+        [enemy("d", EnemyType.DUWENDE, pos=(20.0, 12.0), hp=1, carrying="a")],
+    )
+    new, _ = run(state, atk("b", "d"))
+    assert find_unit(new, "a").is_returning
+    nxt, _ = begin_turn(new)
+    placed = with_positions(nxt, {"a": (45.0, 30.0)})
+    assert find_unit(placed, "a").start == (45.0, 30.0)
+    assert illegal_moves(placed) == ()
+
+
+def test_non_returning_unit_still_blocked_by_illegal_move() -> None:
+    state = board([kubo((55.0, 35.0)), unit("a", pos=(10.0, 10.0))])
+    placed = with_positions(state, {"a": (50.0, 30.0)})
+    assert find_unit(placed, "a").start == (10.0, 10.0)
+    assert illegal_moves(placed) == ("a",)
+
+
+def test_returning_flag_clears_after_one_turn() -> None:
+    state = board(
+        [kubo((55.0, 35.0)), unit("a", pos=(10.0, 10.0), is_returning=True)],
+        [enemy("s", pos=(40.0, 30.0))],
+    )
+    new, _ = run(state)
+    assert not find_unit(new, "a").is_returning
+
+
+def test_returning_flag_stays_off_for_units_never_out() -> None:
+    state = board([kubo((55.0, 35.0)), unit("a", pos=(10.0, 10.0))])
+    new, _ = run(state)
+    assert not find_unit(new, "a").is_returning
+
+
+def test_returning_tag_round_trip() -> None:
+    base = unit("a")
+    marked = apply_unit_tags(base, ["returning"])
+    assert marked.is_returning
+    assert unit_status_tags(marked) == ("returning",)
+    assert apply_unit_tags(marked, []) == base
+    both = apply_unit_tags(base, ["out_1", "returning"])
+    assert unit_status_tags(both) == ("out_1", "returning")
+
+
+def test_returning_flow_is_deterministic() -> None:
+    state, _ = tik_board((4.0, 10.0), (8.0, 10.0))
+    runs = []
+    for _ in range(2):
+        current = state
+        for _ in range(3):
+            current, _ = run(current)
+            current, _ = begin_turn(current)
+        runs.append(current)
+    assert runs[0] == runs[1]
+
+
+def test_thrown_walls_and_auras_do_not_block() -> None:
+    wall = unit("w", UnitClass.WALL, (20.0, 10.0), out_turns=1)
+    aura = unit("c", UnitClass.CHARM, (30.0, 10.0), power=PowerId.P07, out_turns=1)
+    state = board(
+        [kubo((55.0, 35.0)), wall, aura, unit("a", pos=(40.0, 10.0))],
+        [enemy("s", pos=(10.0, 10.0))],
+    )
+    reached = move_toward(state.enemies[0], find_unit(state, "a").hull, state)
+    assert reached[0] > 20.0
+    present = board(
+        [
+            kubo((55.0, 35.0)),
+            unit("w", UnitClass.WALL, (20.0, 10.0)),
+            unit("a", pos=(40.0, 10.0)),
+        ],
+        [enemy("s", pos=(10.0, 10.0))],
+    )
+    blocked = move_toward(present.enemies[0], find_unit(present, "a").hull, present)
+    assert blocked[0] < 20.0

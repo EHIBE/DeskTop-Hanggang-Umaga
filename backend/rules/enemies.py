@@ -191,7 +191,7 @@ def _wall_hulls(state: BoardState) -> list[Hull]:
     return [
         u.hull
         for u in state.units
-        if u.unit_class is UnitClass.WALL and not u.is_down and not u.is_absent
+        if u.unit_class is UnitClass.WALL and not u.is_down and not u.is_out
     ]
 
 
@@ -199,7 +199,7 @@ def _aura_hulls(state: BoardState) -> list[Hull]:
     return [
         u.hull
         for u in state.units
-        if u.power_id is PowerId.P07 and not u.is_down and not u.is_absent
+        if u.power_id is PowerId.P07 and not u.is_down and not u.is_out
     ]
 
 

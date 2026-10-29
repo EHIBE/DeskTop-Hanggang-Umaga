@@ -78,6 +78,7 @@ OUT_PREFIX: Final = "out_"
 STOLEN_PREFIX: Final = "stolen_by:"
 CARRYING_PREFIX: Final = "carrying:"
 LOST_TAG: Final = "lost"
+RETURNING_TAG: Final = "returning"
 HAMPAS_RADIUS_CM: Final = 6.0
 HAMPAS_DAMAGE: Final = 1
 TUSOK_BEHIND_CM: Final = 5.0
@@ -170,6 +171,7 @@ class UnitState:
     out_turns: int = 0
     stolen_by: str | None = None
     is_lost: bool = False
+    is_returning: bool = False
 
     @property
     def is_down(self) -> bool:
@@ -293,17 +295,21 @@ def with_positions(
     hull_offsets: Mapping[str, Hull] | None = None,
 ) -> BoardState:
     offsets = hull_offsets or {}
-    units = tuple(
-        u
-        if u.is_out
-        else replace(
-            u,
-            position=positions.get(u.id, u.position),
-            hull_offsets=offsets.get(u.id, u.hull_offsets),
+    units: list[UnitState] = []
+    for u in state.units:
+        if u.is_out:
+            units.append(u)
+            continue
+        position = positions.get(u.id, u.position)
+        units.append(
+            replace(
+                u,
+                position=position,
+                start=position if u.is_returning else u.start,
+                hull_offsets=offsets.get(u.id, u.hull_offsets),
+            )
         )
-        for u in state.units
-    )
-    return replace(state, units=units)
+    return replace(state, units=tuple(units))
 
 
 def illegal_moves(state: BoardState) -> tuple[str, ...]:
@@ -312,6 +318,7 @@ def illegal_moves(state: BoardState) -> tuple[str, ...]:
         for u in state.units
         if not u.is_kubo
         and u.can_act
+        and not u.is_returning
         and not is_move_legal(u.start, u.position, MOVE_CM[u.move])
     )
 
@@ -394,6 +401,7 @@ class _Round:
         self.defeated = state.enemies_defeated
         self.used: dict[str, int] = {}
         self.thrown: set[str] = set()
+        self.returned: set[str] = set()
 
     def emit(self, event: Event) -> None:
         self.events.append(event)
@@ -420,6 +428,7 @@ class _Round:
         self.units[captive.id] = replace(
             captive, stolen_by=None, position=enemy.position
         )
+        self.returned.add(captive.id)
         self.emit(Event(EventType.RETURN, enemy.id, captive.id, pos=enemy.position))
 
     def dodge(self, src: str, dst: str | None) -> None:
@@ -724,7 +733,15 @@ def _tick_units(rnd: _Round) -> tuple[UnitState, ...]:
         out_turns = (
             unit.out_turns if unit.id in rnd.thrown else max(0, unit.out_turns - 1)
         )
-        ticked.append(replace(unit, cooldown=cooldown, out_turns=out_turns))
+        came_back = unit.out_turns > 0 and out_turns == 0
+        ticked.append(
+            replace(
+                unit,
+                cooldown=cooldown,
+                out_turns=out_turns,
+                is_returning=came_back or unit.id in rnd.returned,
+            )
+        )
     return tuple(ticked)
 
 
@@ -933,6 +950,8 @@ def unit_status_tags(unit: UnitState) -> tuple[str, ...]:
         tags.append(f"{STOLEN_PREFIX}{unit.stolen_by}")
     if unit.is_lost:
         tags.append(LOST_TAG)
+    if unit.is_returning:
+        tags.append(RETURNING_TAG)
     return tuple(tags)
 
 
@@ -940,6 +959,7 @@ def apply_unit_tags(unit: UnitState, tags: Sequence[str]) -> UnitState:
     out_turns = 0
     stolen_by: str | None = None
     is_lost = False
+    is_returning = False
     for tag in tags:
         if tag.startswith(OUT_PREFIX) and tag[len(OUT_PREFIX) :].isdigit():
             out_turns = int(tag[len(OUT_PREFIX) :])
@@ -947,7 +967,15 @@ def apply_unit_tags(unit: UnitState, tags: Sequence[str]) -> UnitState:
             stolen_by = tag[len(STOLEN_PREFIX) :]
         elif tag == LOST_TAG:
             is_lost = True
-    return replace(unit, out_turns=out_turns, stolen_by=stolen_by, is_lost=is_lost)
+        elif tag == RETURNING_TAG:
+            is_returning = True
+    return replace(
+        unit,
+        out_turns=out_turns,
+        stolen_by=stolen_by,
+        is_lost=is_lost,
+        is_returning=is_returning,
+    )
 
 
 def enemy_status_tags(enemy: EnemyState) -> tuple[str, ...]:
