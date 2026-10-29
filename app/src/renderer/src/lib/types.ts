@@ -194,6 +194,14 @@ export type VoiceState = Readonly<{
   ptt_down: boolean
 }>
 
+export type ReplayStatus = 'idle' | 'working' | 'done' | 'failed'
+
+export type ReplayState = Readonly<{
+  status: ReplayStatus
+  file: string | null
+  available: boolean
+}>
+
 export type StateMessage = Readonly<{
   type: 'state'
   seq: number
@@ -216,6 +224,7 @@ export type StateMessage = Readonly<{
   voice: VoiceState
   recording: boolean
   consents: Readonly<Record<string, boolean>>
+  replay: ReplayState
 }>
 
 export type DevicesMessage = Readonly<{
@@ -356,6 +365,7 @@ export type ClientMessage =
   | Readonly<{ type: 'ptt'; down: boolean }>
   | Readonly<{ type: 'voice.mode'; mode: VoiceMode }>
   | Readonly<{ type: 'voice.retry' }>
+  | Readonly<{ type: 'replay.request' }>
 
 export type DesktopConfig = Readonly<{ port: number; token: string }>
 

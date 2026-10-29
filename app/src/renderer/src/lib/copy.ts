@@ -128,6 +128,18 @@ const entries = {
   'rec.waiting': { tl: 'Wala pang sagot', en: 'No answer yet' },
   'rec.player': { tl: 'Sagot ni [name]', en: "[name]'s answer" },
   'replay.making': { tl: 'Ginagawa ang replay...', en: 'Making the replay...' },
+  'replay.make': { tl: 'Gawin ang Replay', en: 'Make the Replay' },
+  'replay.done': { tl: 'Handa na ang replay!', en: 'The replay is ready!' },
+  'replay.failed': {
+    tl: 'Hindi nagawa ang replay. Subukan ulit.',
+    en: 'Could not make the replay. Try again.'
+  },
+  'replay.none': {
+    tl: 'Walang recording ngayong gabi, kaya walang replay.',
+    en: 'No recording tonight, so no replay.'
+  },
+  'replay.show': { tl: 'Ipakita sa folder', en: 'Show in folder' },
+  'replay.missing': { tl: 'Hindi makita ang file.', en: 'Could not find the file.' },
   'net.slow': {
     tl: 'Medyo mabagal ang koneksyon. Tuloy pa rin tayo.',
     en: "The connection is slow. We'll keep going."

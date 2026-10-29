@@ -1,4 +1,5 @@
 import Bilingual from '../components/Bilingual'
+import ReplayPanel from '../components/ReplayPanel'
 import ScorePanel from '../components/ScorePanel'
 import Narration from '../hud/Narration'
 import { t } from '../lib/copy'
@@ -46,6 +47,11 @@ function Defeat({ state, send, narration }: DefeatProps): React.JSX.Element {
         className="w-[1200px]"
       />
       <ScorePanel score={state.score} />
+      <ReplayPanel
+        replay={state.replay}
+        hadPlayers={(state.night?.players.length ?? 0) > 0}
+        send={send}
+      />
       <div className="flex gap-6">
         <button
           type="button"
