@@ -17,7 +17,7 @@ All player-facing text, keyed. This file is canonical until `app/src/renderer/sr
 
 | Fact | Value |
 |---|---|
-| UI keys | 210 in copy.ts (48 from PRD, the rest Proposed) |
+| UI keys | 216 in copy.ts (48 from PRD, the rest Proposed) |
 | Line bank moments | 19 (14 from PRD, 4 aswang edge variants, quiet) |
 | Placeholders | [name], [unit], [object], [player], [feature], [HP], [n], [action], [target], [pangalan], [turn], [seconds] |
 | Review | 2 Filipino playtesters review every Taglish line before recording |
@@ -230,6 +230,12 @@ English text for these is a proposal for playtester review.
 | night.continue_anyway | Ituloy pa rin | Continue anyway | M10, Proposed, playtester review |
 | night.cam_hint | Baka mali ang posisyon kung hindi muna mag-calibrate. | Positions may be off if you continue without recalibrating. | M10, Proposed, playtester review |
 | claim.countdown | Sasara ang claim sa [seconds] segundo | Claims close in [seconds] seconds | M10, Proposed, playtester review |
+| replay.make | Gawin ang Replay | Make the Replay | Phase 14, Proposed, playtester review |
+| replay.done | Handa na ang replay! | The replay is ready! | Phase 14, Proposed, playtester review |
+| replay.failed | Hindi nagawa ang replay. Subukan ulit. | Could not make the replay. Try again. | Phase 14, Proposed, playtester review |
+| replay.none | Walang recording ngayong gabi, kaya walang replay. | No recording tonight, so no replay. | Phase 14, Proposed, playtester review |
+| replay.show | Ipakita sa folder | Show in folder | Phase 14, Proposed, playtester review |
+| replay.missing | Hindi makita ang file. | Could not find the file. | Phase 14, Proposed, playtester review |
 | rec.agree | Payag | I agree | Phase 13, Proposed, playtester review |
 | rec.decline | Hindi | No | Phase 13, Proposed, playtester review |
 | rec.unavailable | Walang recording ngayon, tuloy pa rin ang laro. | No recording tonight, the game goes on. | Phase 13, Proposed, playtester review |

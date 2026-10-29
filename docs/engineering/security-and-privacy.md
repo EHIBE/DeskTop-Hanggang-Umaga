@@ -48,7 +48,7 @@ DeskTop has no accounts, so the main assets are the Meta API key, the players' c
 | GM narration input | Yes | Yes (Spark): unit names, classes, HP, game ids, events. Players appear as P1 to P4 and the names are swapped back locally | Per call, `store: false` |
 | Summon name | Yes | Yes (Spark), after the profanity filter | Per call, `store: false` |
 | Mic audio | Live only | Streamed (Voice), plus recognizer keywords with creature words and unit names, never player names | Not stored locally. Transcripts are not stored |
-| Highlight proxy clip | Yes | With consent (Files, SAM video) | 24 h max, deleted after processing |
+| Highlight proxy clip | Yes | With consent (Files, SAM video), a 960 px 10 FPS cut of 4 to 6 highlights only | 24 h `expires_after`, deleted in a `finally` after tracking (built Phase 14) |
 | Database, sprites, recordings | Yes | Never | Until delete campaign |
 
 All calls in Standard mode, never Contributor mode. Every `responses.create` call sets `store: false` (Spark summon and narration, SAM, Muse Image), so no response is kept for chaining.

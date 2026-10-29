@@ -36,7 +36,7 @@ Every message is a JSON object with `type` plus fields. Proposed shared fields: 
 | Type | Status | Fields | Purpose |
 |---|---|---|---|
 | `frame` | Established | `view` (raw or warped), `width` and `height` (source pixels, the JPEG is downscaled to 960 px wide, quality 70), `jpg`, `poses` | Desk feed and sprite positions |
-| `state` | Established (M3 and M4 fields, plus `units`, `begin_block_key`, `awaiting_tap`) | `phase` (any AppPhase), `campaign`, `camera`, `calibrated`, `calibration_preview`, `play_w_cm`, `play_h_cm`, `demo_safe`, `demo_safe_sam`, `has_api_key`, `voice` (`status` off, connecting, listening or down, `mode` open or ptt, `ptt_down`), `resume_turn` (turn a saved night resumes at, or null), `recording` (bool), `consents` (player name to bool), `night` (turn, units with `status` tags `out_<n>`, `stolen_by:<enemy>`, `lost`, `returning`, enemies, chips, illegal units, kubo HP, `effects` with kind push or steal, unit id and target spot, `effect_seconds_left`), `score` | Full snapshot on connect and after every handled message |
+| `state` | Established (M3 and M4 fields, plus `units`, `begin_block_key`, `awaiting_tap`) | `phase` (any AppPhase), `campaign`, `camera`, `calibrated`, `calibration_preview`, `play_w_cm`, `play_h_cm`, `demo_safe`, `demo_safe_sam`, `has_api_key`, `voice` (`status` off, connecting, listening or down, `mode` open or ptt, `ptt_down`), `resume_turn` (turn a saved night resumes at, or null), `recording` (bool), `consents` (player name to bool), `replay` (`status` idle, working, done or failed, `file`, `available`), `night` (turn, units with `status` tags `out_<n>`, `stolen_by:<enemy>`, `lost`, `returning`, enemies, chips, illegal units, kubo HP, `effects` with kind push or steal, unit id and target spot, `effect_seconds_left`), `score` | Full snapshot on connect and after every handled message |
 | `devices` | Established | `cameras` (index, width, height), `microphones` (index, name) | Device picker (FR-01) |
 | `campaigns` | Established | `campaigns` (id, name, difficulty, nights_survived, created_at), newest first, 20 per page | Continue list (FR-05) |
 | `events` | Established | `turn`, `events` (type, src, dst, dmg, edge, pos). Types include `push`, `thrown`, `steal`, `return` (pos is where the object goes back) and `escape` | Resolution events, then the next turn's spawn and intent events, as two messages |
@@ -81,7 +81,7 @@ Every message is a JSON object with `type` plus fields. Proposed shared fields: 
 | `effect.done` | Established | none. Players moved or removed the object | PHYSICAL_EFFECTS |
 | `demo_safe` | Established | `on` (bool). Persisted in `settings` | Any |
 | `demo_safe.sam` | Established | `on` (bool). SAM re-anchor inside Demo Safe Mode, on by default. Persisted in `settings` | Any |
-| `replay.request` | Proposed | none | SUNRISE with consent |
+| `replay.request` | Established | none. Builds the reel in the background. Notices `replay.making`, `replay.done`, `replay.failed`, `replay.none` | SUNRISE or DEFEAT after a consented recording |
 | `campaign.delete` | Established | `campaign_id`. Replies with `campaigns` and notice `delete.done`, or `delete.failed` | START |
 
 The backend validates every message with a Pydantic model (`extra="forbid"`), checks the current state, and checks every ID against live state. Invalid messages get a `notice` and are logged.

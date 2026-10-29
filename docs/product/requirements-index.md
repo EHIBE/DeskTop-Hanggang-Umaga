@@ -21,7 +21,7 @@ Every functional and non-functional requirement with where it lives and its buil
 | Non-functional | NFR-01 to NFR-31 |
 | Demo-critical (★) | 31 FRs |
 | Status values | Planned, Built, Tested, Cut, Could |
-| Status on 2026-10-29 | M0 to M11, Phase 12 and the Phase 13 code built offline. Live runs, evals with real data, freeze and Playtest 2 are Manual: EHIBE. Rows below give each test |
+| Status on 2026-10-29 | M0 to M11 and Phases 12 to 14 code built offline. Live runs, evals with real data, freeze, Playtest 2, video and submission remain. Rows below give each test |
 
 Update the Status column when a requirement is built (code merged) and tested (test green). Use the `desktop-docs-sync` skill.
 
@@ -43,7 +43,7 @@ Update the Status column when a requirement is built (code merged) and tested (t
 | F12 | Spark fallback parser | Should | 2.80 | 1 | FR-21 | Cut |
 | F13 | Tap controls | Must (guardrail) | 2.53 | 1.5 | FR-25 | Built |
 | F14 | Autosave and restore | Must (guardrail) | 1.90 | 1 | FR-41 | Tested |
-| F15 | Replay | Should | 2.31 | 5 | FR-44 to FR-48 | Planned |
+| F15 | Replay | Should | 2.31 | 5 | FR-44 to FR-48 | Built (live reel needs ffmpeg and the key, Manual: EHIBE) |
 | F16 | Returning objects, recap, progression | Could | 0.60 | 3 | FR-42, FR-43, FR-56 | Could |
 | F17 | Demo Safe Mode | Must | 9.00 | 2 | FR-50 | Built (Wi-Fi off run Manual: EHIBE) |
 | F18 | Cost tracker and hard stop | Must (guardrail) | 0.95 | 1 | FR-51 | Tested |
@@ -105,9 +105,9 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | FR-43 | | "Kagabi..." recap next night | F16 | JS-09 | gm/narrator.py | n/a | Could |
 | FR-44 | | Recording consent from every player | F15 | JS-08 | game/night.py (give_consent), screens/VoiceClaim.tsx | test_night_flow.py (every claimed player, no consent still plays), test_recording_flow.py | Tested |
 | FR-45 | | Record warped feed to H.264 MP4 | F15 | JS-08 | backend/capture/recorder.py, game/night.py | test_recorder.py (fake ffmpeg), test_recording_flow.py. Real ffmpeg run Manual: EHIBE (not installed) | Built |
-| FR-46 | | Pick 4 to 6 highlights from turn_log | F15 | JS-08 | backend/replay/highlights.py | unit test | Planned |
-| FR-47 | | SAM video tracking on 10 FPS proxy, reel render | F15 | JS-08 | replay/proxy.py, replay/render.py | manual | Planned |
-| FR-48 | | Export 1080p MP4, 60 s max, dawn title card | F15 | JS-08 | replay/render.py | manual | Planned |
+| FR-46 | | Pick 4 to 6 highlights from turn_log | F15 | JS-08 | backend/replay/highlights.py | test_highlights.py (last turn, kubo hits up to 6, priority, no overlaps) | Tested |
+| FR-47 | | SAM video tracking on 10 FPS proxy, reel render | F15 | JS-08 | replay/proxy.py, vision/sam.py (SamVideoTracker), replay/render.py | test_proxy.py, test_sam_video.py, test_render.py (sprite hit counts), test_replay_flow.py. 90% on a real reel Manual: EHIBE | Built |
+| FR-48 | | Export 1080p MP4, 60 s max, dawn title card | F15 | JS-08 | replay/render.py, components/ReplayPanel.tsx | test_render.py (1920x1080, 30 FPS, 60 s cap, title card). Opens in Windows Media Player Manual: EHIBE | Built |
 | FR-49 | | Settings screen | F23 | JS-14 | screens/Settings.tsx | n/a | Could |
 | FR-50 | ★ | Demo Safe Mode completes 8 turns offline | F17 | JS-10, JS-13 | backend/game/demo_safe.py | test_demo_safe.py (8 turns with no SAM or Spark calls when the SAM toggle is off). Wi-Fi off dry run Manual: EHIBE | Built |
 | FR-51 | | Cost tracker, warn $90, block at $120 | F18 | JS-13 | backend/meta_client.py, db/store.py, game/night.py, components/CostMeter.tsx | test_meta_client.py, test_server.py (hard stop turns Demo Safe on) | Tested |
@@ -142,7 +142,7 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | NFR-19 | Cost | Warn $90, stop $120 | unit test (test_meta_client.py) | Tested |
 | NFR-20 | Privacy | Consent each night, REC dot | test_recording_flow.py. REC dot in hud/RecIndicator.tsx, display Manual: EHIBE | Built |
 | NFR-21 | Privacy | Local-first data boundary | security review | Planned |
-| NFR-22 | Privacy | Proxy expires 86,400 s, deleted after processing, delete campaign | unit test | Planned |
+| NFR-22 | Privacy | Proxy expires 86,400 s, deleted after processing, delete campaign | test_proxy.py (expires_after 86,400, delete in finally), test_store.py (delete campaign) | Tested |
 | NFR-23 | Privacy | Standard mode only | config review | Planned |
 | NFR-24 | Security | Key in safeStorage, backend only | security review (M3) | Built |
 | NFR-25 | Security | 127.0.0.1 only, per-launch token on every request | unit test (test_server.py) | Tested |

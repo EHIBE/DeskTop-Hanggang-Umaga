@@ -142,7 +142,7 @@ One transaction at CHECK_END writes `night_unit`, `enemy`, `night` (with `board_
 | DB rows | SQLite | Delete campaign (cascade) |
 | Sprites made in play | `%APPDATA%\DeskTop\` | Delete campaign |
 | Baseline and reference crops | `%APPDATA%\DeskTop\` | Delete campaign |
-| Recordings and reels | `%APPDATA%\DeskTop\campaigns\<campaign id>\recordings\night_<n>_<ms>.mp4` (built Phase 13), `night.recording_consent` set when claims finish | Delete clip or delete campaign (the campaign folder is removed) |
+| Recordings and reels | `%APPDATA%\DeskTop\campaigns\<campaign id>\recordings\night_<n>_<ms>.mp4` (built Phase 13), `night.recording_consent` set when claims finish. A JSON sidecar beside each recording holds the start time, anchor boxes after each re-anchor, sprite ids and duration. Reels are `reel_<recording>.mp4` in the same folder, `night.replay_path` stores the relative path, and the proxy work folder is removed after every build | Delete clip or delete campaign (the campaign folder is removed) |
 | Uploaded replay proxy | Meta Files API | Explicit DELETE after processing, `expires_after` 86,400 s backup |
 | api_usage | SQLite | Kept (cost audit) |
 

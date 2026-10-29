@@ -29,7 +29,8 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 | M11 voice | Built 2026-10-28. Taglish grammar, realtime DIARIZATION night session, live captions, voice chips with spoken cancel and End Turn, push-to-talk, voice off in Demo Safe and while paused. Live run Manual: EHIBE (key, mic). MVP scope complete offline |
 | Phase 12 physical enemies and voice claim | Built 2026-10-29. Tikbalang push and throw, duwende steal, flee, return and escape in the rules engine, PHYSICAL_EFFECTS wait with ghosts, marks, badges and Done, voice claim with ako si and hawak ko. Table run Manual: EHIBE |
 | Phase 13 code | Built 2026-10-29. Per-player recording consent, ffmpeg recorder (tested with a fake process), REC dot, narration logging, eval runner `eval/run_eval.py`. E7 50 of 50 (100%). ffmpeg, live evals, freeze tag and Playtest 2 are Manual: EHIBE |
-| Tests | 1113 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
+| Phase 14 replay | Built 2026-10-29. Highlights, 10 FPS proxy, Files upload with expiry and delete, one SAM video request, reel render with sprites, damage numbers and dawn title card, anchor box fallback, Make Replay and Show in folder controls. Real reel needs ffmpeg and the key |
+| Tests | 1217 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
 | CI, git hooks | None |
 
 ## Pending queue
@@ -45,7 +46,8 @@ Ordered. Canonical schedule: `docs/delivery/schedule.md`.
 7. Manual: EHIBE. Play a Demo Safe night with Wi-Fi off, kill the app at turn 5 and resume, delete a test campaign and check `%APPDATA%\DeskTop` (Playtest 1)
 8. Manual: EHIBE. Play a night with a tikbalang push and a duwende steal on the real table (turn 3 on Normal teaches the push)
 9. Manual: EHIBE. Install ffmpeg, play two consented nights, run `eval/run_eval.py e4 --db` and `e6 --db` on the database, record E1 to E3 data, then the freeze tag (`git tag freeze-nov3`, push) at Nov 3 6:00 PM SGT and Playtest 2
-10. Phase 14 and 15: replay reel, video, README, submission
+10. Manual: EHIBE. After a consented night, tap Make the Replay, open the reel in Windows Media Player and check sprites stay on objects (FR-47 90%)
+11. Phase 15: video, README, secret scan, submission
 
 ## Constraints
 
