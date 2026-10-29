@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import json
 import logging
 import math
 import re
@@ -397,6 +398,8 @@ class GameController:
     ) -> None:
         self._recorder_factory = recorder_factory
         self._recorder: Recorder | None = None
+        self._sidecar: dict[str, object] | None = None
+        self._sidecar_path: Path | None = None
         self._clean_name = clean_name
         self._consents: dict[str, bool] = {}
         self._voice_players: dict[str, str] = {}
@@ -1307,6 +1310,24 @@ class GameController:
             self._notify("rec.unavailable", {})
             return
         self._recorder = recorder
+        session = self._session
+        self._sidecar = {
+            "version": SIDECAR_VERSION,
+            "video": path.name,
+            "width": width,
+            "height": height,
+            "fps": RECORDING_FPS,
+            "started_t_ms": 0 if session is None else session.t_ms,
+            "duration_s": 0.0,
+            "anchors": [],
+            "sprites": {
+                game_id_for(u.sam_object_id): u.sprite_id
+                for u in self._units
+                if u.sprite_id is not None
+            },
+        }
+        self._sidecar_path = path.with_suffix(".json")
+        self._record_anchor_snapshot()
         self._notify("rec.on", {})
 
     def _stop_recording(self) -> None:
@@ -1317,6 +1338,45 @@ class GameController:
         result = recorder.stop()
         if not result.ok:
             logger.warning("recording ended with an error")
+        if self._sidecar is not None:
+            self._sidecar["duration_s"] = round(result.seconds, 3)
+            self._write_sidecar()
+        self._sidecar = None
+        self._sidecar_path = None
+
+    def _record_anchor_snapshot(self) -> None:
+        sidecar = self._sidecar
+        session = self._session
+        if sidecar is None or session is None:
+            return
+        anchors = sidecar["anchors"]
+        if not isinstance(anchors, list):
+            return
+        with self._lock:
+            boxes = {
+                game_id_for(u.sam_object_id): [
+                    box.left,
+                    box.top,
+                    box.right,
+                    box.bottom,
+                ]
+                for u in self._units
+                if (box := self._boxes.get(u.sam_object_id)) is not None
+            }
+        anchors.append({"t_ms": session.t_ms, "boxes": boxes})
+        self._write_sidecar()
+
+    def _write_sidecar(self) -> None:
+        path = self._sidecar_path
+        if path is None or self._sidecar is None:
+            return
+        temp = path.with_suffix(".json.tmp")
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            temp.write_text(json.dumps(self._sidecar), encoding="utf-8")
+            temp.replace(path)
+        except OSError:
+            logger.warning("recording sidecar write failed")
 
     @property
     def is_recording(self) -> bool:
@@ -2096,6 +2156,7 @@ class GameController:
             safe_distance,
         )
         self._apply_anchors(night, frame, anchors)
+        self._record_anchor_snapshot()
         return anchors
 
     def _apply_anchors(
@@ -2200,6 +2261,8 @@ STUNNED_STATUS: Final = "stunned"
 REFORM_STATUS_PREFIX: Final = "reform_"
 STATE_CHANGED: Final = "state.changed"
 RECORDINGS_DIR: Final = "recordings"
+RECORDING_FPS: Final = 25
+SIDECAR_VERSION: Final = 1
 NARRATION_EVENT: Final = "narration"
 NARRATION_REQUEST_EVENT: Final = "narration_request"
 PUSH_EFFECT: Final = "push"
@@ -2373,6 +2436,10 @@ class NightSession:
 
     def _t_ms(self) -> int:
         return max(0, round((self._clock() - self._started) * 1000))
+
+    @property
+    def t_ms(self) -> int:
+        return self._t_ms()
 
     def _turn(self) -> int:
         return 0 if self._board is None else self._board.turn

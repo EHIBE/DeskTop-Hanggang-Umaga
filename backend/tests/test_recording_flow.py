@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import numpy as np
@@ -109,4 +110,30 @@ def test_missing_ffmpeg_keeps_the_night_going(tmp_path: Path) -> None:
     assert not controller.snapshot().is_recording
     assert ("rec.unavailable", {}) in controller.drain_notices()
     controller.close()
+    store.close()
+
+
+def test_sidecar_tracks_time_anchors_and_duration(tmp_path: Path) -> None:
+    factory = Factory()
+    store, controller = setup(tmp_path, factory)
+    controller.give_consent("Migs", True)
+    controller.give_consent("Bea", True)
+    controller.finish_claims()
+    recorder = factory.made[0]
+    sidecar = recorder.path.with_suffix(".json")
+    data = json.loads(sidecar.read_text(encoding="utf-8"))
+    assert data["version"] == 1
+    assert data["video"] == recorder.path.name
+    assert (data["width"], data["height"]) == recorder.size
+    assert data["fps"] == 25
+    assert data["started_t_ms"] >= 0
+    assert len(data["anchors"]) == 1
+    assert set(data["anchors"][0]["boxes"]) == {"u_kubo", "u_2", "u_3"}
+    play_turns(controller, 1)
+    data = json.loads(sidecar.read_text(encoding="utf-8"))
+    assert len(data["anchors"]) == 2
+    assert data["anchors"][1]["t_ms"] >= data["anchors"][0]["t_ms"]
+    controller.close()
+    data = json.loads(sidecar.read_text(encoding="utf-8"))
+    assert data["duration_s"] == 1.0
     store.close()
