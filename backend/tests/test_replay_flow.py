@@ -49,6 +49,10 @@ def test_replay_runs_after_a_recorded_night(tmp_path: Path) -> None:
     runner = Runner()
     controller._replay_runner = runner
     assert controller.snapshot().can_replay
+    with pytest.raises(GameError) as info:
+        controller.request_replay("SUMIKAT NA", "SUNRISE")
+    assert info.value.copy_key == "replay.no_ffmpeg"
+    controller._ffmpeg = "ffmpeg"
 
     async def go() -> None:
         controller.request_replay("SUMIKAT NA", "SUNRISE")
@@ -81,6 +85,7 @@ def test_replay_failure_and_demo_safe(tmp_path: Path) -> None:
     store, controller, _ = finished_recorded_night(tmp_path)
     runner = Runner(ReplayError("ffmpeg was not found"))
     controller._replay_runner = runner
+    controller._ffmpeg = "ffmpeg"
     controller.set_demo_safe(True)
 
     async def go() -> None:
@@ -233,3 +238,30 @@ def test_reel_paths_must_sit_below_the_root(tmp_path: Path) -> None:
     recorder = Recorder(tmp_path / "night.mp4", 8, 8, ffmpeg="ffmpeg", root=tmp_path)
     with pytest.raises(RecorderError):
         recorder.start()
+
+
+def test_summon_publishes_what_each_model_did(tmp_path: Path) -> None:
+    from state import Broadcast
+    from tests.test_tracking_flow import (
+        ConfidentSegmenter,
+        controller_for,
+        summon_three,
+    )
+
+    store = Store(tmp_path / "db.sqlite")
+    broadcast = Broadcast()
+    queue = broadcast.subscribe()
+    controller = controller_for(store, ConfidentSegmenter(), broadcast=broadcast)
+    summon_three(controller)
+    results = []
+    while not queue.empty():
+        message = queue.get_nowait()
+        if message["type"] == "summon.result":
+            results.append(message)
+    assert [m["game_id"] for m in results] == ["u_kubo", "u_2", "u_3"]
+    first = results[0]
+    assert first["source"] in ("spark", "fallback")
+    hull = first["mask_hull"]
+    assert isinstance(hull, list) and len(hull) >= 3
+    controller.close()
+    store.close()

@@ -128,6 +128,7 @@ from vision.sam import (
     Segmenter,
     TrackerOnlySegmenter,
     clamp_box,
+    mask_hull_px,
     pad_box,
     reanchor,
 )
@@ -1419,6 +1420,8 @@ class GameController:
             or not self._store.recording_consent(night.id)
         ):
             raise GameError("replay.none")
+        if self._ffmpeg is None:
+            raise GameError("replay.no_ffmpeg")
         if self._replay_status == REPLAY_WORKING:
             raise GameError(BUSY_KEY)
         rows = tuple(
@@ -1851,7 +1854,30 @@ class GameController:
             self._relock_after_summon(snapshot, outcome)
             self._remember_crop(unit, snapshot, outcome)
             self._schedule_sprite(unit)
+            self._publish_summon_result(unit, detection, outcome)
             return self._unit_view(unit)
+
+    def _publish_summon_result(
+        self, unit: UnitRecord, detection: Detection, outcome: SummonOutcome
+    ) -> None:
+        if self._broadcast is None:
+            return
+        box = detection.box
+        hull = mask_hull_px(outcome.mask)
+        self._broadcast.publish(
+            {
+                "type": "summon.result",
+                "unit_id": unit.unit_id,
+                "game_id": game_id_for(unit.sam_object_id),
+                "source": outcome.source,
+                "spark_box": None
+                if box is None
+                else [box.left, box.top, box.right, box.bottom],
+                "mask_hull": [[round(x), round(y)] for x, y in hull[:MAX_HULL_POINTS]],
+                "width": self._area.warped_size[0],
+                "height": self._area.warped_size[1],
+            }
+        )
 
     def _persist(self, outcome: SummonOutcome, started: float) -> UnitRecord:
         night = self._night
@@ -2361,6 +2387,7 @@ DOWN_STATUS: Final = "down"
 STUNNED_STATUS: Final = "stunned"
 REFORM_STATUS_PREFIX: Final = "reform_"
 STATE_CHANGED: Final = "state.changed"
+MAX_HULL_POINTS: Final = 64
 RECORDINGS_DIR: Final = "recordings"
 REPLAY_IDLE: Final = "idle"
 REPLAY_WORKING: Final = "working"
