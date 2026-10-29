@@ -214,6 +214,8 @@ export type StateMessage = Readonly<{
   night: NightSummary | null
   score: ScoreSummary | null
   voice: VoiceState
+  recording: boolean
+  consents: Readonly<Record<string, boolean>>
 }>
 
 export type DevicesMessage = Readonly<{
@@ -334,6 +336,7 @@ export type ClientMessage =
   | Readonly<{ type: 'night.begin' }>
   | Readonly<{ type: 'claim.tap'; player_name: string; unit_ids: readonly string[] }>
   | Readonly<{ type: 'claim.done' }>
+  | Readonly<{ type: 'consent'; player_name: string; agree: boolean }>
   | Readonly<{ type: 'effect.done' }>
   | Readonly<{
       type: 'intent.tap'

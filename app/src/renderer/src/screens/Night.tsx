@@ -485,7 +485,13 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
 
   return (
     <main className="flex h-full w-full flex-col" data-pulse={pulse}>
-      <TopBar night={night} phase={phase} demoSafe={state.demo_safe} hitCount={hitCount} />
+      <TopBar
+        night={night}
+        phase={phase}
+        demoSafe={state.demo_safe}
+        hitCount={hitCount}
+        recording={state.recording}
+      />
       <div className="relative flex min-h-0 flex-1 gap-4 p-4">
         <div className="panel relative min-w-0 flex-1 p-2">
           <Board

@@ -115,6 +115,18 @@ const entries = {
     en: 'Tonight will be recorded for the replay. Does everyone agree?'
   },
   'rec.on': { tl: 'Nagre-record', en: 'Recording' },
+  'rec.agree': { tl: 'Payag', en: 'I agree' },
+  'rec.decline': { tl: 'Hindi', en: 'No' },
+  'rec.unavailable': {
+    tl: 'Walang recording ngayon, tuloy pa rin ang laro.',
+    en: 'No recording tonight, the game goes on.'
+  },
+  'rec.no_ok': {
+    tl: 'Okay lang ang Hindi. Tuloy pa rin ang gabi, walang recording.',
+    en: 'Saying no is fine. The night still plays, just without recording.'
+  },
+  'rec.waiting': { tl: 'Wala pang sagot', en: 'No answer yet' },
+  'rec.player': { tl: 'Sagot ni [name]', en: "[name]'s answer" },
   'replay.making': { tl: 'Ginagawa ang replay...', en: 'Making the replay...' },
   'net.slow': {
     tl: 'Medyo mabagal ang koneksyon. Tuloy pa rin tayo.',

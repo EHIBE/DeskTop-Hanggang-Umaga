@@ -101,6 +101,10 @@ function VoiceClaim({ state, send, subscribe }: VoiceClaimProps): React.JSX.Elem
     setNames((current) => current.map((name, i) => (i === index ? value : name)))
   }
 
+  const answer = (player: string, agree: boolean): void => {
+    send({ type: 'consent', player_name: player, agree })
+  }
+
   const done = (): void => {
     send({ type: 'claim.done' })
   }
@@ -185,6 +189,50 @@ function VoiceClaim({ state, send, subscribe }: VoiceClaimProps): React.JSX.Elem
             {t('claim.duplicate').tl}
           </p>
         )}
+        <section aria-label={t('rec.consent').en} className="flex flex-col gap-3">
+          <Bilingual copyKey="rec.consent" />
+          <Bilingual copyKey="rec.no_ok" />
+          {(state.night?.players ?? []).map((player) => {
+            const answered = Object.prototype.hasOwnProperty.call(state.consents, player)
+            const agreed = answered && state.consents[player]
+            const declined = answered && !state.consents[player]
+            const label = t('rec.player', { name: player })
+            return (
+              <div
+                key={player}
+                role="group"
+                aria-label={label.en}
+                className="flex items-center gap-3"
+              >
+                <span className="min-w-0 flex-1 truncate">
+                  {agreed ? '✓ ' : declined ? '✗ ' : '? '}
+                  {player}
+                </span>
+                <button
+                  type="button"
+                  className="btn w-[140px] shrink-0"
+                  aria-pressed={agreed}
+                  onClick={() => answer(player, true)}
+                >
+                  {agreed ? '✓ ' : ''}
+                  {t('rec.agree').tl}
+                </button>
+                <button
+                  type="button"
+                  className="btn w-[140px] shrink-0"
+                  aria-pressed={declined}
+                  onClick={() => answer(player, false)}
+                >
+                  {declined ? '✗ ' : ''}
+                  {t('rec.decline').tl}
+                </button>
+              </div>
+            )
+          })}
+          {Object.keys(state.consents).length === 0 && (
+            <p className="caption-en">{t('rec.waiting').tl}</p>
+          )}
+        </section>
         <div className="mt-auto flex gap-4">
           <button type="button" className="btn flex-1" onClick={done}>
             {t('claim.skip').tl}

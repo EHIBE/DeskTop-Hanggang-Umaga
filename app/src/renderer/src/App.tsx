@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import CostMeter from './components/CostMeter'
 import Bilingual from './components/Bilingual'
 import Stage from './components/Stage'
+import RecIndicator from './hud/RecIndicator'
 import { isCopyKey, t, type CopyKey } from './lib/copy'
 import { useGameSocket } from './lib/socket'
 import type {
@@ -147,6 +148,11 @@ function App(): React.JSX.Element {
           {state.demo_safe && !inNight && (
             <div className="panel px-4 py-2">{t('start.demo_safe').tl}</div>
           )}
+        </div>
+      )}
+      {ready && state.recording && (state.phase === 'SUNRISE' || state.phase === 'DEFEAT') && (
+        <div className="panel absolute left-4 top-4 px-4 py-2">
+          <RecIndicator />
         </div>
       )}
       {notice && (

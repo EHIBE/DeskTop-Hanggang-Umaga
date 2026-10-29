@@ -166,7 +166,26 @@ canvas {
   }
 }
 
+.rec-dot {
+  width: 16px;
+  height: 16px;
+  background: var(--color-gabi-sindak);
+  border: 2px solid var(--color-gabi-moon);
+  border-radius: 50%;
+  animation: rec-pulse 1.6s steps(2) infinite;
+}
+
+@keyframes rec-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .rec-dot {
+    animation: none;
+  }
+
   .kubo-hit {
     animation: none;
   }

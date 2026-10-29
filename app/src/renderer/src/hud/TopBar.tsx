@@ -1,4 +1,5 @@
 import { t, type CopyKey } from '../lib/copy'
+import RecIndicator from './RecIndicator'
 import type { AppPhase, NightSummary } from '../lib/types'
 
 type TopBarProps = Readonly<{
@@ -6,6 +7,7 @@ type TopBarProps = Readonly<{
   phase: AppPhase
   demoSafe: boolean
   hitCount: number
+  recording: boolean
 }>
 
 function phaseKey(phase: AppPhase): CopyKey {
@@ -24,7 +26,7 @@ function phaseKey(phase: AppPhase): CopyKey {
   }
 }
 
-function TopBar({ night, phase, demoSafe, hitCount }: TopBarProps): React.JSX.Element {
+function TopBar({ night, phase, demoSafe, hitCount, recording }: TopBarProps): React.JSX.Element {
   const turn = t('hud.turn', { n: night.turn })
   const banner = t(phaseKey(phase))
   const max = Math.max(1, night.kubo_hp_max)
@@ -33,7 +35,10 @@ function TopBar({ night, phase, demoSafe, hitCount }: TopBarProps): React.JSX.El
 
   return (
     <header className="flex h-[88px] shrink-0 items-center gap-8 border-b-2 border-gabi-dusk bg-gabi-night px-8">
-      <div className="w-[320px] text-[24px] leading-[32px]">{turn.tl}</div>
+      <div className="flex w-[320px] flex-col text-[24px] leading-[32px]">
+        <span>{turn.tl}</span>
+        {recording && <RecIndicator />}
+      </div>
       <div
         className="panel flex min-w-0 flex-1 flex-col items-center px-6 py-1"
         role="status"
