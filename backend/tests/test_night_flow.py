@@ -471,3 +471,36 @@ def test_no_consent_still_plays_and_is_saved_as_no(tmp_path: Path) -> None:
     assert not store.recording_consent(night.id)
     controller.close()
     store.close()
+
+
+class BlackSource:
+    released = False
+
+    def isOpened(self) -> bool:
+        return True
+
+    def set(self, prop_id: int, value: float) -> bool:
+        return True
+
+    def get(self, prop_id: int) -> float:
+        return 1920.0 if prop_id == 3 else 1080.0
+
+    def read(self) -> tuple[bool, np.ndarray | None]:
+        return True, np.zeros((1080, 1920, 3), dtype=np.uint8)
+
+    def release(self) -> None:
+        BlackSource.released = True
+
+
+def test_black_camera_is_refused_with_a_clear_notice(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    controller = controller_for(store, ConfidentSegmenter())
+    controller._camera_factory = lambda _: BlackSource()
+    controller.start_new_campaign("B", Difficulty.NORMAL)
+    with pytest.raises(GameError) as info:
+        controller.select_camera(1)
+    assert info.value.copy_key == "cam.black"
+    assert BlackSource.released
+    assert controller.snapshot().camera is None
+    controller.close()
+    store.close()

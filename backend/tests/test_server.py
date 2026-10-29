@@ -255,7 +255,9 @@ def test_devices_and_campaign_lists(client: TestClient) -> None:
         receive_type(ws, "state")
         ws.send_text(json.dumps({"type": "devices.list"}))
         devices = receive_type(ws, "devices")
-        assert devices["cameras"] == [{"index": 0, "width": 1920, "height": 1080}]
+        assert devices["cameras"] == [
+            {"index": 0, "width": 1920, "height": 1080, "has_picture": True}
+        ]
         assert devices["microphones"] == [{"index": 1, "name": "Mic"}]
         ws.send_text(json.dumps({"type": "campaign.list"}))
         assert receive_type(ws, "campaigns")["campaigns"] == []

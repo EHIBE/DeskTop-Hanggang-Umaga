@@ -12,6 +12,7 @@ from capture.camera import (
     CameraError,
     CameraResolutionError,
     VideoSource,
+    is_black,
     list_cameras,
 )
 
@@ -25,7 +26,9 @@ class FakeSource:
         is_open: bool = True,
         size: tuple[int, int] = (1920, 1080),
         frames: int | None = None,
+        brightness: int = 0,
     ) -> None:
+        self._brightness = brightness
         self._is_open = is_open
         self._size = size
         self._frames_left = frames
@@ -51,7 +54,7 @@ class FakeSource:
                 return False, None
             self._frames_left -= 1
         self.first_frame.set()
-        return True, np.zeros((4, 4, 3), dtype=np.uint8)
+        return True, np.full((4, 4, 3), self._brightness, dtype=np.uint8)
 
     def release(self) -> None:
         self.released = True
@@ -138,4 +141,23 @@ def test_list_cameras_reports_open_devices() -> None:
         (0, 1920, 1080),
         (2, 1280, 720),
     ]
+    assert [c.has_picture for c in found] == [False, False]
     assert all(source.released for source in sources.values())
+
+
+def test_list_cameras_marks_cameras_that_only_give_black() -> None:
+    sources = {0: FakeSource(brightness=120), 1: FakeSource(brightness=0)}
+
+    def factory(index: int) -> VideoSource:
+        return sources.get(index, FakeSource(is_open=False))
+
+    found = list_cameras(factory)
+    assert [(c.index, c.has_picture) for c in found] == [(0, True), (1, False)]
+    assert sources[1].reads == 3
+
+
+def test_is_black_threshold() -> None:
+    assert is_black(np.zeros((4, 4, 3), dtype=np.uint8))
+    assert is_black(np.full((4, 4, 3), 2, dtype=np.uint8))
+    assert not is_black(np.full((4, 4, 3), 3, dtype=np.uint8))
+    assert is_black(np.zeros((0, 0, 3), dtype=np.uint8))

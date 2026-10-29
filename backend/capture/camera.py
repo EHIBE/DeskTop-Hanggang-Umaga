@@ -8,7 +8,12 @@ import cv2
 import numpy as np
 import numpy.typing as npt
 
-from config import CAMERA_CAPTURE_SIZE, CAMERA_MIN_SIZE
+from config import (
+    CAMERA_BLACK_MEAN_MAX,
+    CAMERA_CAPTURE_SIZE,
+    CAMERA_MIN_SIZE,
+    CAMERA_PROBE_READS,
+)
 
 Image = npt.NDArray[np.uint8]
 
@@ -76,6 +81,19 @@ class CameraInfo:
     index: int
     width: int
     height: int
+    has_picture: bool = True
+
+
+def is_black(image: Image) -> bool:
+    return image.size == 0 or float(image.mean()) <= CAMERA_BLACK_MEAN_MAX
+
+
+def _probe_picture(source: VideoSource) -> bool:
+    for _ in range(CAMERA_PROBE_READS):
+        ok, image = source.read()
+        if ok and image is not None and not is_black(image):
+            return True
+    return False
 
 
 @dataclass(frozen=True)
@@ -92,9 +110,18 @@ def list_cameras(factory: SourceFactory = open_directshow) -> list[CameraInfo]:
         try:
             if not source.isOpened():
                 continue
+            source.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_CAPTURE_SIZE[0])
+            source.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_CAPTURE_SIZE[1])
             width = int(source.get(cv2.CAP_PROP_FRAME_WIDTH))
             height = int(source.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            found.append(CameraInfo(index=index, width=width, height=height))
+            found.append(
+                CameraInfo(
+                    index=index,
+                    width=width,
+                    height=height,
+                    has_picture=_probe_picture(source),
+                )
+            )
         finally:
             source.release()
     return found

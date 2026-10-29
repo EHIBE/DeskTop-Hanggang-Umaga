@@ -139,21 +139,24 @@ function Calibration({ state, send, subscribe }: CalibrationProps): React.JSX.El
           {cameras.length === 0 ? (
             <Bilingual copyKey="calib.no_camera" />
           ) : (
-            cameras.map((camera) => {
-              const active = state.camera?.index === camera.index
-              return (
-                <button
-                  key={camera.index}
-                  type="button"
-                  className="btn text-left"
-                  aria-pressed={active}
-                  onClick={() => send({ type: 'camera.select', index: camera.index })}
-                >
-                  {active ? '> ' : ''}
-                  {camera.index + 1} ({camera.width}x{camera.height})
-                </button>
-              )
-            })
+            [...cameras]
+              .sort((a, b) => Number(b.has_picture) - Number(a.has_picture))
+              .map((camera) => {
+                const active = state.camera?.index === camera.index
+                return (
+                  <button
+                    key={camera.index}
+                    type="button"
+                    className="btn text-left"
+                    aria-pressed={active}
+                    onClick={() => send({ type: 'camera.select', index: camera.index })}
+                  >
+                    {active ? '> ' : ''}
+                    {camera.index + 1} ({camera.width}x{camera.height})
+                    {camera.has_picture ? '' : ` X ${t('calib.no_picture').tl}`}
+                  </button>
+                )
+              })
           )}
         </section>
         <section className="flex flex-col gap-4">

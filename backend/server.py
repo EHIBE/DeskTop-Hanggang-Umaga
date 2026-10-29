@@ -749,7 +749,12 @@ class Connection:
             return {
                 "type": "devices",
                 "cameras": [
-                    {"index": c.index, "width": c.width, "height": c.height}
+                    {
+                        "index": c.index,
+                        "width": c.width,
+                        "height": c.height,
+                        "has_picture": c.has_picture,
+                    }
                     for c in devices.cameras
                 ],
                 "microphones": [

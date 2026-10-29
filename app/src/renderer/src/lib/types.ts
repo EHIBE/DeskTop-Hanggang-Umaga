@@ -133,7 +133,12 @@ export type CampaignSummary = Readonly<{
   created_at: string
 }>
 
-export type CameraInfo = Readonly<{ index: number; width: number; height: number }>
+export type CameraInfo = Readonly<{
+  index: number
+  width: number
+  height: number
+  has_picture: boolean
+}>
 
 export type MicrophoneInfo = Readonly<{ index: number; name: string }>
 

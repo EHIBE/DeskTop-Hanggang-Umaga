@@ -35,6 +35,7 @@ from capture.camera import (
     CameraInfo,
     MicrophoneInfo,
     SourceFactory,
+    is_black,
     list_cameras,
     list_microphones,
     open_directshow,
@@ -42,6 +43,7 @@ from capture.camera import (
 from capture.recorder import Recorder, RecorderError
 from capture.tracker import TrackedPose, TrackerSet
 from config import (
+    CAMERA_PICTURE_WAIT_S,
     HANDS_OFF_WAIT_S,
     NIGHT_COST_ALERT_USD,
     PHYSICAL_EFFECT_TIMEOUT_S,
@@ -985,11 +987,26 @@ class GameController:
                 )
                 raise GameError("cam.busy") from error
             camera.start()
+            if not self._has_picture(camera):
+                camera.stop()
+                logger.warning("camera %s gave only black frames", index)
+                raise GameError("cam.black")
             self._camera = camera
             self._camera_info = CameraInfo(index=index, width=width, height=height)
             self._store.set_setting(CAMERA_SETTING, str(index))
             if self._is_stored_calibration and not self._is_calibrated:
                 self._check_stored_calibration()
+
+    def _has_picture(self, camera: Camera) -> bool:
+        deadline = self._clock() + CAMERA_PICTURE_WAIT_S
+        while self._clock() < deadline:
+            frame = camera.latest()
+            if frame is not None and not is_black(frame.image):
+                return True
+            if camera.has_failed:
+                return False
+            self._sleep(FIRST_FRAME_POLL_S)
+        return False
 
     def _check_stored_calibration(self) -> None:
         if self._campaign is None or self._calibration is None:

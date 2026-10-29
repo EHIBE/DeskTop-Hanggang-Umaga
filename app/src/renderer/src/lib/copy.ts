@@ -174,6 +174,11 @@ const entries = {
     en: 'Welcome back, [unit]. [n] HP short from last night.'
   },
   'calib.aim': { tl: 'Itutok ang camera sa mesa lang.', en: 'Point the camera at the table only.' },
+  'cam.black': {
+    tl: 'Itim lang ang kuha ng camerang ito. Baka gamit ito ng ibang app, gaya ng NVIDIA Broadcast. Pumili ng ibang camera.',
+    en: 'This camera only shows black. Another app such as NVIDIA Broadcast may be holding it. Pick another camera.'
+  },
+  'calib.no_picture': { tl: 'walang larawan', en: 'no picture' },
   'cam.busy': {
     tl: 'May ibang app na gumagamit ng camera.',
     en: 'Another app is using the camera.'

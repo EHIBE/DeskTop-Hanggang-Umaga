@@ -183,6 +183,7 @@ Change the path to wherever you unzipped it. This only lasts for that PowerShell
 | What you see | What to try |
 |---|---|
 | The window opens but stays on a loading or reconnecting state | Close it and run `npm --prefix app run dev` again. Check `backend.log` for the reason. Most often the Python install step was skipped |
+| The camera light is on but the picture is black, or a camera is marked "no picture" | Another app is holding that camera. NVIDIA Broadcast is the usual one: it takes the real webcam and offers its own virtual camera instead. Pick the camera that is not marked "no picture" (often the 1280x720 one), or quit NVIDIA Broadcast and use the real webcam directly |
 | "No camera found" or the camera is busy | Close other apps using the webcam (Zoom, Teams, the Camera app), then pick the camera again |
 | "Too dark. Add more light." | Turn on a lamp. Tracking needs even light |
 | "The camera moved! Calibrate again." | Put the camera back where it was and press Resume, or recalibrate from the pause screen |
