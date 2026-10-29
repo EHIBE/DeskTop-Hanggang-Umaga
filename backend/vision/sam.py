@@ -1,9 +1,9 @@
 import base64
 import math
-from collections.abc import AsyncIterator, Callable, Sequence
+from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
-from typing import Final, Protocol, cast
+from typing import Any, Final, Protocol, cast
 
 import cv2
 import numpy as np
@@ -13,13 +13,16 @@ from meta_sam_parser import (
     PromptBox,
     PromptObject,
     PromptPoint,
+    SegmentationBoxRecord,
     SegmentationMask,
     SegmentationMaskRecord,
     SegmentationRecord,
+    SegmentationTextRecord,
     build_object_prompt,
     decode_mask_to_raster,
     image_segmentation_format,
     parse_responses_stream,
+    video_segmentation_format,
 )
 
 from config import (
@@ -535,3 +538,204 @@ async def _reanchor_ladder(
             target, px_per_cm, AnchorStatus.UNCERTAIN
         )
     return anchors
+
+
+SAM_VIDEO_SPEC: Final = CallSpec(
+    model=MetaModel.SAM, kind=CallKind.SAM_VIDEO, is_idempotent=True
+)
+SAM_VIDEO_METADATA: Final = {
+    "propagation_direction": "forward",
+    "mask_encoding": "one_bit",
+}
+
+RecordingBox = tuple[int, int, int, int]
+
+
+@dataclass(frozen=True)
+class TrackBox:
+    frame: int
+    left: int
+    top: int
+    right: int
+    bottom: int
+
+
+async def _parse_video_events(
+    events: AsyncIterator[object],
+) -> Sequence[SegmentationRecord]:
+    parsed = parse_responses_stream(events, video_segmentation_format())  # type: ignore[arg-type]
+    async for _ in parsed:
+        continue
+    result = await parsed.final_result()
+    return result.records
+
+
+def _scaled_prompt_box(
+    box: RecordingBox, source: tuple[int, int], proxy: tuple[int, int]
+) -> PixelBox:
+    scale_x = proxy[0] / source[0]
+    scale_y = proxy[1] / source[1]
+    scaled = PixelBox(
+        round(box[0] * scale_x),
+        round(box[1] * scale_y),
+        round(box[2] * scale_x),
+        round(box[3] * scale_y),
+    )
+    return clamp_box(scaled, proxy[0], proxy[1])
+
+
+def _scaled_track_box(
+    frame: int,
+    bounds: tuple[float, float, float, float],
+    source: tuple[int, int],
+    proxy: tuple[int, int],
+) -> TrackBox:
+    scale_x = source[0] / proxy[0]
+    scale_y = source[1] / proxy[1]
+    left = min(max(math.floor(bounds[0] * scale_x), 0), source[0] - 1)
+    top = min(max(math.floor(bounds[1] * scale_y), 0), source[1] - 1)
+    right = min(max(math.ceil(bounds[2] * scale_x), left + 1), source[0])
+    bottom = min(max(math.ceil(bounds[3] * scale_y), top + 1), source[1])
+    return TrackBox(frame, left, top, right, bottom)
+
+
+def tracks_from_records(
+    records: Sequence[SegmentationRecord],
+    game_ids: Mapping[int, str],
+    source: tuple[int, int],
+    proxy: tuple[int, int],
+) -> dict[str, tuple[TrackBox, ...]]:
+    found: dict[tuple[int, int], TrackBox] = {}
+    from_box: set[tuple[int, int]] = set()
+    for record in records:
+        if not isinstance(record, (SegmentationBoxRecord, SegmentationMaskRecord)):
+            continue
+        if not record.object_id.isdigit() or record.frame is None:
+            continue
+        sam_id = int(record.object_id)
+        if sam_id not in game_ids:
+            continue
+        key = (sam_id, record.frame.frame_index)
+        if isinstance(record, SegmentationBoxRecord):
+            bounds = (record.left, record.top, record.right, record.bottom)
+            from_box.add(key)
+        elif key not in from_box:
+            edge = record.bounds
+            bounds = (edge.left, edge.top, edge.right, edge.bottom)
+        else:
+            continue
+        found[key] = _scaled_track_box(key[1], bounds, source, proxy)
+    grouped: dict[str, list[TrackBox]] = {}
+    for (sam_id, _), box in found.items():
+        grouped.setdefault(game_ids[sam_id], []).append(box)
+    return {
+        game_id: tuple(sorted(boxes, key=lambda item: item.frame))
+        for game_id, boxes in grouped.items()
+    }
+
+
+def build_video_prompt(
+    game_ids: Mapping[int, str],
+    segments: Sequence[int],
+    prompts: Mapping[int, Mapping[str, RecordingBox]],
+    source: tuple[int, int],
+    proxy: tuple[int, int],
+) -> str:
+    sam_ids = {game_id: sam_id for sam_id, game_id in game_ids.items()}
+    frames_by_object: dict[int, list[FramePrompt]] = {}
+    for frame in sorted(segments):
+        for game_id, box in prompts.get(frame, {}).items():
+            pixel = _scaled_prompt_box(box, source, proxy)
+            frames_by_object.setdefault(sam_ids[game_id], []).append(
+                FramePrompt(
+                    frame=frame,
+                    box=PromptBox(pixel.left, pixel.top, pixel.right, pixel.bottom),
+                )
+            )
+    objects = [
+        PromptObject(id=sam_id, prompts=frame_prompts)
+        for sam_id, frame_prompts in sorted(frames_by_object.items())
+    ]
+    return build_object_prompt(size=proxy, objects=objects)
+
+
+def _assign_video_ids(
+    segments: Sequence[int], prompts: Mapping[int, Mapping[str, RecordingBox]]
+) -> dict[int, str]:
+    ordered: list[str] = []
+    for frame in sorted(segments):
+        for game_id in prompts.get(frame, {}):
+            if game_id not in ordered:
+                ordered.append(game_id)
+    if not ordered:
+        raise SegmentationError("no object prompts were given")
+    if len(ordered) > MAX_SAM_ID:
+        raise SegmentationError("SAM tracks at most 16 objects per request")
+    return {index + MIN_SAM_ID: game_id for index, game_id in enumerate(ordered)}
+
+
+def _distinct_frames(records: Sequence[SegmentationRecord]) -> int:
+    return len(
+        {
+            record.frame.frame_index
+            for record in records
+            if not isinstance(record, SegmentationTextRecord)
+            and record.frame is not None
+        }
+    )
+
+
+class SamVideoTracker:
+    def __init__(self, client: MetaClient) -> None:
+        self._client = client
+
+    @property
+    def is_available(self) -> bool:
+        return self._client.is_available(MetaModel.SAM)
+
+    async def track(
+        self,
+        file_id: str,
+        segments: Sequence[int],
+        prompts: Mapping[int, Mapping[str, RecordingBox]],
+        *,
+        source_size: tuple[int, int],
+        proxy_size: tuple[int, int],
+    ) -> dict[str, tuple[TrackBox, ...]]:
+        if not file_id:
+            raise SegmentationError("a file id is required")
+        if not segments or not prompts:
+            raise SegmentationError("segments and prompts are required")
+        if min(source_size) <= 0 or min(proxy_size) <= 0:
+            raise SegmentationError("frame sizes must be positive")
+        if set(prompts) - set(segments) or min(segments) < 0:
+            raise SegmentationError("prompts must sit on segment first frames")
+        game_ids = _assign_video_ids(segments, prompts)
+        text = build_video_prompt(game_ids, segments, prompts, source_size, proxy_size)
+
+        async def operation() -> Sequence[SegmentationRecord]:
+            message: Any = [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": text},
+                        {"type": "input_video", "file_id": file_id},
+                    ],
+                }
+            ]
+            stream = await self._client.sdk().responses.create(
+                model=MetaModel.SAM.value,
+                store=False,
+                input=message,
+                stream=True,
+                metadata=SAM_VIDEO_METADATA,
+            )
+            return await _parse_video_events(stream.__aiter__())
+
+        records = await self._client.execute(
+            SAM_VIDEO_SPEC,
+            operation,
+            lambda found: Usage(frames=_distinct_frames(found)),
+        )
+        return tracks_from_records(records, game_ids, source_size, proxy_size)
