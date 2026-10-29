@@ -522,6 +522,24 @@ class Store:
         if cursor.rowcount == 0:
             raise NotFoundError("night not found")
 
+    def set_recording_consent(self, night_id: str, is_given: bool) -> None:
+        with self.transaction() as conn:
+            cursor = conn.execute(
+                "UPDATE night SET recording_consent = ? WHERE id = ?",
+                (int(is_given), night_id),
+            )
+        if cursor.rowcount == 0:
+            raise NotFoundError("night not found")
+
+    def recording_consent(self, night_id: str) -> bool:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT recording_consent FROM night WHERE id = ?", (night_id,)
+            ).fetchone()
+        if row is None:
+            raise NotFoundError("night not found")
+        return bool(row[0])
+
     def add_unit(
         self,
         night: NightRecord,

@@ -12,6 +12,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from decimal import Decimal
 from enum import StrEnum
+from pathlib import Path
 from typing import Final
 
 import cv2
@@ -37,6 +38,7 @@ from capture.camera import (
     list_microphones,
     open_directshow,
 )
+from capture.recorder import Recorder, RecorderError
 from capture.tracker import TrackedPose, TrackerSet
 from config import (
     HANDS_OFF_WAIT_S,
@@ -154,6 +156,8 @@ from voice.grammar import (
 from voice.session import Caption, VoiceMode, VoiceSession, VoiceStatus
 
 logger = logging.getLogger("desktop.game")
+
+RecorderFactory = Callable[[Path, int, int, Path], Recorder]
 
 VoiceFactory = Callable[
     [
@@ -335,6 +339,8 @@ class Snapshot:
     begin_block_key: str | None = None
     is_awaiting_tap: bool = False
     resume_turn: int | None = None
+    is_recording: bool = False
+    consents: tuple[tuple[str, bool], ...] = ()
     voice: VoiceView = VoiceView(VoiceStatus.OFF.value, VoiceMode.OPEN.value, False)
     night: NightView | None = None
     score: FinalScore | None = None
@@ -387,8 +393,12 @@ class GameController:
         narration: NarrationService | None = None,
         voice_factory: VoiceFactory | None = None,
         clean_name: Callable[[str, str], str] | None = None,
+        recorder_factory: RecorderFactory | None = None,
     ) -> None:
+        self._recorder_factory = recorder_factory
+        self._recorder: Recorder | None = None
         self._clean_name = clean_name
+        self._consents: dict[str, bool] = {}
         self._voice_players: dict[str, str] = {}
         self._narration = narration
         self._voice_factory = voice_factory
@@ -466,6 +476,8 @@ class GameController:
                 ),
                 is_awaiting_tap=self._pending is not None,
                 resume_turn=self._resume_turn,
+                is_recording=self.is_recording,
+                consents=tuple(self._consents.items()),
                 voice=VoiceView(
                     self._voice_status.value, self._voice_mode.value, self._is_ptt_down
                 ),
@@ -602,6 +614,7 @@ class GameController:
             return
         self._run_session(session.begin)
         self._session = session
+        self._consents = {}
         self._claim_started = self._clock()
         self._notify("night.start", {})
         self._start_voice()
@@ -654,8 +667,17 @@ class GameController:
         session = self._session_or_error()
         poses = {pose.id: (pose.x_cm, pose.y_cm) for pose in self._pose_list()}
         sizes = self._unit_sizes()
+        is_agreed = self.is_recording_agreed
         result = self._run_session(lambda: session.finish_claims(poses, sizes))
+        night = self._night
+        if night is not None:
+            try:
+                self._store.set_recording_consent(night.id, is_agreed)
+            except StoreError:
+                logger.warning("consent write failed")
         self._publish_events(result)
+        if is_agreed:
+            self._start_recording()
         self._narrate(NarrationPhase.NIGHT_START, result.telegraph)
         self._start_voice()
 
@@ -732,9 +754,11 @@ class GameController:
         if session.state is TurnState.SUNRISE:
             self._narrate(NarrationPhase.SUNRISE, events)
             self._stop_voice()
+            self._stop_recording()
         elif session.state is TurnState.DEFEAT:
             self._narrate(NarrationPhase.DEFEAT, events)
             self._stop_voice()
+            self._stop_recording()
         else:
             self._narrate(NarrationPhase.RESOLUTION_THEN_TELEGRAPH, events + telegraph)
 
@@ -1172,12 +1196,45 @@ class GameController:
             lambda sent, reply: self._publish_narration(sent, reply, players),
         )
 
+    def _log_narration(self, request: NarrationRequest, narration: Narration) -> None:
+        night = self._night
+        session = self._session
+        if night is None or session is None:
+            return
+        try:
+            self._store.log_turn(
+                night.id,
+                request.turn,
+                session.state.value,
+                NARRATION_EVENT,
+                {"source": narration.source.value, "phase": request.phase},
+                0,
+            )
+        except StoreError:
+            logger.warning("narration log write failed")
+
+    def give_consent(self, player_name: str, is_given: bool) -> None:
+        session = self._session_or_error()
+        if session.state is not TurnState.VOICE_CLAIM:
+            raise GameError("cmd.unknown")
+        if player_name not in session.players:
+            raise GameError("claim.who")
+        self._consents[player_name] = is_given
+
+    @property
+    def is_recording_agreed(self) -> bool:
+        session = self._session
+        if session is None or not session.players:
+            return False
+        return all(self._consents.get(name) is True for name in session.players)
+
     def _publish_narration(
         self,
         request: NarrationRequest,
         narration: Narration,
         players: Mapping[str, str],
     ) -> None:
+        self._log_narration(request, narration)
         if self._broadcast is None:
             return
         narration = restore_player_names(narration, players)
@@ -1207,6 +1264,48 @@ class GameController:
         if self._narration is not None:
             self._narration.cancel()
         self._stop_voice()
+        self._stop_recording()
+
+    def _start_recording(self) -> None:
+        factory = self._recorder_factory
+        night = self._night
+        campaign = self._campaign
+        if (
+            factory is None
+            or night is None
+            or campaign is None
+            or self._recorder is not None
+        ):
+            return
+        width, height = self._area.warped_size
+        path = (
+            self._store.campaign_dir(campaign.id)
+            / RECORDINGS_DIR
+            / f"night_{night.number}_{int(self._clock() * 1000)}.mp4"
+        )
+        recorder = factory(path, width, height, self._store.data_root)
+        try:
+            recorder.start()
+        except RecorderError:
+            logger.warning("recording could not start")
+            self._notify("rec.unavailable", {})
+            return
+        self._recorder = recorder
+        self._notify("rec.on", {})
+
+    def _stop_recording(self) -> None:
+        recorder = self._recorder
+        self._recorder = None
+        if recorder is None:
+            return
+        result = recorder.stop()
+        if not result.ok:
+            logger.warning("recording ended with an error")
+
+    @property
+    def is_recording(self) -> bool:
+        recorder = self._recorder
+        return recorder is not None and recorder.is_recording
 
     def _start_voice(self) -> None:
         factory = self._voice_factory
@@ -1853,6 +1952,9 @@ class GameController:
             jpg, width, height = encode_jpeg(frame.image)
             return EncodedFrame(sequence, FrameView.RAW, width, height, jpg)
         warped = warp(frame.image, calibration)
+        recorder = self._recorder
+        if recorder is not None:
+            recorder.write(warped)
         poses = self.track(warped)
         jpg, width, height = encode_jpeg(warped)
         return EncodedFrame(sequence, FrameView.WARPED, width, height, jpg, poses)
@@ -2081,6 +2183,8 @@ DOWN_STATUS: Final = "down"
 STUNNED_STATUS: Final = "stunned"
 REFORM_STATUS_PREFIX: Final = "reform_"
 STATE_CHANGED: Final = "state.changed"
+RECORDINGS_DIR: Final = "recordings"
+NARRATION_EVENT: Final = "narration"
 PUSH_EFFECT: Final = "push"
 STEAL_EFFECT: Final = "steal"
 EFFECT_NOTICES: Final[Mapping[EventType, str]] = {

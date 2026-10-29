@@ -428,3 +428,46 @@ def test_recalibrate_is_refused_mid_turn(tmp_path: Path) -> None:
     assert controller.snapshot().phase is AppPhase.PLAYER_PHASE
     controller.close()
     store.close()
+
+
+def test_consent_needs_every_claimed_player(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    controller = controller_for(store, ConfidentSegmenter())
+    summon_three(controller)
+    with pytest.raises(GameError):
+        controller.give_consent("Migs", True)
+    controller.begin_night()
+    controller.claim("Migs", ["u_2"], CONTENT.clean_player_name)
+    controller.claim("Bea", ["u_3"], CONTENT.clean_player_name)
+    with pytest.raises(GameError) as info:
+        controller.give_consent("Ghost", True)
+    assert info.value.copy_key == "claim.who"
+    controller.give_consent("Migs", True)
+    assert not controller.is_recording_agreed
+    controller.give_consent("Bea", True)
+    assert controller.is_recording_agreed
+    controller.give_consent("Bea", False)
+    assert not controller.is_recording_agreed
+    controller.give_consent("Bea", True)
+    controller.finish_claims()
+    with pytest.raises(GameError):
+        controller.give_consent("Bea", False)
+    campaign = controller.snapshot().campaign
+    assert campaign is not None
+    night = store.start_or_resume_night(campaign.id)
+    assert store.recording_consent(night.id)
+    controller.close()
+    store.close()
+
+
+def test_no_consent_still_plays_and_is_saved_as_no(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    controller = controller_for(store, ConfidentSegmenter())
+    start_night(controller)
+    assert controller.snapshot().phase is AppPhase.PLAYER_PHASE
+    campaign = controller.snapshot().campaign
+    assert campaign is not None
+    night = store.start_or_resume_night(campaign.id)
+    assert not store.recording_consent(night.id)
+    controller.close()
+    store.close()

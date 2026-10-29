@@ -207,6 +207,7 @@ def test_connect_sends_start_state(client: TestClient) -> None:
         ),
         json.dumps({"type": "demo_safe", "on": "yes"}),
         json.dumps({"type": "night.resume", "force": "yes"}),
+        json.dumps({"type": "consent", "player_name": "", "agree": True}),
         json.dumps({"type": "night.pause", "now": True}),
         "x" * 20_000,
     ],
@@ -318,6 +319,10 @@ def test_pause_and_resume_need_a_night(client: TestClient) -> None:
         ws.send_text(json.dumps({"type": "night.pause"}))
         assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
         ws.send_text(json.dumps({"type": "effect.done"}))
+        assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
+        ws.send_text(
+            json.dumps({"type": "consent", "player_name": "Migs", "agree": True})
+        )
         assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"
         ws.send_text(json.dumps({"type": "night.resume"}))
         assert receive_type(ws, "notice")["copy_key"] == "cmd.unknown"

@@ -231,3 +231,20 @@ def test_gm_invalid_is_logged_at_the_current_turn(tmp_path: Path) -> None:
     assert (row[0], row[1]) == (1, "PLAYER_PHASE")
     controller.close()
     store.close()
+
+
+def test_narrations_are_logged_for_e4(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    controller = controller_for(
+        store,
+        ConfidentSegmenter(),
+        narration=NarrationService(LineBank()),
+        broadcast=Broadcast(),
+    )
+    claimed(controller)
+    campaign = controller.snapshot().campaign
+    assert campaign is not None
+    night = store.start_or_resume_night(campaign.id)
+    assert store.turn_log_count(night.id, "narration") == 1
+    controller.close()
+    store.close()

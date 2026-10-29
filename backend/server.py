@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
 from capture.calibration import CalibrationError
 from capture.camera import CameraError
+from capture.recorder import Recorder, find_ffmpeg
 from config import STREAM_FPS, AppSettings, load_settings
 from db.store import Campaign, NotFoundError, Store, StoreError
 from game.night import (
@@ -30,6 +31,7 @@ from game.night import (
     GameError,
     NightView,
     PipelineFactory,
+    RecorderFactory,
     SegmenterFactory,
     Snapshot,
     SpriteServiceFactory,
@@ -212,6 +214,12 @@ class DemoSafeMessage(ClientModel):
     on: bool
 
 
+class ConsentMessage(ClientModel):
+    type: Literal["consent"]
+    player_name: Annotated[str, Field(min_length=1, max_length=24)]
+    agree: bool
+
+
 class EffectDoneMessage(ClientModel):
     type: Literal["effect.done"]
 
@@ -263,6 +271,7 @@ ClientMessage = (
     | DemoSafeSamMessage
     | PttMessage
     | EffectDoneMessage
+    | ConsentMessage
     | VoiceModeMessage
     | VoiceRetryMessage
 )
@@ -311,6 +320,7 @@ def build_services(settings: AppSettings) -> Services:
         narration=build_narration(meta, content, log_invalid),
         voice_factory=build_voice_factory(settings.api_key, meta.meter),
         clean_name=content.clean_player_name,
+        recorder_factory=build_recorder_factory(find_ffmpeg(env=os.environ)),
     )
     pump = FramePump(controller, live)
 
@@ -353,6 +363,13 @@ def build_narration(
     return NarrationService(
         line_bank, lambda: SparkNarrator(meta, content, line_bank, log_invalid)
     )
+
+
+def build_recorder_factory(ffmpeg: str | None) -> RecorderFactory:
+    def factory(path: Path, width: int, height: int, root: Path) -> Recorder:
+        return Recorder(path, width, height, ffmpeg=ffmpeg, root=root)
+
+    return factory
 
 
 def build_voice_factory(api_key: str | None, meter: CostMeter) -> VoiceFactory | None:
@@ -551,6 +568,8 @@ def state_json(snapshot: Snapshot) -> JsonObject:
         "begin_block_key": snapshot.begin_block_key,
         "awaiting_tap": snapshot.is_awaiting_tap,
         "resume_turn": snapshot.resume_turn,
+        "recording": snapshot.is_recording,
+        "consents": dict(snapshot.consents),
         "voice": {
             "status": snapshot.voice.status,
             "mode": snapshot.voice.mode,
@@ -781,6 +800,9 @@ class Connection:
             return None
         if isinstance(message, NightResumeMessage):
             await asyncio.to_thread(controller.resume_night, message.force)
+            return None
+        if isinstance(message, ConsentMessage):
+            controller.give_consent(message.player_name, message.agree)
             return None
         if isinstance(message, EffectDoneMessage):
             controller.finish_effects_now()
