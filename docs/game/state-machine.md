@@ -63,7 +63,7 @@ stateDiagram-v2
 | VALIDATE | Snapshot | All moves legal | None | Sinusuri |
 | RESOLVE_PLAYER | Valid | Events emitted | Instant | Labanan |
 | RESOLVE_ENEMY | Player done | Events emitted | Instant | Labanan |
-| PHYSICAL_EFFECTS | Push or steal event | Object at target or removed | 20 s then accept | Labanan |
+| PHYSICAL_EFFECTS | Push or steal event | Object at target (within 2 cm) or removed, or the Done tap | 20 s then accept the current spot | Labanan. Built 2026-10-29, checked once a second by the server loop |
 | CHECK_END | Effects done | Next state | Instant | Labanan |
 | SUNRISE | Turn 8 survived | Replay, Next Night or Quit | None | n/a |
 | DEFEAT | Kubo HP 0 or no units | Try Again or Quit | None | n/a |

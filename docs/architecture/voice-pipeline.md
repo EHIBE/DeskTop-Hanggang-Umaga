@@ -13,7 +13,7 @@ related: [docs/decisions/ADR-0007-voice-diarization-enrollment.md, docs/design/c
 
 Two realtime sessions run per night: ENDPOINTING for summon and DIARIZATION for the night. A local grammar turns Taglish transcripts into intents, and every intent shows as a cancelable chip.
 
-Built in M11 (2026-10-28): the night DIARIZATION session only, in `backend/voice/session.py`, started by `game/night.py` when claims finish or on restore. The URL carries `?sessionId=desktop-<uuid>`. Keywords are creature words, order verbs and unit names, with no player names. The ENDPOINTING summon session and `voice/claim.py` are not built, so summon is typed and claim is by tap. Event field names (`turnId`, `text`, `speaker`) are Unverified until a live fixture is recorded.
+Built in M11 (2026-10-28): the night DIARIZATION session only, in `backend/voice/session.py`, started by `game/night.py` when claims finish or on restore. The URL carries `?sessionId=desktop-<uuid>`. Keywords are creature words, order verbs and unit names, with no player names. The ENDPOINTING summon session is not built, so summon is typed. Claim works by voice (Phase 12) or tap. Event field names (`turnId`, `text`, `speaker`) are Unverified until a live fixture is recorded.
 
 ## Key facts
 
@@ -59,6 +59,8 @@ Summon session: same fields, `mode: "ENDPOINTING"`, keywords for class names, co
 State is keyed by `turnId`.
 
 ## Enrollment (FR-18)
+
+Built 2026-10-29 in `backend/voice/claim.py` and `game/night.py`. Voice starts when the claim screen opens. Names pass the profanity filter and match an existing player case-insensitively. During the night only known player names re-map a label, so table talk like "I'm thinking" never renames anyone. A restarted session clears the label map and shows `voice.reclaim`.
 
 - At VOICE_CLAIM, a `speechComplete` matching `ako si (name)` maps that label to the player.
 - "hawak ko ang (units)" assigns units by fuzzy match (Levenshtein ratio 0.75+).

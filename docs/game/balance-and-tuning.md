@@ -33,6 +33,8 @@ All thresholds are starting values. Game constants live once in `backend/rules` 
 | Push distance | 8 cm | PRD 8 |
 | Push compliance radius | 2 cm | FR-36 |
 | Physical effect timeout | 20 s | PRD 8 |
+| Thrown unit out | 1 full turn (`THROWN_TURNS`) | Built 2026-10-29 |
+| Duwende flee | 12 cm per turn to the nearest edge, escapes within 2 cm of it at turn start | Built 2026-10-29 |
 | Turns per night | 8 | PRD 8 |
 | Max objects | 12 | FR-16 |
 | Kubo moved warning | 2 cm | Edge case 19 |

@@ -17,7 +17,7 @@ All player-facing text, keyed. This file is canonical until `app/src/renderer/sr
 
 | Fact | Value |
 |---|---|
-| UI keys | 192 in copy.ts (48 from PRD, the rest Proposed) |
+| UI keys | 204 in copy.ts (48 from PRD, the rest Proposed) |
 | Line bank moments | 19 (14 from PRD, 4 aswang edge variants, quiet) |
 | Placeholders | [name], [unit], [object], [player], [feature], [HP], [n], [action], [target], [pangalan], [turn], [seconds] |
 | Review | 2 Filipino playtesters review every Taglish line before recording |
@@ -230,6 +230,17 @@ English text for these is a proposal for playtester review.
 | night.continue_anyway | Ituloy pa rin | Continue anyway | M10, Proposed, playtester review |
 | night.cam_hint | Baka mali ang posisyon kung hindi muna mag-calibrate. | Positions may be off if you continue without recalibrating. | M10, Proposed, playtester review |
 | claim.countdown | Sasara ang claim sa [seconds] segundo | Claims close in [seconds] seconds | M10, Proposed, playtester review |
+| effect.done | Tapos na | Done | M11 and Phase 12, Proposed, playtester review |
+| effect.seconds | [seconds] segundo | [seconds] seconds | M11 and Phase 12, Proposed, playtester review |
+| effect.title | Galaw sa mesa | Table move | M11 and Phase 12, Proposed, playtester review |
+| effect.slide_here | Dito | Here | M11 and Phase 12, Proposed, playtester review |
+| effect.remove | Alisin | Remove | M11 and Phase 12, Proposed, playtester review |
+| effect.put_back | Ibalik dito | Put back here | M11 and Phase 12, Proposed, playtester review |
+| status.out | Labas [turns] | Out [turns] | M11 and Phase 12, Proposed, playtester review |
+| status.stolen | Ninakaw | Stolen | M11 and Phase 12, Proposed, playtester review |
+| effect.thrown_float | Itinapon! | Thrown! | M11 and Phase 12, Proposed, playtester review |
+| effect.escape_float | Nakatakas! | Escaped! | M11 and Phase 12, Proposed, playtester review |
+| status.lost | Nawala | Lost | M11 and Phase 12, Proposed, playtester review |
 | voice.region | Boses | Voice | M11, Proposed, playtester review |
 | voice.status.off | Naka-off ang mic | Mic off | M11, Proposed, playtester review |
 | voice.status.connecting | Kumokonekta ang mic | Connecting mic | M11, Proposed, playtester review |

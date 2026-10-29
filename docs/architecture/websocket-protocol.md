@@ -36,10 +36,10 @@ Every message is a JSON object with `type` plus fields. Proposed shared fields: 
 | Type | Status | Fields | Purpose |
 |---|---|---|---|
 | `frame` | Established | `view` (raw or warped), `width` and `height` (source pixels, the JPEG is downscaled to 960 px wide, quality 70), `jpg`, `poses` | Desk feed and sprite positions |
-| `state` | Established (M3 and M4 fields, plus `units`, `begin_block_key`, `awaiting_tap`) | `phase` (any AppPhase), `campaign`, `camera`, `calibrated`, `calibration_preview`, `play_w_cm`, `play_h_cm`, `demo_safe`, `demo_safe_sam`, `has_api_key`, `voice` (`status` off, connecting, listening or down, `mode` open or ptt, `ptt_down`), `resume_turn` (turn a saved night resumes at, or null), `night` (turn, units, enemies, chips, illegal units, kubo HP), `score` | Full snapshot on connect and after every handled message |
+| `state` | Established (M3 and M4 fields, plus `units`, `begin_block_key`, `awaiting_tap`) | `phase` (any AppPhase), `campaign`, `camera`, `calibrated`, `calibration_preview`, `play_w_cm`, `play_h_cm`, `demo_safe`, `demo_safe_sam`, `has_api_key`, `voice` (`status` off, connecting, listening or down, `mode` open or ptt, `ptt_down`), `resume_turn` (turn a saved night resumes at, or null), `night` (turn, units with `status` tags `out_<n>`, `stolen_by:<enemy>`, `lost`, `returning`, enemies, chips, illegal units, kubo HP, `effects` with kind push or steal, unit id and target spot, `effect_seconds_left`), `score` | Full snapshot on connect and after every handled message |
 | `devices` | Established | `cameras` (index, width, height), `microphones` (index, name) | Device picker (FR-01) |
 | `campaigns` | Established | `campaigns` (id, name, difficulty, nights_survived, created_at), newest first, 20 per page | Continue list (FR-05) |
-| `events` | Established | `turn`, `events` (type, src, dst, dmg, edge, pos) | Resolution events, then the next turn's spawn and intent events, as two messages |
+| `events` | Established | `turn`, `events` (type, src, dst, dmg, edge, pos). Types include `push`, `thrown`, `steal`, `return` (pos is where the object goes back) and `escape` | Resolution events, then the next turn's spawn and intent events, as two messages |
 | `caption` | Established | `turn_id`, `text`, `is_final`, `speaker` | Live transcript. Partials replace. A dropped turn ends with an empty final |
 | `narration` | Established | `night`, `turn`, `phase` (night_start, resolution_then_telegraph, sunrise, defeat), `narration_tl`, `narration_en`, `mood`, `callouts`, `hint_tl`, `source` (spark or line_bank) | GM caption, sent in the background after claims, each resolved turn, sunrise or defeat. A newer request drops an older pending one |
 | `chip` | Not used | none | Chips ride in `state.night.chips` with `source` (tap or voice) and `speaker` |
@@ -78,6 +78,7 @@ Every message is a JSON object with `type` plus fields. Proposed shared fields: 
 | `voice.retry` | Established | none. Restarts the voice session | Active night or PAUSED |
 | `night.pause` | Established | none | PLAYER_PHASE to PAUSED |
 | `night.resume` | Established | `force` (bool, default false). Without force a still-moved camera answers `cam.moved` and stays PAUSED | PAUSED |
+| `effect.done` | Established | none. Players moved or removed the object | PHYSICAL_EFFECTS |
 | `demo_safe` | Established | `on` (bool). Persisted in `settings` | Any |
 | `demo_safe.sam` | Established | `on` (bool). SAM re-anchor inside Demo Safe Mode, on by default. Persisted in `settings` | Any |
 | `replay.request` | Proposed | none | SUNRISE with consent |
