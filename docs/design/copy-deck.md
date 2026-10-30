@@ -17,7 +17,7 @@ All player-facing text, keyed. `app/src/renderer/src/lib/copy.ts` and `assets/li
 
 | Fact | Value |
 |---|---|
-| UI keys | 229 in copy.ts (48 from PRD, the rest Proposed) |
+| UI keys | 245 in copy.ts (48 from PRD, the rest Proposed) |
 | Line bank moments | 19 (14 from PRD, 4 aswang edge variants, quiet) |
 | Placeholders | [name], [unit], [object], [player], [feature], [HP], [n], [action], [target], [pangalan], [turn], [seconds] |
 | Review | 2 Filipino playtesters review every Taglish line before recording |
@@ -265,6 +265,21 @@ English text for these is a proposal for playtester review.
 | effect.thrown_float | Itinapon! | Thrown! | M11 and Phase 12, Proposed, playtester review |
 | effect.escape_float | Nakatakas! | Escaped! | M11 and Phase 12, Proposed, playtester review |
 | status.lost | Nawala | Lost | M11 and Phase 12, Proposed, playtester review |
+| lang.title | Wika | Language | UI redesign 2026-10-31, Proposed, playtester review |
+| lang.tl | Filipino | Filipino | UI redesign 2026-10-31, Proposed |
+| lang.en | English | English | UI redesign 2026-10-31, Proposed |
+| title.sub | Hanggang Umaga | Until Sunrise | UI redesign 2026-10-31, Proposed |
+| start.tip | Linisin muna ang mesa. | Clear the table first. | UI redesign 2026-10-31, Proposed, playtester review |
+| start.saves | Mga Baryo | Your Barrios | UI redesign 2026-10-31, Proposed, playtester review |
+| start.placeholder | Hal. San Roque | e.g. San Roque | UI redesign 2026-10-31, Proposed |
+| key.title | Ikabit ang AI | Connect the AI | UI redesign 2026-10-31, Proposed, playtester review |
+| key.short_privacy | Naka-encrypt sa laptop na ito. | Encrypted on this laptop. | UI redesign 2026-10-31, Proposed, playtester review |
+| key.offline_short | Maglaro offline | Play offline | UI redesign 2026-10-31, Proposed |
+| calib.step_place | Papel na A4 sa gitna | A4 sheet in the middle | UI redesign 2026-10-31, Proposed, playtester review |
+| calib.step_tap | I-tap ang 4 na kanto | Tap its 4 corners | UI redesign 2026-10-31, Proposed, playtester review |
+| calib.step_remove | Alisin ang papel | Remove the sheet | UI redesign 2026-10-31, Proposed, playtester review |
+| calib.area | Laki ng mesa | Table size | UI redesign 2026-10-31, Proposed |
+| calib.title | Ayusin ang Camera | Set Up the Camera | UI redesign 2026-10-31, Proposed, playtester review |
 | voice.region | Boses | Voice | M11, Proposed, playtester review |
 | voice.status.off | Naka-off ang mic | Mic off | M11, Proposed, playtester review |
 | voice.status.connecting | Kumokonekta ang mic | Connecting mic | M11, Proposed, playtester review |

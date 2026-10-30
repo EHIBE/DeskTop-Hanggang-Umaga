@@ -1,4 +1,5 @@
-import { t, type CopyKey } from '../lib/copy'
+import { currentLang } from '../lib/lang'
+import { pick, t, type CopyKey } from '../lib/copy'
 import type { NarrationMessage, NarrationMood } from '../lib/types'
 
 type NarrationProps = Readonly<{
@@ -45,16 +46,17 @@ function Narration({ narration, className = '' }: NarrationProps): React.JSX.Ele
     >
       <span
         className={`w-[128px] shrink-0 border-2 px-2 text-center ${MOOD_BORDER[narration.mood]} ${MOOD_TEXT[narration.mood]}`}
-        title={mood.en}
+        title={pick(mood)}
       >
-        {mood.tl}
+        {pick(mood)}
       </span>
       <div className="flex min-w-0 flex-1 flex-col">
-        <p className="caption-tl text-[24px] leading-[32px]">{narration.narration_tl}</p>
-        <p className="caption-en leading-[24px]">{narration.narration_en}</p>
+        <p className="caption-tl text-[24px] leading-[32px]">
+          {currentLang() === 'en' ? narration.narration_en : narration.narration_tl}
+        </p>
         {hasHint && (
           <p className="text-gabi-lantern leading-[24px]">
-            {hint.tl}: {narration.hint_tl}
+            {pick(hint)}: {narration.hint_tl}
           </p>
         )}
       </div>

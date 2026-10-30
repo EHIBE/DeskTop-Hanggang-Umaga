@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { t } from '../lib/copy'
+import { say } from '../lib/copy'
 import type { MessageHandler } from '../lib/socket'
 
 type CaptionsProps = Readonly<{
@@ -53,7 +53,7 @@ function Captions({ subscribe, className = '' }: CaptionsProps): React.JSX.Eleme
 
   return (
     <section
-      aria-label={t('voice.caption_label').en}
+      aria-label={say('voice.caption_label')}
       aria-live="polite"
       className={`flex min-h-[48px] min-w-0 flex-1 flex-col justify-center border-2 border-gabi-dusk bg-gabi-night px-4 py-1 ${className}`}
     >

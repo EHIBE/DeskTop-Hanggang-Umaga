@@ -23,7 +23,7 @@ import UnitStrip from '../hud/UnitStrip'
 import VoiceControls from '../hud/VoiceControls'
 import { parseStatus, statusEntries } from '../hud/status'
 import { actionTarget, enemyLabel } from '../hud/targets'
-import { t, type CopyKey } from '../lib/copy'
+import { pick as pickText, say, t, type CopyKey } from '../lib/copy'
 import { prefersReducedMotion } from '../lib/motion'
 import { palette } from '../lib/palette'
 import type { MessageHandler } from '../lib/socket'
@@ -114,9 +114,9 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
           return current.units.find((candidate) => candidate.id === id) ?? null
         }
         const made = floatersFromEvents(message.events, locate, performance.now(), {
-          dodge: t('enemy.dodge').tl,
-          thrown: t('effect.thrown_float').tl,
-          escape: t('effect.escape_float').tl
+          dodge: say('enemy.dodge'),
+          thrown: say('effect.thrown_float'),
+          escape: say('effect.escape_float')
         })
         floatersRef.current = [...floatersRef.current, ...made]
         if (message.events.some((event) => event.type === 'kubo_hit')) {
@@ -404,7 +404,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
         }
         const badges = statusEntries(unitStatus)
         const label = nu.is_down
-          ? `${unit.name} ${t('hud.down').tl}`
+          ? `${unit.name} ${say('hud.down')}`
           : [unit.name, ...badges.map((entry) => entry.text)].join(' ')
         const dim = nu.is_down || unitStatus.unavailable
         drawTag(ctx, label, ux, box.top + box.height + 4, dim ? palette.mist : palette.moon)
@@ -431,10 +431,10 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
               gx,
               gy,
               MIN_SCALE,
-              t('effect.slide_here').tl
+              say('effect.slide_here')
             )
           } else {
-            drawRemoveMark(ctx, ux, uy, t('effect.remove').tl)
+            drawRemoveMark(ctx, ux, uy, say('effect.remove'))
           }
         })
       }
@@ -449,7 +449,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
           rx,
           ry,
           MIN_SCALE,
-          t('effect.put_back').tl
+          say('effect.put_back')
         )
       })
 
@@ -534,7 +534,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
             subscribe={subscribe}
             onTap={playerPhase ? handleTap : undefined}
             overlay={overlay}
-            label={t('hud.board').en}
+            label={say('hud.board')}
           />
           {note !== null && (
             <div
@@ -550,7 +550,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
             <div className="absolute inset-0 flex items-center justify-center bg-gabi-ink/80">
               <div
                 role="alertdialog"
-                aria-label={t('phase.paused').en}
+                aria-label={say('phase.paused')}
                 className="banner flex w-[720px] flex-col items-center gap-6 p-8 text-center"
               >
                 <Bilingual copyKey="phase.paused" />
@@ -566,7 +566,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
                     className="btn btn-primary"
                     onClick={() => send({ type: 'night.resume', force: false })}
                   >
-                    {t('night.resume').tl}
+                    {say('night.resume')}
                   </button>
                   {camMoved && (
                     <button
@@ -574,7 +574,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
                       className="btn"
                       onClick={() => send({ type: 'night.resume', force: true })}
                     >
-                      {t('night.continue_anyway').tl}
+                      {say('night.continue_anyway')}
                     </button>
                   )}
                   <button
@@ -582,7 +582,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
                     className="btn"
                     onClick={() => send({ type: 'calibrate.restart' })}
                   >
-                    {t('hud.recalibrate').tl}
+                    {say('hud.recalibrate')}
                   </button>
                 </div>
               </div>
@@ -591,8 +591,8 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
         </div>
         <div className="flex min-h-0 w-[440px] shrink-0 flex-col gap-4">
           {effecting && (
-            <section aria-label={t('effect.title').en} className="panel flex flex-col gap-3 p-3">
-              <h2 className="text-[24px] leading-[32px]">{t('effect.title').tl}</h2>
+            <section aria-label={say('effect.title')} className="panel flex flex-col gap-3 p-3">
+              <h2 className="text-[24px] leading-[32px]">{say('effect.title')}</h2>
               {night.effects.map((effect) => {
                 const name = state.units.find((unit) => unit.id === effect.unit_id)?.name ?? ''
                 const text =
@@ -601,8 +601,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
                     : t('duw.steal', { unit: name })
                 return (
                   <div key={`${effect.kind}:${effect.unit_id}`} role="status">
-                    <p className="caption-tl">{text.tl}</p>
-                    <p className="caption-en">{text.en}</p>
+                    <p className="caption-tl">{pickText(text)}</p>
                   </div>
                 )
               })}
@@ -611,14 +610,14 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
                 className={night.effect_seconds_left <= 5 ? 'text-gabi-lantern' : 'caption-en'}
               >
                 {night.effect_seconds_left <= 5 ? '! ' : ''}
-                {t('effect.seconds', { seconds: night.effect_seconds_left }).tl}
+                {say('effect.seconds', { seconds: night.effect_seconds_left })}
               </p>
               <button
                 type="button"
                 className="btn btn-primary h-[72px] w-full text-[24px]"
                 onClick={() => send({ type: 'effect.done' })}
               >
-                {t('effect.done').tl}
+                {say('effect.done')}
               </button>
             </section>
           )}
@@ -665,7 +664,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
           disabled={!playerPhase}
           onClick={() => send({ type: 'night.pause' })}
         >
-          {t('night.pause').tl}
+          {say('night.pause')}
         </button>
         <OrderChips
           chips={night.chips}
@@ -691,7 +690,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
           disabled={!playerPhase}
           onClick={() => send({ type: 'end_turn' })}
         >
-          {t('hud.end_turn').tl}
+          {say('hud.end_turn')}
         </button>
       </footer>
     </main>

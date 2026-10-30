@@ -1,5 +1,5 @@
 import Bilingual from '../components/Bilingual'
-import { t } from '../lib/copy'
+import { say } from '../lib/copy'
 import type { IntentAction, NightUnit, UnitSummary } from '../lib/types'
 import { actionTarget, powerTarget } from './targets'
 
@@ -21,7 +21,7 @@ function TapMenu({ unit, night, pending, onPick, onCancel }: TapMenuProps): Reac
   return (
     <div className="panel flex flex-col gap-3 p-4" role="group" aria-label={unit.name}>
       {pending === null ? (
-        <p>{t('tap.pick_action', { unit: unit.name }).tl}</p>
+        <p>{say('tap.pick_action', { unit: unit.name })}</p>
       ) : (
         target !== 'none' && <Bilingual copyKey="tap.pick_target" params={{ unit: unit.name }} />
       )}
@@ -34,7 +34,7 @@ function TapMenu({ unit, night, pending, onPick, onCancel }: TapMenuProps): Reac
               disabled={!canAttack}
               onClick={() => onPick('attack')}
             >
-              {t('tap.attack').tl}
+              {say('tap.attack')}
             </button>
             {hasPower && (
               <button
@@ -53,17 +53,17 @@ function TapMenu({ unit, night, pending, onPick, onCancel }: TapMenuProps): Reac
                 disabled={onCooldown}
                 onClick={() => onPick('heal')}
               >
-                {t('tap.heal').tl}
+                {say('tap.heal')}
               </button>
             )}
           </>
         )}
         <button type="button" className="btn" onClick={onCancel}>
-          {t('tap.cancel').tl}
+          {say('tap.cancel')}
         </button>
       </div>
       {!canAttack && pending === null && unit.class !== 'kubo' && (
-        <p className="caption-en">{t('cmd.no_atk', { unit: unit.name }).tl}</p>
+        <p className="caption-en">{say('cmd.no_atk', { unit: unit.name })}</p>
       )}
     </div>
   )

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import SpriteView from '../canvas/SpriteView'
 import Bilingual from '../components/Bilingual'
 import Captions from '../hud/Captions'
-import { t } from '../lib/copy'
+import { pick, say, t } from '../lib/copy'
 import type { MessageHandler } from '../lib/socket'
 import type { ClientMessage, StateMessage } from '../lib/types'
 
@@ -117,9 +117,9 @@ function VoiceClaim({ state, send, subscribe }: VoiceClaimProps): React.JSX.Elem
         <Captions subscribe={subscribe} className="flex-none" />
         <p role="timer" className={secondsLeft <= 10 ? 'text-gabi-lantern' : 'caption-en'}>
           {secondsLeft <= 10 ? '! ' : ''}
-          {t('claim.countdown', { seconds: secondsLeft }).tl}
+          {say('claim.countdown', { seconds: secondsLeft })}
         </p>
-        <h2 className="text-[24px] leading-[32px]">{t('summon.roster').tl}</h2>
+        <h2 className="text-[24px] leading-[32px]">{say('summon.roster')}</h2>
         <ul className="flex flex-col gap-3 overflow-y-auto">
           {ordered.map((unit) => {
             const owner = claims[unit.id]
@@ -139,7 +139,7 @@ function VoiceClaim({ state, send, subscribe }: VoiceClaimProps): React.JSX.Elem
                   <span className="min-w-0 flex-1 truncate">{unit.name}</span>
                   <span className="shrink-0">
                     {owner === undefined
-                      ? t('card.owner_none').tl
+                      ? say('card.owner_none')
                       : `${LETTERS[owner]} ${trimmed[owner]}`}
                   </span>
                 </button>
@@ -149,7 +149,7 @@ function VoiceClaim({ state, send, subscribe }: VoiceClaimProps): React.JSX.Elem
         </ul>
       </section>
       <aside className="panel flex w-[640px] shrink-0 flex-col gap-6 p-6">
-        <h2 className="text-[24px] leading-[32px]">{t('claim.players').tl}</h2>
+        <h2 className="text-[24px] leading-[32px]">{say('claim.players')}</h2>
         {selected !== null ? (
           <Bilingual copyKey="claim.who" />
         ) : (
@@ -166,8 +166,8 @@ function VoiceClaim({ state, send, subscribe }: VoiceClaimProps): React.JSX.Elem
                   className="field min-w-0 flex-1"
                   value={name}
                   maxLength={NAME_MAX}
-                  aria-label={label.en}
-                  placeholder={label.tl}
+                  aria-label={pick(label)}
+                  placeholder={pick(label)}
                   aria-invalid={duplicate[index]}
                   disabled={count > 0}
                   onChange={(event) => rename(index, event.target.value)}
@@ -186,10 +186,10 @@ function VoiceClaim({ state, send, subscribe }: VoiceClaimProps): React.JSX.Elem
         </div>
         {anyDuplicate && (
           <p role="alert" className="caption-en">
-            {t('claim.duplicate').tl}
+            {say('claim.duplicate')}
           </p>
         )}
-        <section aria-label={t('rec.consent').en} className="flex flex-col gap-3">
+        <section aria-label={say('rec.consent')} className="flex flex-col gap-3">
           <Bilingual copyKey="rec.consent" />
           <Bilingual copyKey="rec.no_ok" />
           {(state.night?.players ?? []).map((player) => {
@@ -201,7 +201,7 @@ function VoiceClaim({ state, send, subscribe }: VoiceClaimProps): React.JSX.Elem
               <div
                 key={player}
                 role="group"
-                aria-label={label.en}
+                aria-label={pick(label)}
                 className="flex items-center gap-3"
               >
                 <span className="min-w-0 flex-1 truncate">
@@ -215,7 +215,7 @@ function VoiceClaim({ state, send, subscribe }: VoiceClaimProps): React.JSX.Elem
                   onClick={() => answer(player, true)}
                 >
                   {agreed ? '✓ ' : ''}
-                  {t('rec.agree').tl}
+                  {say('rec.agree')}
                 </button>
                 <button
                   type="button"
@@ -224,18 +224,18 @@ function VoiceClaim({ state, send, subscribe }: VoiceClaimProps): React.JSX.Elem
                   onClick={() => answer(player, false)}
                 >
                   {declined ? '✗ ' : ''}
-                  {t('rec.decline').tl}
+                  {say('rec.decline')}
                 </button>
               </div>
             )
           })}
           {Object.keys(state.consents).length === 0 && (
-            <p className="caption-en">{t('rec.waiting').tl}</p>
+            <p className="caption-en">{say('rec.waiting')}</p>
           )}
         </section>
         <div className="mt-auto flex gap-4">
           <button type="button" className="btn flex-1" onClick={done}>
-            {t('claim.skip').tl}
+            {say('claim.skip')}
           </button>
           <button
             type="button"
@@ -243,7 +243,7 @@ function VoiceClaim({ state, send, subscribe }: VoiceClaimProps): React.JSX.Elem
             disabled={claimedCount === 0 || anyDuplicate}
             onClick={done}
           >
-            {t('claim.done').tl}
+            {say('claim.done')}
           </button>
         </div>
       </aside>

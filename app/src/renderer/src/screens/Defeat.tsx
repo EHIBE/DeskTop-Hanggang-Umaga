@@ -1,8 +1,9 @@
-import Bilingual from '../components/Bilingual'
+import NightScene from '../components/NightScene'
 import ReplayPanel from '../components/ReplayPanel'
+import PixelIcon from '../components/PixelIcon'
 import ScorePanel from '../components/ScorePanel'
 import Narration from '../hud/Narration'
-import { t } from '../lib/copy'
+import { say } from '../lib/copy'
 import { palette } from '../lib/palette'
 import type { ClientMessage, NarrationMessage, StateMessage } from '../lib/types'
 
@@ -35,34 +36,49 @@ function FallenKubo(): React.JSX.Element {
 
 function Defeat({ state, send, narration }: DefeatProps): React.JSX.Element {
   return (
-    <main className="flex h-full w-full flex-col items-center gap-8 bg-gabi-ink pt-16">
-      <h1 className="text-[48px] leading-[56px] text-gabi-sindak">{t('defeat.title').tl}</h1>
-      <p className="caption-en">{t('defeat.title').en}</p>
-      <FallenKubo />
-      <div className="panel w-[880px] p-4 text-center" role="status" aria-live="polite">
-        <Bilingual copyKey="lose" />
+    <main className="relative h-full w-full">
+      <NightScene dim />
+      <div className="absolute left-[160px] top-[112px] flex w-[880px] flex-col gap-10">
+        <div className="rise-in flex items-end gap-10">
+          <FallenKubo />
+          <h1 className="text-[56px] leading-[64px] text-gabi-sindak [text-shadow:4px_4px_0_var(--color-gabi-ink)]">
+            {say('defeat.title')}
+          </h1>
+        </div>
+        <p className="rise-in text-[24px] leading-[40px]" role="status" aria-live="polite">
+          {say('lose')}
+        </p>
+        <Narration
+          narration={narration !== null && narration.phase === 'defeat' ? narration : null}
+        />
+        <ReplayPanel
+          replay={state.replay}
+          hadPlayers={(state.night?.players.length ?? 0) > 0}
+          send={send}
+        />
+        <div className="flex gap-6">
+          <button
+            type="button"
+            className="btn btn-primary btn-big text-[24px]"
+            onClick={() => send({ type: 'night.next' })}
+          >
+            <PixelIcon name="play" size={4} />
+            {say('defeat.retry')}
+          </button>
+          <button
+            type="button"
+            className="btn btn-big"
+            onClick={() => send({ type: 'night.quit' })}
+          >
+            {say('sunrise.quit')}
+          </button>
+        </div>
       </div>
-      <Narration
-        narration={narration !== null && narration.phase === 'defeat' ? narration : null}
-        className="w-[1200px]"
-      />
-      <ScorePanel score={state.score} />
-      <ReplayPanel
-        replay={state.replay}
-        hadPlayers={(state.night?.players.length ?? 0) > 0}
-        send={send}
-      />
-      <div className="flex gap-6">
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => send({ type: 'night.next' })}
-        >
-          {t('defeat.retry').tl}
-        </button>
-        <button type="button" className="btn" onClick={() => send({ type: 'night.quit' })}>
-          {t('sunrise.quit').tl}
-        </button>
+      <div
+        className="rise-in absolute right-[160px] top-[112px]"
+        style={{ animationDelay: '200ms' }}
+      >
+        <ScorePanel score={state.score} />
       </div>
     </main>
   )

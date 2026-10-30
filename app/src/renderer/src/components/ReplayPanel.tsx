@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { t } from '../lib/copy'
+import { say } from '../lib/copy'
 import type { ClientMessage, ReplayState } from '../lib/types'
 import Bilingual from './Bilingual'
 
@@ -30,13 +30,13 @@ function ReplayPanel({ replay, hadPlayers, send }: ReplayPanelProps): React.JSX.
 
   if (!replay.available) {
     if (!hadPlayers) return null
-    return <p className="caption-en">{t('replay.none').tl}</p>
+    return <p className="caption-en">{say('replay.none')}</p>
   }
 
   const working = replay.status === 'working'
 
   return (
-    <div className="flex flex-col items-center gap-3" role="status" aria-live="polite">
+    <div className="flex flex-col items-start gap-3" role="status" aria-live="polite">
       {working && <Bilingual copyKey="replay.making" />}
       {replay.status === 'done' && <Bilingual copyKey="replay.done" />}
       {replay.status === 'failed' && <Bilingual copyKey="replay.failed" />}
@@ -44,17 +44,17 @@ function ReplayPanel({ replay, hadPlayers, send }: ReplayPanelProps): React.JSX.
       <div className="flex gap-6">
         {(replay.status === 'idle' || replay.status === 'working') && (
           <button type="button" className="btn" disabled={working} onClick={request}>
-            {t('replay.make').tl}
+            {say('replay.make')}
           </button>
         )}
         {replay.status === 'failed' && (
           <button type="button" className="btn" onClick={request}>
-            {t('replay.make').tl}
+            {say('replay.make')}
           </button>
         )}
         {replay.status === 'done' && (
           <button type="button" className="btn" onClick={show}>
-            {t('replay.show').tl}
+            {say('replay.show')}
           </button>
         )}
       </div>

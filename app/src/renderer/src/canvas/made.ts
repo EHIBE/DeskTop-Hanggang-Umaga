@@ -1,5 +1,5 @@
 import { palette } from '../lib/palette'
-import { t } from '../lib/copy'
+import { say } from '../lib/copy'
 import type { SummonResultMessage } from '../lib/types'
 import type { BoardMapping } from './Board'
 
@@ -70,7 +70,7 @@ export function drawSummonOverlay(
       bottom = Math.max(bottom, y)
       left = Math.min(left, x)
     })
-    drawLabel(ctx, t('model.sam').tl, left, bottom + 8, palette.dahon, minLeft, minTop, maxRight)
+    drawLabel(ctx, say('model.sam'), left, bottom + 8, palette.dahon, minLeft, minTop, maxRight)
   }
 
   if (made.spark_box !== null) {
@@ -84,7 +84,7 @@ export function drawSummonOverlay(
     ctx.setLineDash([])
     drawLabel(
       ctx,
-      t('model.spark').tl,
+      say('model.spark'),
       x0,
       y0 - LABEL_HEIGHT - 8,
       palette.lantern,
@@ -123,7 +123,7 @@ export function drawReanchorFlash(
   ctx.globalAlpha = 1
   const [x0, y0] = mapping.toCanvas(0, 0)
   const [x1] = mapping.toCanvas(mapping.srcWidth, mapping.srcHeight)
-  drawLabel(ctx, t('model.sam').tl, (x0 + x1) / 2 - 60, y0 + 12, palette.moon, x0, y0, x1)
+  drawLabel(ctx, say('model.sam'), (x0 + x1) / 2 - 60, y0 + 12, palette.moon, x0, y0, x1)
   ctx.restore()
   return true
 }

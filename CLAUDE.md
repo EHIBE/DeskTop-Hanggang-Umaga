@@ -31,6 +31,7 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 | Phase 13 code | Built 2026-10-29. Per-player recording consent, ffmpeg recorder (tested with a fake process), REC dot, narration logging, eval runner `eval/run_eval.py`. E7 50 of 50 (100%). ffmpeg, live evals, freeze tag and Playtest 2 are Manual: EHIBE |
 | Phase 14 replay | Built 2026-10-29. Highlights, 10 FPS proxy, Files upload with expiry and delete, one SAM video request, reel render with sprites, damage numbers and dawn title card, anchor box fallback, Make Replay and Show in folder controls. Real reel needs ffmpeg and the key |
 | Phase 15 code side | Done 2026-10-29. Root README with real numbers only, secret scan of history and tree (no secrets, one fake test key), raw video and voice audio ignored, summon how-it-was-made panel with model names, re-anchor flash, ffmpeg notice, `eval/run_eval.py cost`, final docs and demo audits. Video, license, freeze tag and submission are Manual: EHIBE |
+| UI redesign | Done 2026-10-31. First-run Filipino or English pick, FIL / ENG toggle, one caption line per message, pixel night scene, JRPG windows, pixel icons, title-screen Start, short KeySetup, step-list Calibration, scene Sunrise and Defeat. Component CSS moved into `@layer components` |
 | Tests | 1219 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
 | CI, git hooks | None |
 

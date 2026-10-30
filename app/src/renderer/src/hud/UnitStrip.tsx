@@ -1,5 +1,5 @@
 import SpriteView from '../canvas/SpriteView'
-import { t } from '../lib/copy'
+import { say } from '../lib/copy'
 import StatusBadge from './StatusBadge'
 import { parseStatus, statusEntries } from './status'
 import type { NightUnit, UnitSummary } from '../lib/types'
@@ -26,7 +26,7 @@ function UnitStrip({
 
   return (
     <section
-      aria-label={t('summon.roster').en}
+      aria-label={say('summon.roster')}
       className="panel flex w-[440px] shrink-0 flex-col gap-2 overflow-y-auto p-3"
     >
       {rows.map(({ night, unit }) => {
@@ -34,7 +34,7 @@ function UnitStrip({
         const status = parseStatus(night.status)
         const badges = statusEntries(status)
         const selected = selectedId === unit.id
-        const detail = [isKubo ? null : `${t('hud.cd').tl} ${night.cooldown}`, night.owner].filter(
+        const detail = [isKubo ? null : `${say('hud.cd')} ${night.cooldown}`, night.owner].filter(
           (part): part is string => part !== null && part !== ''
         )
         return (
@@ -59,7 +59,7 @@ function UnitStrip({
               <span className="flex justify-between gap-2">
                 <span className="min-w-0 truncate">{unit.name}</span>
                 <span className="shrink-0">
-                  {t('hud.hp').tl} {night.hp}/{night.hp_max}
+                  {say('hud.hp')} {night.hp}/{night.hp_max}
                 </span>
               </span>
               <span className="caption-en flex flex-wrap gap-x-3 truncate">
@@ -67,7 +67,7 @@ function UnitStrip({
                   <StatusBadge key={entry.kind} entry={entry} />
                 ))}
                 <span className="truncate">
-                  {night.is_down ? t('hud.down').tl : detail.join(' · ')}
+                  {night.is_down ? say('hud.down') : detail.join(' · ')}
                 </span>
               </span>
             </span>

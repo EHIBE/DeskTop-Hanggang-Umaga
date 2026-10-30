@@ -63,7 +63,7 @@ Rules:
 | Role | Spec |
 |---|---|
 | Base | Pixel font, 8 px design size rendered at 2x (16 px) minimum at 1080p |
-| Body and captions | 16 px (2x), Taglish line in moon, English line below in mist |
+| Body and captions | 16 px (2x), one line in the chosen language (Filipino or English), moon on night |
 | Labels and chips | 16 px (2x) |
 | Phase banner, turn counter | 24 px (3x) |
 | Sunrise and defeat titles | 48 px (6x) |
@@ -82,9 +82,15 @@ Full state tables: `hud-components.md`.
 - Panels: night fill with dusk 2 px border, square corners. No soft shadows, no blur.
 - Rings and arrows: drawn on canvas, pixel-aligned, shape plus color.
 - Cards (unit card only): night panel with the sprite at integer scale, stats in a grid.
+- Windows (`.window`): JRPG menu frame for the onboarding, Sunrise and Defeat screens. 4 px ink border, slate and dusk inner lines, 4 px notched corners.
+- Pixel icons: `components/PixelIcon.tsx` draws glyphs from character grids with crisp edges. No Unicode symbols or emoji as icons.
+- Scene: `components/NightScene.tsx` paints the stepped night sky, stars, pixel moon, tree canopy, palms and the kubo behind the onboarding, Connecting and Defeat screens.
+- Component classes live in `@layer components` so Tailwind utilities can override them.
 - Loading: "Sandali..." copy with a 2-frame pixel lantern blink. No spinners.
 - Empty states: instruction copy from the copy deck (for example `summon.prompt`).
 - Errors: inline banner with copy-deck text and an action. Never a raw error message.
+
+- Language mode: players pick Filipino or English on first launch (`screens/LanguagePick.tsx`). The choice lives in `lib/lang.ts` (localStorage `desktop.lang`) and `say(key)` returns one line. A FIL / ENG toggle sits on Start, KeySetup and Calibration. Only one language shows at a time, to keep screens light.
 
 ## 5. Layout principles
 

@@ -1,6 +1,9 @@
 import { useState } from 'react'
-import Bilingual from '../components/Bilingual'
-import { t } from '../lib/copy'
+import LangToggle from '../components/LangToggle'
+import NightScene from '../components/NightScene'
+import PixelIcon from '../components/PixelIcon'
+import TitleMark from '../components/TitleMark'
+import { say } from '../lib/copy'
 import type { ClientMessage, KeyStatus } from '../lib/types'
 
 type KeySetupProps = Readonly<{
@@ -42,57 +45,75 @@ function KeySetup({ send, onKeyStatus, onContinueOffline }: KeySetupProps): Reac
   }
 
   return (
-    <main className="flex h-full w-full items-center justify-center">
-      <form
-        className="panel flex w-[960px] flex-col gap-6 p-8"
-        onSubmit={(event) => {
-          event.preventDefault()
-          void save()
-        }}
-      >
-        <Bilingual copyKey="key.prompt" />
-        <label htmlFor="api-key" className="caption-tl">
-          {t('key.label').tl}
-        </label>
-        <input
-          id="api-key"
-          type="password"
-          autoComplete="off"
-          spellCheck={false}
-          className="field w-full"
-          value={value}
-          aria-invalid={phase === 'invalid'}
-          aria-describedby="key-status"
-          onChange={(event) => {
-            setValue(event.target.value)
-            if (phase !== 'saving') setPhase('idle')
-          }}
-        />
-        <div id="key-status" role="status" aria-live="polite">
-          {phase === 'invalid' && (
-            <div className="banner banner-error p-4">
-              <Bilingual copyKey="key.invalid" />
-            </div>
-          )}
-          {phase === 'saved' && (
-            <div className="banner p-4">
-              <Bilingual copyKey="key.saved" />
-            </div>
-          )}
+    <main className="relative h-full w-full">
+      <NightScene />
+      <div className="absolute left-[160px] top-[112px] flex w-[720px] flex-col gap-16">
+        <div className="rise-in">
+          <TitleMark />
         </div>
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={phase === 'saving' || value.trim().length === 0}
+        <form
+          className="window rise-in flex flex-col gap-8 p-10"
+          style={{ animationDelay: '120ms' }}
+          onSubmit={(event) => {
+            event.preventDefault()
+            void save()
+          }}
         >
-          {t('key.save').tl}
-        </button>
-        <Bilingual copyKey="key.privacy" />
-        <button type="button" className="btn" onClick={goOffline}>
-          {t('key.offline').tl}
-          <span className="caption-en block">{t('key.offline').en}</span>
-        </button>
-      </form>
+          <h2 className="text-[24px] leading-[32px]">{say('key.title')}</h2>
+          <div className="flex flex-col gap-3">
+            <label htmlFor="api-key" className="label">
+              {say('key.label')}
+            </label>
+            <input
+              id="api-key"
+              type="password"
+              autoComplete="off"
+              autoFocus
+              spellCheck={false}
+              className="field w-full"
+              value={value}
+              aria-invalid={phase === 'invalid'}
+              aria-describedby="key-status key-privacy"
+              onChange={(event) => {
+                setValue(event.target.value)
+                if (phase !== 'saving') setPhase('idle')
+              }}
+            />
+            <p id="key-privacy" className="flex items-center gap-3 text-gabi-mist">
+              <PixelIcon name="lock" size={2} />
+              {say('key.short_privacy')}
+            </p>
+          </div>
+          <div id="key-status" role="status" aria-live="polite">
+            {phase === 'invalid' && (
+              <p className="flex items-center gap-3 text-gabi-bukang">
+                <PixelIcon name="cross" size={2} />
+                {say('key.invalid')}
+              </p>
+            )}
+            {phase === 'saved' && (
+              <p className="flex items-center gap-3 text-gabi-dahon">
+                <PixelIcon name="check" size={2} />
+                {say('key.saved')}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-6">
+            <button
+              type="submit"
+              className="btn btn-primary btn-big flex-1 text-[24px]"
+              disabled={phase === 'saving' || value.trim().length === 0}
+            >
+              {phase === 'saving' ? say('summon.busy') : say('key.save')}
+            </button>
+            <button type="button" className="btn btn-big flex-1" onClick={goOffline}>
+              <PixelIcon name="wifi" size={3} />
+              {say('key.offline_short')}
+            </button>
+          </div>
+        </form>
+      </div>
+      <LangToggle className="absolute bottom-[20px] right-[64px]" />
     </main>
   )
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { t } from '../lib/copy'
+import { pick, say, t } from '../lib/copy'
 import type { ClientMessage, VoiceMode, VoiceState, VoiceStatus } from '../lib/types'
 
 type VoiceControlsProps = Readonly<{
@@ -88,17 +88,17 @@ function VoiceControls({ voice, send }: VoiceControlsProps): React.JSX.Element {
   const statusText = t(STATUS_KEY[status])
 
   return (
-    <section aria-label={t('voice.region').en} className="flex shrink-0 items-center gap-3">
+    <section aria-label={say('voice.region')} className="flex shrink-0 items-center gap-3">
       <span
         role="status"
         className={`flex min-h-[48px] items-center gap-2 border-2 border-gabi-dusk bg-gabi-night px-3 ${STATUS_TEXT[status]}`}
-        title={statusText.en}
+        title={pick(statusText)}
       >
         <span aria-hidden="true">{STATUS_GLYPH[status]}</span>
-        <span>{statusText.tl}</span>
-        <span className="text-gabi-mist">{t('model.voice').en}</span>
+        <span>{pick(statusText)}</span>
+        <span className="text-gabi-mist">{say('model.voice')}</span>
       </span>
-      <div role="group" aria-label={t('voice.mode.label').en} className="flex gap-2">
+      <div role="group" aria-label={say('voice.mode.label')} className="flex gap-2">
         {MODES.map((candidate) => {
           const label = t(candidate === 'open' ? 'voice.mode.open' : 'voice.mode.ptt')
           return (
@@ -107,11 +107,11 @@ function VoiceControls({ voice, send }: VoiceControlsProps): React.JSX.Element {
               type="button"
               className="btn"
               aria-pressed={mode === candidate}
-              title={label.en}
+              title={pick(label)}
               onClick={() => send({ type: 'voice.mode', mode: candidate })}
             >
               {mode === candidate ? '✓ ' : ''}
-              {label.tl}
+              {pick(label)}
             </button>
           )
         })}
@@ -121,7 +121,7 @@ function VoiceControls({ voice, send }: VoiceControlsProps): React.JSX.Element {
           type="button"
           className={`btn ${active ? 'btn-primary' : ''}`}
           aria-pressed={active}
-          title={t('voice.ptt_hold').en}
+          title={say('voice.ptt_hold')}
           onPointerDown={() => setDown(true)}
           onPointerUp={() => setDown(false)}
           onPointerLeave={() => setDown(false)}
@@ -129,12 +129,12 @@ function VoiceControls({ voice, send }: VoiceControlsProps): React.JSX.Element {
           onContextMenu={(event) => event.preventDefault()}
         >
           {active ? '● ' : '○ '}
-          {t(active ? 'voice.ptt_held' : 'voice.ptt_hold').tl}
+          {say(active ? 'voice.ptt_held' : 'voice.ptt_hold')}
         </button>
       )}
       {showRetry && (
         <button type="button" className="btn" onClick={() => send({ type: 'voice.retry' })}>
-          {t('voice.problems').tl}
+          {say('voice.problems')}
         </button>
       )}
     </section>

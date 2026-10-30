@@ -1,5 +1,5 @@
 import SpriteView from '../canvas/SpriteView'
-import { t, type CopyKey } from '../lib/copy'
+import { say, type CopyKey } from '../lib/copy'
 import type { SummonSource, UnitSummary } from '../lib/types'
 
 type MadePanelProps = Readonly<{
@@ -26,9 +26,9 @@ function Step({ index, nameKey, stepKey, dim = false, children }: StepProps): Re
           {index}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[24px] leading-[32px] text-gabi-lantern">{t(nameKey).tl}</p>
-          <p className="caption-tl">{t(stepKey).tl}</p>
-          <p className="caption-en">{t(stepKey).en}</p>
+          <p className="text-[24px] leading-[32px] text-gabi-lantern">{say(nameKey)}</p>
+          <p className="caption-tl">{say(stepKey)}</p>
+          <p className="caption-en">{say(stepKey)}</p>
         </div>
       </div>
       {children}
@@ -42,7 +42,7 @@ function MadePanel({ unit, source, visible }: MadePanelProps): React.JSX.Element
   const size = 48 * SPRITE_SCALE
   return (
     <section
-      aria-label={t('made.title').en}
+      aria-label={say('made.title')}
       aria-hidden={!visible}
       className={`absolute bottom-8 left-[576px] right-8 z-30 transition-[opacity,visibility] duration-500 motion-reduce:transition-none ${
         visible ? 'opacity-100' : 'invisible opacity-0'
@@ -70,7 +70,7 @@ function MadePanel({ unit, source, visible }: MadePanelProps): React.JSX.Element
               className="flex shrink-0 items-center justify-center border-2 border-dashed border-gabi-lantern bg-gabi-dusk text-center text-gabi-lantern"
               style={{ width: size, height: size }}
             >
-              {t('made.drawing').tl}
+              {say('made.drawing')}
             </div>
           )}
         </Step>

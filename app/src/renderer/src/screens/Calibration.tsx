@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import Board, { type BoardMapping } from '../canvas/Board'
-import Bilingual from '../components/Bilingual'
-import { t } from '../lib/copy'
+import LangToggle from '../components/LangToggle'
+import PixelIcon from '../components/PixelIcon'
+import { say, type CopyKey } from '../lib/copy'
 import { palette } from '../lib/palette'
 import type { MessageHandler } from '../lib/socket'
 import type { CameraInfo, ClientMessage, Point, StateMessage } from '../lib/types'
@@ -26,6 +27,23 @@ function clampCm(raw: string, fallback: number): number {
 function inRange(raw: string): boolean {
   const value = Number(raw)
   return raw.trim() !== '' && Number.isFinite(value) && value >= MIN_CM && value <= MAX_CM
+}
+
+type StepState = 'todo' | 'active' | 'done'
+
+function Step({
+  n,
+  state,
+  copyKey,
+  extra
+}: Readonly<{ n: number; state: StepState; copyKey: CopyKey; extra?: string }>): React.JSX.Element {
+  return (
+    <li className="step" data-state={state} aria-current={state === 'active' ? 'step' : undefined}>
+      <span className="step-num">{state === 'done' ? <PixelIcon name="check" size={3} /> : n}</span>
+      <span className="flex-1">{say(copyKey)}</span>
+      {extra !== undefined && <span className="text-gabi-lantern">{extra}</span>}
+    </li>
+  )
 }
 
 function Calibration({ state, send, subscribe }: CalibrationProps): React.JSX.Element {
@@ -122,100 +140,122 @@ function Calibration({ state, send, subscribe }: CalibrationProps): React.JSX.El
     if (preview) send({ type: 'calibrate.restart' })
   }
 
+  const tapped = corners.length
+  const placeState: StepState = preview || tapped > 0 ? 'done' : 'active'
+  const tapState: StepState = preview ? 'done' : 'active'
+  const removeState: StepState = preview ? 'active' : 'todo'
+  const sortedCameras = [...cameras].sort((a, b) => Number(b.has_picture) - Number(a.has_picture))
+
   return (
-    <main className="flex h-full w-full gap-8 p-8">
-      <aside className="panel flex w-[512px] flex-col gap-6 overflow-y-auto p-6">
-        <Bilingual copyKey="calib.aim" />
-        {preview ? (
-          <Bilingual copyKey="calib.remove" />
-        ) : (
-          <>
-            <Bilingual copyKey="calib.place" />
-            <Bilingual copyKey="calib.tap" />
-          </>
-        )}
-        <section aria-label={t('calib.camera').en} className="flex flex-col gap-4">
-          <Bilingual copyKey="calib.camera" />
-          {cameras.length === 0 ? (
-            <Bilingual copyKey="calib.no_camera" />
+    <main className="flex h-full w-full gap-6 p-6">
+      <aside className="window flex w-[560px] shrink-0 flex-col gap-8 overflow-y-auto p-8">
+        <div className="flex flex-col gap-3">
+          <h1 className="text-[24px] leading-[32px] text-gabi-lantern">{say('calib.title')}</h1>
+          <p className="text-gabi-mist">{say('calib.aim')}</p>
+        </div>
+        <ol className="flex flex-col gap-2">
+          <Step n={1} state={placeState} copyKey="calib.step_place" />
+          <Step
+            n={2}
+            state={tapState}
+            copyKey="calib.step_tap"
+            extra={preview ? undefined : `${tapped}/4`}
+          />
+          <Step n={3} state={removeState} copyKey="calib.step_remove" />
+        </ol>
+        <section aria-labelledby="camera-label" className="flex flex-col gap-3">
+          <span id="camera-label" className="label flex items-center gap-3">
+            <PixelIcon name="camera" size={2} />
+            {say('calib.camera')}
+          </span>
+          {sortedCameras.length === 0 ? (
+            <p className="text-gabi-bukang">{say('calib.no_camera')}</p>
           ) : (
-            [...cameras]
-              .sort((a, b) => Number(b.has_picture) - Number(a.has_picture))
-              .map((camera) => {
-                const active = state.camera?.index === camera.index
-                return (
-                  <button
-                    key={camera.index}
-                    type="button"
-                    className="btn text-left"
-                    aria-pressed={active}
-                    onClick={() => send({ type: 'camera.select', index: camera.index })}
-                  >
-                    {active ? '> ' : ''}
-                    {camera.index + 1} ({camera.width}x{camera.height})
-                    {camera.has_picture ? '' : ` X ${t('calib.no_picture').tl}`}
-                  </button>
-                )
-              })
+            <div className="flex flex-wrap gap-2">
+              {sortedCameras.map((camera) => (
+                <button
+                  key={camera.index}
+                  type="button"
+                  className="btn"
+                  aria-pressed={state.camera?.index === camera.index}
+                  title={`${camera.width}x${camera.height}`}
+                  onClick={() => send({ type: 'camera.select', index: camera.index })}
+                >
+                  {camera.index + 1}
+                  {!camera.has_picture && (
+                    <span className="flex items-center gap-2 text-gabi-bukang">
+                      <PixelIcon name="cross" size={2} />
+                      {say('calib.no_picture')}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           )}
         </section>
-        <section className="flex flex-col gap-4">
-          <label htmlFor="play-w">
-            <Bilingual copyKey="calib.width" />
-          </label>
-          <input
-            id="play-w"
-            type="number"
-            min={MIN_CM}
-            max={MAX_CM}
-            className="field w-full"
-            value={widthText}
-            disabled={preview || corners.length > 0}
-            aria-invalid={!inRange(widthText)}
-            onChange={(event) => setWidthText(event.target.value)}
-          />
-          <label htmlFor="play-h">
-            <Bilingual copyKey="calib.height" />
-          </label>
-          <input
-            id="play-h"
-            type="number"
-            min={MIN_CM}
-            max={MAX_CM}
-            className="field w-full"
-            value={heightText}
-            disabled={preview || corners.length > 0}
-            aria-invalid={!inRange(heightText)}
-            onChange={(event) => setHeightText(event.target.value)}
-          />
+        <section aria-labelledby="area-label" className="flex flex-col gap-3">
+          <span id="area-label" className="label">
+            {say('calib.area')}
+          </span>
+          <div className="grid grid-cols-2 gap-4">
+            <label className="flex flex-col gap-2">
+              <span className="text-gabi-mist">{say('calib.width')}</span>
+              <input
+                type="number"
+                min={MIN_CM}
+                max={MAX_CM}
+                className="field w-full"
+                value={widthText}
+                disabled={preview || tapped > 0}
+                aria-invalid={!inRange(widthText)}
+                onChange={(event) => setWidthText(event.target.value)}
+              />
+            </label>
+            <label className="flex flex-col gap-2">
+              <span className="text-gabi-mist">{say('calib.height')}</span>
+              <input
+                type="number"
+                min={MIN_CM}
+                max={MAX_CM}
+                className="field w-full"
+                value={heightText}
+                disabled={preview || tapped > 0}
+                aria-invalid={!inRange(heightText)}
+                onChange={(event) => setHeightText(event.target.value)}
+              />
+            </label>
+          </div>
         </section>
         <div className="mt-auto flex flex-col gap-4">
           {preview && (
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-primary btn-big text-[24px]"
               onClick={() => send({ type: 'calibrate.done' })}
             >
-              {t('calib.confirm').tl}
+              <PixelIcon name="check" size={4} />
+              {say('calib.confirm')}
             </button>
           )}
-          <button
-            type="button"
-            className="btn"
-            disabled={!preview && corners.length === 0}
-            onClick={reset}
-          >
-            {t('calib.reset').tl}
-            <span className="caption-en block">{t('calib.reset').en}</span>
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              className="btn flex-1"
+              disabled={!preview && tapped === 0}
+              onClick={reset}
+            >
+              {say('calib.reset')}
+            </button>
+            <LangToggle />
+          </div>
         </div>
       </aside>
-      <div className="panel min-w-0 flex-1 p-2">
+      <div className="window min-w-0 flex-1 p-3">
         <Board
           subscribe={subscribe}
           onTap={preview ? undefined : handleTap}
           overlay={overlay}
-          label={t(preview ? 'calib.remove' : 'calib.tap').en}
+          label={say(preview ? 'calib.remove' : 'calib.tap')}
         />
       </div>
     </main>

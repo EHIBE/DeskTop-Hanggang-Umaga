@@ -21,12 +21,12 @@ DeskTop is played by groups sitting around a laptop, some who will not speak and
 | Captions | Always on |
 | Color | Shape plus color on rings and arrows |
 | Input | Tap path for every voice action |
-| Language | Taglish lines with English captions. Tagalog never required |
+| Language | Filipino (Taglish) or English, chosen on first launch and switchable with the FIL / ENG toggle. Tagalog never required |
 
 ## Text
 
 - Pixel font at 16 px minimum at 1080p (NFR-26).
-- Captions always on. Taglish line first, English line below.
+- Captions always on, in the chosen language. One line per message.
 - High contrast: moon text on night panels.
 - Never put text over the busy desk feed without a panel behind it.
 

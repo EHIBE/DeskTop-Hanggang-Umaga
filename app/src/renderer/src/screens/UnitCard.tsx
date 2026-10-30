@@ -1,6 +1,7 @@
+import { currentLang } from '../lib/lang'
 import { useEffect, useState } from 'react'
 import SpriteView from '../canvas/SpriteView'
-import { isCopyKey, t, type CopyKey } from '../lib/copy'
+import { isCopyKey, pick, say, t, type CopyKey } from '../lib/copy'
 import type { ClientMessage, UnitSummary } from '../lib/types'
 
 type UnitCardProps = Readonly<{
@@ -20,7 +21,7 @@ function classKey(unit: UnitSummary): CopyKey {
 }
 
 function initials(unit: UnitSummary): string {
-  return t(classKey(unit)).tl.slice(0, 2).toUpperCase()
+  return say(classKey(unit)).slice(0, 2).toUpperCase()
 }
 
 function UnitCard({
@@ -44,7 +45,8 @@ function UnitCard({
   const powerKey = `power.${unit.power_id}`
   const powerCopy = isCopyKey(powerKey) ? t(powerKey) : null
   const powerName = unit.power_name_tl.trim() !== '' ? unit.power_name_tl : (powerCopy?.tl ?? '')
-  const powerText = unit.card_text_tl.trim() !== '' ? unit.card_text_tl : (powerCopy?.en ?? '')
+  const cardText = currentLang() === 'en' ? unit.card_text_en : unit.card_text_tl
+  const powerText = cardText.trim() !== '' ? cardText : (powerCopy?.en ?? '')
   const cls = t(classKey(unit))
   const trimmed = draft.trim()
 
@@ -99,37 +101,35 @@ function UnitCard({
                   value={draft}
                   maxLength={NAME_MAX}
                   autoFocus
-                  aria-label={t('summon.rename').en}
+                  aria-label={say('summon.rename')}
                   onChange={(event) => setDraft(event.target.value)}
                 />
                 <button type="submit" className="btn btn-primary" disabled={trimmed === ''}>
-                  {t('summon.rename_save').tl}
+                  {say('summon.rename_save')}
                 </button>
               </form>
             ) : (
               <h2 className="break-words text-gabi-lantern">{unit.name}</h2>
             )}
             <p>
-              {t('card.class').tl}: {cls.tl}
-              <span className="caption-en block">{cls.en}</span>
+              {say('card.class')}: {pick(cls)}
             </p>
             <p>
               HP {unit.hp}/{unit.hp_max} &nbsp; ATK {unit.atk}
             </p>
             <p>
-              {t('card.move').tl}: {t(`move.${unit.move}`).tl} &nbsp; {t('card.range').tl}:{' '}
-              {t(`range.${unit.range}`).tl}
+              {say('card.move')}: {say(`move.${unit.move}`)} &nbsp; {say('card.range')}:{' '}
+              {say(`range.${unit.range}`)}
             </p>
           </div>
         </div>
         <div className="flex flex-col gap-2">
           <p>
-            {t('card.power').tl}: {powerName === '' ? t('power.none').tl : powerName}
+            {say('card.power')}: {powerName === '' ? say('power.none') : powerName}
             {powerText !== '' && `: ${powerText}`}
           </p>
-          {unit.card_text_en.trim() !== '' && <p className="caption-en">EN: {unit.card_text_en}</p>}
           <p>
-            {t('card.owner').en}: {t('card.owner_none').tl}
+            {say('card.owner')}: {say('card.owner_none')}
           </p>
         </div>
         <div className="flex gap-4">
@@ -139,7 +139,7 @@ function UnitCard({
             disabled={locked || unit.rerolls_left <= 0}
             onClick={() => send({ type: 'unit.reroll', unit_id: unit.unit_id })}
           >
-            {t('summon.reroll').tl} ({unit.rerolls_left})
+            {say('summon.reroll')} ({unit.rerolls_left})
           </button>
           <button
             type="button"
@@ -150,10 +150,10 @@ function UnitCard({
               setRenaming(!renaming)
             }}
           >
-            {t('summon.rename').tl}
+            {say('summon.rename')}
           </button>
           <button type="button" className="btn ml-auto" onClick={onClose}>
-            {t('summon.close').tl}
+            {say('summon.close')}
           </button>
         </div>
       </section>

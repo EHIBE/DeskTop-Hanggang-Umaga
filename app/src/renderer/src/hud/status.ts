@@ -1,4 +1,4 @@
-import { t } from '../lib/copy'
+import { say } from '../lib/copy'
 
 export type UnitStatus = Readonly<{
   outTurns: number | null
@@ -29,9 +29,9 @@ export type StatusEntry = Readonly<{ kind: StatusKind; text: string }>
 export function statusEntries(status: UnitStatus): readonly StatusEntry[] {
   const entries: StatusEntry[] = []
   if (status.outTurns !== null) {
-    entries.push({ kind: 'out', text: t('status.out', { turns: status.outTurns }).tl })
+    entries.push({ kind: 'out', text: say('status.out', { turns: status.outTurns }) })
   }
-  if (status.stolen) entries.push({ kind: 'stolen', text: t('status.stolen').tl })
-  if (status.lost) entries.push({ kind: 'lost', text: t('status.lost').tl })
+  if (status.stolen) entries.push({ kind: 'stolen', text: say('status.stolen') })
+  if (status.lost) entries.push({ kind: 'lost', text: say('status.lost') })
   return entries
 }

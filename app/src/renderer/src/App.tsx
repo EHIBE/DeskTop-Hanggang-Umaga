@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import CostMeter from './components/CostMeter'
 import Bilingual from './components/Bilingual'
+import NightScene from './components/NightScene'
 import Stage from './components/Stage'
 import RecIndicator from './hud/RecIndicator'
-import { isCopyKey, t, type CopyKey } from './lib/copy'
+import { isCopyKey, say, type CopyKey } from './lib/copy'
+import { useLang } from './lib/lang'
 import { useGameSocket } from './lib/socket'
 import type {
   AppPhase,
@@ -15,6 +17,7 @@ import type {
 } from './lib/types'
 import Calibration from './screens/Calibration'
 import KeySetup from './screens/KeySetup'
+import LanguagePick from './screens/LanguagePick'
 import Start from './screens/Start'
 import Defeat from './screens/Defeat'
 import Night from './screens/Night'
@@ -47,19 +50,19 @@ const NOTICE_MS = 6000
 
 function Connecting(): React.JSX.Element {
   return (
-    <main
-      className="flex h-full w-full flex-col items-center justify-center gap-8"
-      role="status"
-      aria-live="polite"
-    >
-      <div className="lantern" aria-hidden="true" />
-      <Bilingual copyKey="restore" className="text-center" />
+    <main className="relative h-full w-full" role="status" aria-live="polite">
+      <NightScene dim />
+      <div className="absolute left-[160px] top-1/2 flex -translate-y-1/2 items-center gap-8">
+        <div className="lantern" aria-hidden="true" />
+        <Bilingual copyKey="restore" className="text-[24px] leading-[32px]" />
+      </div>
     </main>
   )
 }
 
 function App(): React.JSX.Element {
   const { status, send, subscribe } = useGameSocket()
+  const lang = useLang()
   const [state, setState] = useState<StateMessage | null>(null)
   const [keyStatus, setKeyStatus] = useState<KeyStatus | null>(null)
   const [offlineChosen, setOfflineChosen] = useState(false)
@@ -110,7 +113,9 @@ function App(): React.JSX.Element {
   const ready = status === 'open' && state !== null && keyStatus !== null
 
   let screen: React.JSX.Element
-  if (!ready) {
+  if (lang === null) {
+    screen = <LanguagePick />
+  } else if (!ready) {
     screen = <Connecting />
   } else if (keyStatus === 'missing' && !state.has_api_key && !state.demo_safe && !offlineChosen) {
     screen = (
@@ -121,7 +126,7 @@ function App(): React.JSX.Element {
       />
     )
   } else if (state.phase === 'START') {
-    screen = <Start state={state} send={send} subscribe={subscribe} cost={cost} />
+    screen = <Start state={state} send={send} subscribe={subscribe} />
   } else if (state.phase === 'CALIBRATE') {
     screen = <Calibration state={state} send={send} subscribe={subscribe} />
   } else if (state.phase === 'VOICE_CLAIM') {
@@ -140,13 +145,13 @@ function App(): React.JSX.Element {
   return (
     <Stage>
       {screen}
-      {ready && (cost !== null || state.demo_safe) && (
+      {ready && lang !== null && (cost !== null || state.demo_safe) && (
         <div
           className={`absolute right-4 flex items-center gap-4 ${inNight ? 'bottom-[120px]' : 'top-4'}`}
         >
           {cost !== null && <CostMeter cost={cost} variant="chip" />}
-          {state.demo_safe && !inNight && (
-            <div className="panel px-4 py-2">{t('start.demo_safe').tl}</div>
+          {state.demo_safe && !inNight && state.phase !== 'START' && (
+            <div className="panel px-4 py-2">{say('start.demo_safe')}</div>
           )}
         </div>
       )}

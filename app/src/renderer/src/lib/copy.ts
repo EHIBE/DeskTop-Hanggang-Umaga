@@ -1,3 +1,4 @@
+import { currentLang } from './lang'
 import type { CopyParams } from './types'
 
 export type CopyEntry = Readonly<{ tl: string; en: string }>
@@ -423,7 +424,22 @@ const entries = {
   'status.stolen': { tl: 'Ninakaw', en: 'Stolen' },
   'effect.thrown_float': { tl: 'Itinapon!', en: 'Thrown!' },
   'effect.escape_float': { tl: 'Nakatakas!', en: 'Escaped!' },
-  'status.lost': { tl: 'Nawala', en: 'Lost' }
+  'status.lost': { tl: 'Nawala', en: 'Lost' },
+  'lang.title': { tl: 'Wika', en: 'Language' },
+  'lang.tl': { tl: 'Filipino', en: 'Filipino' },
+  'lang.en': { tl: 'English', en: 'English' },
+  'title.sub': { tl: 'Hanggang Umaga', en: 'Until Sunrise' },
+  'start.tip': { tl: 'Linisin muna ang mesa.', en: 'Clear the table first.' },
+  'start.saves': { tl: 'Mga Baryo', en: 'Your Barrios' },
+  'start.placeholder': { tl: 'Hal. San Roque', en: 'e.g. San Roque' },
+  'key.title': { tl: 'Ikabit ang AI', en: 'Connect the AI' },
+  'key.short_privacy': { tl: 'Naka-encrypt sa laptop na ito.', en: 'Encrypted on this laptop.' },
+  'key.offline_short': { tl: 'Maglaro offline', en: 'Play offline' },
+  'calib.step_place': { tl: 'Papel na A4 sa gitna', en: 'A4 sheet in the middle' },
+  'calib.step_tap': { tl: 'I-tap ang 4 na kanto', en: 'Tap its 4 corners' },
+  'calib.step_remove': { tl: 'Alisin ang papel', en: 'Remove the sheet' },
+  'calib.area': { tl: 'Laki ng mesa', en: 'Table size' },
+  'calib.title': { tl: 'Ayusin ang Camera', en: 'Set Up the Camera' }
 } as const satisfies Record<string, CopyEntry>
 
 export type CopyKey = keyof typeof entries
@@ -443,4 +459,12 @@ function fill(text: string, params: CopyParams): string {
 export function t(key: CopyKey, params: CopyParams = {}): CopyEntry {
   const entry: CopyEntry = entries[key]
   return { tl: fill(entry.tl, params), en: fill(entry.en, params) }
+}
+
+export function say(key: CopyKey, params: CopyParams = {}): string {
+  return t(key, params)[currentLang()]
+}
+
+export function pick(entry: Readonly<{ tl: string; en: string }>): string {
+  return entry[currentLang()]
 }

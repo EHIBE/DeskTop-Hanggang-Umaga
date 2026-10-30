@@ -1,4 +1,4 @@
-import { t, type CopyKey } from '../lib/copy'
+import { pick, say, t, type CopyKey } from '../lib/copy'
 import RecIndicator from './RecIndicator'
 import type { AppPhase, NightSummary } from '../lib/types'
 
@@ -36,28 +36,27 @@ function TopBar({ night, phase, demoSafe, hitCount, recording }: TopBarProps): R
   return (
     <header className="flex h-[88px] shrink-0 items-center gap-8 border-b-2 border-gabi-dusk bg-gabi-night px-8">
       <div className="flex w-[320px] flex-col text-[24px] leading-[32px]">
-        <span>{turn.tl}</span>
+        <span>{pick(turn)}</span>
         {recording && <RecIndicator />}
       </div>
       <div
         className="panel flex min-w-0 flex-1 flex-col items-center px-6 py-1"
         role="status"
         aria-live="polite"
-        aria-label={banner.en}
+        aria-label={pick(banner)}
       >
-        <span className="text-[24px] leading-[32px] text-gabi-lantern">{banner.tl}</span>
-        <span className="caption-en leading-[24px]">{banner.en}</span>
+        <span className="text-[24px] leading-[32px] text-gabi-lantern">{pick(banner)}</span>
       </div>
       <div className="flex w-[560px] items-center justify-end gap-4">
-        {demoSafe && <div className="panel px-4 py-2">{t('start.demo_safe').tl}</div>}
-        <span>{kubo.tl}</span>
+        {demoSafe && <div className="panel px-4 py-2">{say('start.demo_safe')}</div>}
+        <span>{pick(kubo)}</span>
         <div
           key={hitCount}
           className={`relative h-[32px] w-[240px] border-2 border-gabi-ink bg-gabi-ink ${
             hitCount > 0 ? 'kubo-hit' : ''
           }`}
           role="meter"
-          aria-label={kubo.en}
+          aria-label={pick(kubo)}
           aria-valuemin={0}
           aria-valuemax={max}
           aria-valuenow={hp}

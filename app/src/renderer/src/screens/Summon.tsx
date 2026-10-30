@@ -5,7 +5,7 @@ import Board, { type BoardMapping } from '../canvas/Board'
 import { drawSummonOverlay } from '../canvas/made'
 import Bilingual from '../components/Bilingual'
 import MadePanel from '../components/MadePanel'
-import { isCopyKey, t, type CopyKey } from '../lib/copy'
+import { isCopyKey, say, type CopyKey } from '../lib/copy'
 import { palette } from '../lib/palette'
 import type { MessageHandler } from '../lib/socket'
 import { prefersReducedMotion } from '../lib/motion'
@@ -278,27 +278,27 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
               onChange={(event) => setName(event.target.value)}
             />
             <button type="submit" className="btn btn-primary" disabled={!canSend}>
-              {t('summon.name_go').tl}
+              {say('summon.name_go')}
             </button>
           </div>
           {busy && (
             <p role="status" aria-live="polite" className="caption-en">
-              {t('summon.busy').tl}
+              {say('summon.busy')}
             </p>
           )}
           {full && <Bilingual copyKey="summon.full" />}
         </form>
-        <section aria-label={t('summon.roster').en} className="flex flex-col gap-3">
+        <section aria-label={say('summon.roster')} className="flex flex-col gap-3">
           <div className="flex justify-between">
-            <span>{t('summon.roster').tl}</span>
+            <span>{say('summon.roster')}</span>
             <span>
               {state.units.length} / {MAX_UNITS}
             </span>
           </div>
           {!hasKubo && (
             <div className="border-2 border-dashed border-gabi-lantern p-3">
-              <p className="text-gabi-lantern">1. {t('class.kubo').tl}</p>
-              <p className="caption-en">{t('summon.kubo_first').en}</p>
+              <p className="text-gabi-lantern">1. {say('class.kubo')}</p>
+              <p className="caption-en">{say('summon.kubo_first')}</p>
             </div>
           )}
           {ordered.map((unit, index) => (
@@ -315,7 +315,7 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
                 scale={2}
                 fallback={
                   <span className="text-gabi-lantern">
-                    {t(`class.${unit.class}`).tl.slice(0, 2).toUpperCase()}
+                    {say(`class.${unit.class}`).slice(0, 2).toUpperCase()}
                   </span>
                 }
               />
@@ -323,7 +323,7 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
                 {index + 1}. {unit.name}
               </span>
               <span className="shrink-0">
-                {t(`class.${unit.class}`).tl} {unit.hp}/{unit.hp_max}
+                {say(`class.${unit.class}`)} {unit.hp}/{unit.hp_max}
               </span>
             </button>
           ))}
@@ -341,8 +341,8 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
             onClick={begin}
           >
             {state.resume_turn !== null
-              ? t('summon.resume_button', { turn: state.resume_turn }).tl
-              : t('summon.begin').tl}
+              ? say('summon.resume_button', { turn: state.resume_turn })
+              : say('summon.begin')}
           </button>
         </div>
       </aside>
@@ -351,7 +351,7 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
           subscribe={subscribe}
           onTap={state.awaiting_tap && !resuming ? handleTap : undefined}
           overlay={overlay}
-          label={t(state.awaiting_tap ? 'summon.which' : 'summon.prompt').en}
+          label={say(state.awaiting_tap ? 'summon.which' : 'summon.prompt')}
         />
         {made !== null && madeUnit !== undefined && (
           <button
@@ -360,7 +360,7 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
             aria-pressed={madeVisible}
             onClick={() => setMadeVisible((value) => !value)}
           >
-            {t('made.show').tl}
+            {say('made.show')}
           </button>
         )}
       </div>

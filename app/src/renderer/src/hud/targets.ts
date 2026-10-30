@@ -1,4 +1,4 @@
-import { t } from '../lib/copy'
+import { say } from '../lib/copy'
 import type { EnemySummary, IntentAction, PowerId, UnitSummary } from '../lib/types'
 
 export type TargetKind = 'enemy' | 'ally' | 'none'
@@ -33,8 +33,8 @@ export function actionTarget(action: IntentAction, power: PowerId): TargetKind {
 export function enemyLabel(enemies: readonly EnemySummary[], enemy: EnemySummary): string {
   const sameType = enemies.filter((other) => other.type === enemy.type && other.part === enemy.part)
   const index = sameType.findIndex((other) => other.id === enemy.id) + 1
-  const base = t(`enemy.${enemy.type}`).tl
-  const part = enemy.part === null ? '' : ` ${t(`enemy.${enemy.part}`).tl}`
+  const base = say(`enemy.${enemy.type}`)
+  const part = enemy.part === null ? '' : ` ${say(`enemy.${enemy.part}`)}`
   return sameType.length > 1 ? `${base}${part} ${index}` : `${base}${part}`
 }
 

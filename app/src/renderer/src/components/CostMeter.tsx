@@ -1,4 +1,4 @@
-import { t } from '../lib/copy'
+import { pick, t } from '../lib/copy'
 import { palette } from '../lib/palette'
 import type { CostMessage } from '../lib/types'
 
@@ -79,7 +79,7 @@ function CostMeter({ cost, variant }: CostMeterProps): React.JSX.Element {
 
   const meterProps = {
     role: 'meter',
-    'aria-label': label.en,
+    'aria-label': pick(label),
     'aria-valuemin': 0,
     'aria-valuemax': CAP_USD,
     'aria-valuenow': Math.min(spent, CAP_USD),
@@ -88,7 +88,7 @@ function CostMeter({ cost, variant }: CostMeterProps): React.JSX.Element {
 
   if (variant === 'chip') {
     return (
-      <div {...meterProps} className="panel flex items-center gap-3 px-4 py-2" title={label.en}>
+      <div {...meterProps} className="panel flex items-center gap-3 px-4 py-2" title={pick(label)}>
         <Status warn={warn} stopped={stopped} />
         {track}
         <span>{text}</span>
@@ -99,7 +99,7 @@ function CostMeter({ cost, variant }: CostMeterProps): React.JSX.Element {
   return (
     <div {...meterProps} className="flex flex-col gap-1" style={{ width }}>
       <div className="flex items-center gap-3">
-        <span>{label.tl}</span>
+        <span>{pick(label)}</span>
         <Status warn={warn} stopped={stopped} />
         <span className="ml-auto">{text}</span>
       </div>
