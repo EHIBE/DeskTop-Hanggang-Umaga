@@ -66,7 +66,7 @@ SUBPROTOCOL_HEADER: Final = "sec-websocket-protocol"
 POLICY_VIOLATION: Final = 1008
 MAX_MESSAGE_BYTES: Final = 16_384
 INVALID_MESSAGE_KEY: Final = "cmd.unknown"
-FAILURE_KEY: Final = "restore"
+FAILURE_KEY: Final = "err.generic"
 DEV_FLAG: Final = "DESKTOP_DEV"
 PARENT_WATCH_FLAG: Final = "DESKTOP_PARENT_WATCH"
 PACKAGED_FLAG: Final = "DESKTOP_PACKAGED"
@@ -730,6 +730,11 @@ class Connection:
             ValueError,
         ) as error:
             logger.warning("message handling failed with %s", type(error).__name__)
+            await self.send(notice_json(FAILURE_KEY))
+            await self.send_state()
+            return
+        except Exception:
+            logger.exception("unexpected error while handling a message")
             await self.send(notice_json(FAILURE_KEY))
             await self.send_state()
             return

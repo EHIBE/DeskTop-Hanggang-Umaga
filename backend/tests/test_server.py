@@ -460,6 +460,22 @@ def test_demo_safe_toggle_persists_in_state(client: TestClient) -> None:
         assert receive_type(ws, "state")["demo_safe_sam"] is False
 
 
+def test_unexpected_error_gets_a_generic_notice_and_keeps_the_socket(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def explode(_: GameController) -> list[object]:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(GameController, "list_campaigns", explode)
+    with connect(client) as ws:
+        receive_type(ws, "state")
+        ws.send_text(json.dumps({"type": "campaign.list"}))
+        assert receive_type(ws, "notice")["copy_key"] == "err.generic"
+        receive_type(ws, "state")
+        ws.send_text(json.dumps({"type": "campaign.list"}))
+        assert receive_type(ws, "notice")["copy_key"] == "err.generic"
+
+
 def test_busy_camera_gets_notice(tmp_path: Path) -> None:
     settings = AppSettings(token=TOKEN, data_dir=tmp_path, port=8765, api_key=None)
     app = create_app(settings, frozenset({ORIGIN}), make_factory(tmp_path, busy=True))
