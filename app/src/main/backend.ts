@@ -37,7 +37,8 @@ const PASSTHROUGH_ENV: readonly string[] = [
   'USERPROFILE',
   'HOMEDRIVE',
   'HOMEPATH',
-  'COMPUTERNAME'
+  'COMPUTERNAME',
+  'DESKTOP_FFMPEG'
 ]
 
 function delay(ms: number): Promise<void> {
