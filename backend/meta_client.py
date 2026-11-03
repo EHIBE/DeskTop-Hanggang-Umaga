@@ -322,6 +322,9 @@ class MetaClient:
                     result = await asyncio.wait_for(
                         operation(), timeout=self._timeouts[spec.kind]
                     )
+            except asyncio.CancelledError:
+                self._record_estimate(spec, started, is_ok=False)
+                raise
             except (
                 TimeoutError,
                 openai.APIConnectionError,

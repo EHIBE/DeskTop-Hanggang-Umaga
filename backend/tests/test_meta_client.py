@@ -276,6 +276,29 @@ def test_ambiguous_failures_charge_the_estimate() -> None:
     ]
 
 
+def test_cancelled_call_charges_the_estimate() -> None:
+    harness = make_harness()
+    started = asyncio.Event()
+
+    async def hang() -> str:
+        started.set()
+        await asyncio.Event().wait()
+        return "never"
+
+    async def go() -> None:
+        task = asyncio.create_task(harness.client.execute(SPARK, hang, spark_usage))
+        await started.wait()
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    asyncio.run(go())
+    record = harness.log.records[0]
+    assert not record.ok
+    assert record.cost_usd == Decimal("0.02")
+    assert harness.client.meter.reserved_usd == Decimal(0)
+
+
 def test_unsent_and_rejected_requests_cost_nothing() -> None:
     harness = make_harness()
     request = httpx2.Request("POST", "https://api.meta.ai/v1/responses")
