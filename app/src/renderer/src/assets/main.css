@@ -314,6 +314,20 @@ canvas {
     animation: cursor-nudge 600ms steps(2) infinite;
   }
 
+  .glossary-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    border-bottom-color: var(--color-gabi-dusk);
+    cursor: default;
+  }
+
+  .glossary-row:focus {
+    background: var(--color-gabi-dusk);
+    border-color: var(--color-gabi-lantern);
+    outline: none;
+  }
+
   @keyframes cursor-nudge {
     50% {
       transform: translateX(4px);

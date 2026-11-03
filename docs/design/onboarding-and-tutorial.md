@@ -136,9 +136,10 @@ Descriptions reuse the cultural-care wording word for word. Keep them in sync wi
 | `gloss.anting` | Anting-anting | An amulet believed to give protection |
 | `gloss.kubo` | Bahay kubo | A traditional Filipino house made of bamboo and nipa |
 
+- Term names use keys `gloss.name_<term>` (same text in both languages) so every visible word goes through `say()`.
 - Title key `gloss.title`: tl "Mga Alamat" (Proposed), en "Folklore" (Proposed). Close key `gloss.close`: tl "Isara", en "Close".
 - Tagalog versions of the eight descriptions are Pending. A Filipino reviewer writes them, `desktop-cultural-reviewer` checks them. Until then the panel shows the English line under both languages. Do not machine-translate folklore.
-- Kapre stays in the list even though Kapre smoke is cut from play, because the creature may be seen in art. Verify against `docs/game/enemies.md` before ship and drop it if no kapre appears.
+- Kapre stays in the list even though Kapre smoke is cut from play, because the creature may be seen in art. Verified 2026-11-03: kapre spawns in `backend/rules/waves.py`, so it stays.
 - No place names, no region claims, no gore, per the cultural-care rules.
 
 ### Layout
@@ -163,11 +164,11 @@ Descriptions reuse the cultural-care wording word for word. Keep them in sync wi
 
 ### Acceptance checks
 
-- [ ] Button on Start opens the panel with all 8 terms.
-- [ ] Button in the Night pause overlay opens it. No button during a live turn.
-- [ ] Each English line matches `docs/design/cultural-care.md` exactly.
-- [ ] Escape and Close return focus to the opener.
-- [ ] Panel works offline and in Demo Safe.
+- [x] Button on Start opens the panel with all 8 terms. Verified by code reading 2026-11-03
+- [x] Button in the Night pause overlay opens it. No button during a live turn. Verified by code reading 2026-11-03
+- [x] Each English line matches `docs/design/cultural-care.md` exactly. Verified by code reading 2026-11-03
+- [x] Escape and Close return focus to the opener. Verified by code reading 2026-11-03
+- [x] Panel works offline and in Demo Safe. Pure renderer, no backend message. Verified by code reading 2026-11-03
 - [ ] Two Filipino reviewers sign off in `docs/playtests.md` before recording.
 
 ## C. Speaker chip

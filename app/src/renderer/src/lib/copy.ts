@@ -467,7 +467,47 @@ const entries = {
     en: 'A tikbalang shoves a unit. Slide it to the shadow.'
   },
   'tut.dismiss': { tl: 'Sige', en: 'Got it' },
-  'tut.skip_all': { tl: 'Laktawan lahat', en: 'Skip all hints' }
+  'tut.skip_all': { tl: 'Laktawan lahat', en: 'Skip all hints' },
+  'gloss.title': { tl: 'Mga Alamat', en: 'Folklore' },
+  'gloss.open': { tl: 'Mga Alamat', en: 'Folklore' },
+  'gloss.close': { tl: 'Isara', en: 'Close' },
+  'gloss.name_aswang': { tl: 'Aswang', en: 'Aswang' },
+  'gloss.name_tikbalang': { tl: 'Tikbalang', en: 'Tikbalang' },
+  'gloss.name_kapre': { tl: 'Kapre', en: 'Kapre' },
+  'gloss.name_manananggal': { tl: 'Manananggal', en: 'Manananggal' },
+  'gloss.name_duwende': { tl: 'Duwende', en: 'Duwende' },
+  'gloss.name_albularyo': { tl: 'Albularyo', en: 'Albularyo' },
+  'gloss.name_anting': { tl: 'Anting-anting', en: 'Anting-anting' },
+  'gloss.name_kubo': { tl: 'Bahay kubo', en: 'Bahay kubo' },
+  'gloss.aswang': {
+    tl: 'A shape-shifting night creature in Philippine folklore that hunts people who wander alone',
+    en: 'A shape-shifting night creature in Philippine folklore that hunts people who wander alone'
+  },
+  'gloss.tikbalang': {
+    tl: "A tall creature with a horse's head that leads travelers astray in forests and mountains",
+    en: "A tall creature with a horse's head that leads travelers astray in forests and mountains"
+  },
+  'gloss.kapre': {
+    tl: 'A big tree giant that sits in large trees like the balete and smokes a huge cigar',
+    en: 'A big tree giant that sits in large trees like the balete and smokes a huge cigar'
+  },
+  'gloss.manananggal': {
+    tl: 'A creature that splits its upper body from its lower half and flies at night. Salt on the lower half stops it from rejoining',
+    en: 'A creature that splits its upper body from its lower half and flies at night. Salt on the lower half stops it from rejoining'
+  },
+  'gloss.duwende': {
+    tl: 'A small spirit that lives in mounds (punso) and can bring luck or mischief. People say "tabi tabi po" to ask permission to pass',
+    en: 'A small spirit that lives in mounds (punso) and can bring luck or mischief. People say "tabi tabi po" to ask permission to pass'
+  },
+  'gloss.albularyo': { tl: 'A traditional folk healer', en: 'A traditional folk healer' },
+  'gloss.anting': {
+    tl: 'An amulet believed to give protection',
+    en: 'An amulet believed to give protection'
+  },
+  'gloss.kubo': {
+    tl: 'A traditional Filipino house made of bamboo and nipa',
+    en: 'A traditional Filipino house made of bamboo and nipa'
+  }
 } as const satisfies Record<string, CopyEntry>
 
 export type CopyKey = keyof typeof entries

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import GlossaryPanel from '../components/GlossaryPanel'
 import LangToggle from '../components/LangToggle'
 import NightScene from '../components/NightScene'
 import PixelIcon from '../components/PixelIcon'
@@ -27,6 +28,7 @@ function Start({ state, send, subscribe }: StartProps): React.JSX.Element {
   const [name, setName] = useState('')
   const [difficulty, setDifficulty] = useState<Difficulty>('normal')
   const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [glossaryOpen, setGlossaryOpen] = useState(false)
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -169,7 +171,7 @@ function Start({ state, send, subscribe }: StartProps): React.JSX.Element {
           <PixelIcon name="arrow" size={3} className="text-gabi-lantern" />
           {say('start.tip')}
         </p>
-        <div className="ml-auto flex items-center gap-4">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
           <button
             type="button"
             role="switch"
@@ -201,10 +203,14 @@ function Start({ state, send, subscribe }: StartProps): React.JSX.Element {
               {say('start.demo_safe_sam')}
             </button>
           )}
+          <button type="button" className="btn btn-quiet" onClick={() => setGlossaryOpen(true)}>
+            {say('gloss.open')}
+          </button>
           <SoundToggle />
           <LangToggle />
         </div>
       </footer>
+      {glossaryOpen && <GlossaryPanel onClose={() => setGlossaryOpen(false)} />}
     </main>
   )
 }

@@ -290,6 +290,25 @@ English text for these is a proposal for playtester review.
 | tut.push | Itutulak ng tikbalang ang unit. Ilipat sa anino. | A tikbalang shoves a unit. Slide it to the shadow. | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
 | tut.dismiss | Sige | Got it | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
 | tut.skip_all | Laktawan lahat | Skip all hints | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
+| gloss.title | Mga Alamat | Folklore | Folklore glossary 2026-11-03, Proposed, playtester review |
+| gloss.open | Mga Alamat | Folklore | Folklore glossary 2026-11-03, Proposed, playtester review |
+| gloss.close | Isara | Close | Folklore glossary 2026-11-03, Proposed, playtester review |
+| gloss.name_aswang | Aswang | Aswang | Folklore glossary 2026-11-03, Proposed, term name same in both languages |
+| gloss.name_tikbalang | Tikbalang | Tikbalang | Folklore glossary 2026-11-03, Proposed, term name same in both languages |
+| gloss.name_kapre | Kapre | Kapre | Folklore glossary 2026-11-03, Proposed, term name same in both languages |
+| gloss.name_manananggal | Manananggal | Manananggal | Folklore glossary 2026-11-03, Proposed, term name same in both languages |
+| gloss.name_duwende | Duwende | Duwende | Folklore glossary 2026-11-03, Proposed, term name same in both languages |
+| gloss.name_albularyo | Albularyo | Albularyo | Folklore glossary 2026-11-03, Proposed, term name same in both languages |
+| gloss.name_anting | Anting-anting | Anting-anting | Folklore glossary 2026-11-03, Proposed, term name same in both languages |
+| gloss.name_kubo | Bahay kubo | Bahay kubo | Folklore glossary 2026-11-03, Proposed, term name same in both languages |
+| gloss.aswang | A shape-shifting night creature in Philippine folklore that hunts people who wander alone | A shape-shifting night creature in Philippine folklore that hunts people who wander alone | Folklore glossary 2026-11-03, Proposed, en verbatim from cultural-care.md, tl pending Filipino reviewer |
+| gloss.tikbalang | A tall creature with a horse's head that leads travelers astray in forests and mountains | A tall creature with a horse's head that leads travelers astray in forests and mountains | Folklore glossary 2026-11-03, Proposed, en verbatim from cultural-care.md, tl pending Filipino reviewer |
+| gloss.kapre | A big tree giant that sits in large trees like the balete and smokes a huge cigar | A big tree giant that sits in large trees like the balete and smokes a huge cigar | Folklore glossary 2026-11-03, Proposed, en verbatim from cultural-care.md, tl pending Filipino reviewer |
+| gloss.manananggal | A creature that splits its upper body from its lower half and flies at night. Salt on the lower half stops it from rejoining | A creature that splits its upper body from its lower half and flies at night. Salt on the lower half stops it from rejoining | Folklore glossary 2026-11-03, Proposed, en verbatim from cultural-care.md, tl pending Filipino reviewer |
+| gloss.duwende | A small spirit that lives in mounds (punso) and can bring luck or mischief. People say "tabi tabi po" to ask permission to pass | A small spirit that lives in mounds (punso) and can bring luck or mischief. People say "tabi tabi po" to ask permission to pass | Folklore glossary 2026-11-03, Proposed, en verbatim from cultural-care.md, tl pending Filipino reviewer |
+| gloss.albularyo | A traditional folk healer | A traditional folk healer | Folklore glossary 2026-11-03, Proposed, en verbatim from cultural-care.md, tl pending Filipino reviewer |
+| gloss.anting | An amulet believed to give protection | An amulet believed to give protection | Folklore glossary 2026-11-03, Proposed, en verbatim from cultural-care.md, tl pending Filipino reviewer |
+| gloss.kubo | A traditional Filipino house made of bamboo and nipa | A traditional Filipino house made of bamboo and nipa | Folklore glossary 2026-11-03, Proposed, en verbatim from cultural-care.md, tl pending Filipino reviewer |
 | voice.region | Boses | Voice | M11, Proposed, playtester review |
 | voice.status.off | Naka-off ang mic | Mic off | M11, Proposed, playtester review |
 | voice.status.connecting | Kumokonekta ang mic | Connecting mic | M11, Proposed, playtester review |

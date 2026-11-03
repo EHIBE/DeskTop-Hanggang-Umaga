@@ -14,6 +14,7 @@ import {
 } from '../canvas/rings'
 import { MIN_SCALE, drawSprite, useUnitImages } from '../canvas/sprites'
 import Bilingual from '../components/Bilingual'
+import GlossaryPanel from '../components/GlossaryPanel'
 import SoundToggle from '../components/SoundToggle'
 import Captions from '../hud/Captions'
 import HintStrip from '../hud/HintStrip'
@@ -74,6 +75,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
   const [blockedHeard, setBlockedHeard] = useState(false)
   const [pulse, setPulse] = useState(0)
   const [camMoved, setCamMoved] = useState(false)
+  const [glossaryOpen, setGlossaryOpen] = useState(false)
   const [returns, setReturns] = useState<Readonly<Record<string, Spot>>>({})
   const [note, setNote] = useState<EventNote | null>(null)
   const noteIdRef = useRef(0)
@@ -159,6 +161,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
       } else if (message.type === 'state') {
         if (pausedRef.current && message.phase !== 'PAUSED') setCamMoved(false)
         pausedRef.current = message.phase === 'PAUSED'
+        if (!pausedRef.current) setGlossaryOpen(false)
       }
     })
   }, [subscribe, triggerFlash])
@@ -574,6 +577,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
                   <button
                     type="button"
                     className="btn btn-primary"
+                    disabled={glossaryOpen}
                     onClick={() => send({ type: 'night.resume', force: false })}
                   >
                     {say('night.resume')}
@@ -595,7 +599,12 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
                     {say('hud.recalibrate')}
                   </button>
                 </div>
-                <SoundToggle />
+                <div className="flex flex-wrap justify-center gap-4">
+                  <button type="button" className="btn" onClick={() => setGlossaryOpen(true)}>
+                    {say('gloss.open')}
+                  </button>
+                  <SoundToggle />
+                </div>
               </div>
             </div>
           )}
@@ -711,6 +720,9 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
           {say('hud.end_turn')}
         </button>
       </footer>
+      {glossaryOpen && phase === 'PAUSED' && (
+        <GlossaryPanel onClose={() => setGlossaryOpen(false)} />
+      )}
     </main>
   )
 }

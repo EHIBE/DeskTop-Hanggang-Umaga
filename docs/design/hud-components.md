@@ -66,6 +66,7 @@ The night HUD frames the warped desk feed with a top band for status and a botto
 | Banners | TopBar | `net.slow`, `net.down`, `credits.low`, Demo Safe badge |
 | Floating numbers | Board | Damage (ember), heal (dahon), "Nakaiwas!" |
 | Sound switch | SoundToggle | `.btn-quiet` switch, check when on, cross when off, `sfx.on` or `sfx.off`. In the Start footer and the Night pause overlay |
+| Folklore glossary | GlossaryPanel | Modal `.window` 960 px wide, max 800 px, list scrolls. Opened by `gloss.open` in the Start footer (`.btn-quiet`) and the Night pause overlay (`.btn`). Escape and Close return focus to the opener. Resume is disabled while open |
 
 ## Interaction rules
 
