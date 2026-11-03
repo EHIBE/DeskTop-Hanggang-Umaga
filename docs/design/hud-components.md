@@ -55,7 +55,7 @@ The night HUD frames the warped desk feed with a top band for status and a botto
 | Intent arrow | arrows.ts | Red, "!" icon at head, damage number. Hidden inside kapre smoke (smoke cut) |
 | Unit badge | sprites.ts | "?" uncertain, lock when stolen, scar mark (Could) |
 | Sprite | sprites.ts | Placeholder, real, greyed (down), blue night tint, dawn tint |
-| Speaker chip | Not built (M11 shows the label inline in Captions and OrderChips) | Label and name, pulses while speaking, "?" when unknown |
+| Speaker chip | Built 2026-11-03 in `components/SpeakerChip.tsx`, used by Captions, OrderChips and VoiceClaim. Slot is the speaker's position in `night.players`, anything else shows "?" | Shape glyph and P1 to P4 label, pulses while a partial caption is live, "?" when unknown |
 | Hint strip | HintStrip, `lib/tutorial.ts` | `.banner` above the captions row, 56 px high, one 24 px line with an arrow icon, Got it and Skip all buttons. Shows only in PLAYER_PHASE of turns 1 to 3, one hint at a time, advances on dismiss or after 8 s. Seen ids per campaign in `desktop.tutorial`. The slot stays reserved on turns 1 to 3 while any hint is unseen, so the board never shifts mid-turn. Spec: `onboarding-and-tutorial.md` |
 | Captions | Captions | Partial (replaces, never appends), final, GM narration Taglish line plus English caption |
 | Order chips | OrderChips | Pending (cancelable by "hindi" or X), resolving, removed |

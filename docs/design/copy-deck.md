@@ -282,6 +282,11 @@ English text for these is a proposal for playtester review.
 | calib.title | Ayusin ang Camera | Set Up the Camera | UI redesign 2026-10-31, Proposed, playtester review |
 | sfx.on | Tunog: naka-on | Sound: on | Synthesized sound 2026-11-03, Proposed, playtester review |
 | sfx.off | Tunog: naka-off | Sound: off | Synthesized sound 2026-11-03, Proposed, playtester review |
+| speaker.p1 | Player 1 | Player 1 | Speaker chip aria-label 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
+| speaker.p2 | Player 2 | Player 2 | Speaker chip aria-label 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
+| speaker.p3 | Player 3 | Player 3 | Speaker chip aria-label 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
+| speaker.p4 | Player 4 | Player 4 | Speaker chip aria-label 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
+| speaker.unknown | Di kilalang nagsasalita | Unknown speaker | Speaker chip aria-label 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
 | tut.telegraph | Pulang arrow = ang tatamaan nila ngayong turn. | Red arrows show who they will hit this turn. | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
 | tut.move | Ilipat ang tunay na gamit. Berdeng ring = abot. | Move a real object. Green ring = in reach. | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
 | tut.order | Sabihin: "Stapler, atake ang aswang!" O i-tap. | Say "Stapler, atake ang aswang!" or tap. | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |

@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import SpriteView from '../canvas/SpriteView'
 import Bilingual from '../components/Bilingual'
+import SpeakerChip from '../components/SpeakerChip'
 import Captions from '../hud/Captions'
 import { pick, say, t } from '../lib/copy'
 import type { MessageHandler } from '../lib/socket'
+import type { SpeakerSlot } from '../lib/speaker'
 import type { ClientMessage, StateMessage } from '../lib/types'
 
 type VoiceClaimProps = Readonly<{
@@ -15,7 +17,9 @@ type VoiceClaimProps = Readonly<{
 const CLAIM_SECONDS = 60
 const SLOTS = 4
 const NAME_MAX = 24
-const LETTERS = ['A', 'B', 'C', 'D'] as const
+function slotOf(index: number): SpeakerSlot {
+  return (index + 1) as SpeakerSlot
+}
 
 type Claims = Readonly<Record<string, number>>
 
@@ -114,7 +118,11 @@ function VoiceClaim({ state, send, subscribe }: VoiceClaimProps): React.JSX.Elem
       <section className="panel flex min-w-0 flex-1 flex-col gap-6 p-6">
         <Bilingual copyKey="claim.prompt" />
         <Bilingual copyKey="claim.voice_hint" />
-        <Captions subscribe={subscribe} className="flex-none" />
+        <Captions
+          subscribe={subscribe}
+          players={state.night?.players ?? []}
+          className="flex-none"
+        />
         <p role="timer" className={secondsLeft <= 10 ? 'text-gabi-lantern' : 'caption-en'}>
           {secondsLeft <= 10 ? '! ' : ''}
           {say('claim.countdown', { seconds: secondsLeft })}
@@ -137,11 +145,14 @@ function VoiceClaim({ state, send, subscribe }: VoiceClaimProps): React.JSX.Elem
                     fallback={<span className="text-gabi-lantern">{unit.name.slice(0, 1)}</span>}
                   />
                   <span className="min-w-0 flex-1 truncate">{unit.name}</span>
-                  <span className="shrink-0">
-                    {owner === undefined
-                      ? say('card.owner_none')
-                      : `${LETTERS[owner]} ${trimmed[owner]}`}
-                  </span>
+                  {owner === undefined ? (
+                    <span className="shrink-0">{say('card.owner_none')}</span>
+                  ) : (
+                    <span className="flex min-w-0 shrink-0 items-center gap-2">
+                      <SpeakerChip slot={slotOf(owner)} />
+                      <span className="max-w-[160px] truncate">{trimmed[owner]}</span>
+                    </span>
+                  )}
                 </button>
               </li>
             )
@@ -161,7 +172,8 @@ function VoiceClaim({ state, send, subscribe }: VoiceClaimProps): React.JSX.Elem
             const count = unitsOf(index, claims).length
             const ready = trimmed[index] !== '' && !duplicate[index]
             return (
-              <div key={LETTERS[index]} className="flex items-center gap-3">
+              <div key={slotOf(index)} className="flex items-center gap-3">
+                <SpeakerChip slot={slotOf(index)} />
                 <input
                   className="field min-w-0 flex-1"
                   value={name}
@@ -174,11 +186,11 @@ function VoiceClaim({ state, send, subscribe }: VoiceClaimProps): React.JSX.Elem
                 />
                 <button
                   type="button"
-                  className="btn w-[200px] shrink-0 truncate"
+                  className="btn w-[160px] shrink-0 truncate"
                   disabled={!ready || selected === null}
                   onClick={() => assign(index)}
                 >
-                  {LETTERS[index]} {ready ? trimmed[index] : ''} {count > 0 ? count : ''}
+                  {ready ? trimmed[index] : ''} {count > 0 ? count : ''}
                 </button>
               </div>
             )

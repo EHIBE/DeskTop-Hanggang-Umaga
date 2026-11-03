@@ -190,7 +190,9 @@ Show which player spoke, so overlap, "Hindi" cancels and claims are clear. This 
 | P3 | `gabi-bukang` | Triangle |
 | P4 | `gabi-mist` | Diamond |
 
-- Shapes are drawn with a small inline pixel grid in the same style as `PixelIcon`. If `PixelIcon` is extended it needs four new glyphs. Contrast of each colour on `gabi-night` Unverified. Check with a contrast tool and swap tokens if under 4.5:1.
+- Shapes are drawn with a small inline pixel grid in the same style as `PixelIcon`. `PixelIcon` gained four glyphs (circle, square, triangle, diamond) drawn on a 6 by 6 grid at 2x, so 12 px.
+- Contrast of each colour on `gabi-night` (WCAG 2.x, computed 2026-11-03 from the CSS token hex values): lantern 9.39:1, dahon 6.24:1, bukang 8.11:1, mist 6.18:1. All pass 4.5:1, no token swap needed. The label text stays `gabi-moon` (13.51:1) and the colour is used for the border and glyph.
+- The renderer maps a speaker to a slot by matching the caption or chip `speaker` string to `night.players`. The backend sends the claimed player name when a voice label is mapped, or the raw diarization label when it is not. A raw label matches no player, so it shows the unknown chip.
 
 ### Placement
 
@@ -223,13 +225,13 @@ Show which player spoke, so overlap, "Hindi" cancels and claims are clear. This 
 
 ### Acceptance checks
 
-- [ ] A diarized caption shows the correct chip.
-- [ ] Unknown speaker shows "?" and no colour.
-- [ ] Each of P1 to P4 differs by shape in greyscale.
-- [ ] No real name appears in any outgoing model request. Verify with the recorded fixtures and a log scan.
-- [ ] Reduced motion shows no pulse.
-- [ ] Chip text does not overflow a 440 px side column.
-- [ ] Update `docs/design/hud-components.md` row from "Not built" when done.
+- [x] A diarized caption shows the correct chip. Verified by code reading 2026-11-03, live check needs a claimed voice night (Manual: EHIBE)
+- [x] Unknown speaker shows "?" and no colour. Verified by code reading 2026-11-03
+- [x] Each of P1 to P4 differs by shape in greyscale. Verified by code reading 2026-11-03
+- [ ] No real name appears in any outgoing model request. Verify with the recorded fixtures and a log scan. No renderer message or backend code changed
+- [x] Reduced motion shows no pulse. Verified by code reading 2026-11-03, a steady 4 px border replaces it
+- [ ] Chip chrome is about 84 px wide and the caption line truncates, so it should not overflow a 440 px side column. Needs a look in the running app
+- [x] Update `docs/design/hud-components.md` row from "Not built" when done. Done 2026-11-03
 
 ## D. Synthesized sound
 

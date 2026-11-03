@@ -1,9 +1,12 @@
+import SpeakerChip from '../components/SpeakerChip'
 import { pick, say, t } from '../lib/copy'
+import { speakerSlot } from '../lib/speaker'
 import type { Chip, EnemySummary, UnitSummary } from '../lib/types'
 import { targetLabel } from './targets'
 
 type OrderChipsProps = Readonly<{
   chips: readonly Chip[]
+  players: readonly string[]
   units: readonly UnitSummary[]
   enemies: readonly EnemySummary[]
   interactive: boolean
@@ -22,6 +25,7 @@ function actionWord(
 
 function OrderChips({
   chips,
+  players,
   units,
   enemies,
   interactive,
@@ -47,6 +51,9 @@ function OrderChips({
             key={chip.chip_id}
             className="flex items-center border-2 border-gabi-ink bg-gabi-dusk"
           >
+            {chip.source === 'voice' && chip.speaker && (
+              <SpeakerChip slot={speakerSlot(chip.speaker, players)} className="ml-2" />
+            )}
             {chip.source === 'voice' && (
               <span
                 className="ml-2 border-2 border-gabi-lantern px-2 text-gabi-lantern"
@@ -54,7 +61,6 @@ function OrderChips({
               >
                 <span aria-hidden="true">{'♪ '}</span>
                 {say('voice.chip_mic')}
-                {chip.speaker ? ` ${chip.speaker}` : ''}
               </span>
             )}
             <span className="px-3">{pick(text)}</span>

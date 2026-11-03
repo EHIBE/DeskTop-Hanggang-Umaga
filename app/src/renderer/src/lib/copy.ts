@@ -442,6 +442,11 @@ const entries = {
   'calib.title': { tl: 'Ayusin ang Camera', en: 'Set Up the Camera' },
   'sfx.on': { tl: 'Tunog: naka-on', en: 'Sound: on' },
   'sfx.off': { tl: 'Tunog: naka-off', en: 'Sound: off' },
+  'speaker.p1': { tl: 'Player 1', en: 'Player 1' },
+  'speaker.p2': { tl: 'Player 2', en: 'Player 2' },
+  'speaker.p3': { tl: 'Player 3', en: 'Player 3' },
+  'speaker.p4': { tl: 'Player 4', en: 'Player 4' },
+  'speaker.unknown': { tl: 'Di kilalang nagsasalita', en: 'Unknown speaker' },
   'tut.telegraph': {
     tl: 'Pulang arrow = ang tatamaan nila ngayong turn.',
     en: 'Red arrows show who they will hit this turn.'

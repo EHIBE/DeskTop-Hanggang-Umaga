@@ -681,7 +681,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
         voiceOff={state.demo_safe || state.voice.status === 'off' || state.voice.status === 'down'}
       />
       <div className="mx-4 mb-2 flex shrink-0 items-center gap-4">
-        <Captions subscribe={subscribe} />
+        <Captions subscribe={subscribe} players={night.players} />
         <VoiceControls voice={state.voice} send={send} />
       </div>
       <footer className="flex min-h-[104px] shrink-0 items-center gap-6 border-t-2 border-gabi-dusk bg-gabi-night px-8 py-2">
@@ -695,6 +695,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
         </button>
         <OrderChips
           chips={night.chips}
+          players={night.players}
           units={state.units}
           enemies={night.enemies}
           interactive={playerPhase}

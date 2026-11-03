@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import SpeakerChip from '../components/SpeakerChip'
 import { say } from '../lib/copy'
 import type { MessageHandler } from '../lib/socket'
+import { speakerSlot } from '../lib/speaker'
 
 type CaptionsProps = Readonly<{
   subscribe: (handler: MessageHandler) => () => void
+  players: readonly string[]
   className?: string
 }>
 
@@ -11,7 +14,7 @@ type Line = Readonly<{ turnId: string; text: string; speaker: string | null }>
 
 const FINAL_MS = 4000
 
-function Captions({ subscribe, className = '' }: CaptionsProps): React.JSX.Element {
+function Captions({ subscribe, players, className = '' }: CaptionsProps): React.JSX.Element {
   const [partial, setPartial] = useState<Line | null>(null)
   const [final, setFinal] = useState<Line | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -58,19 +61,17 @@ function Captions({ subscribe, className = '' }: CaptionsProps): React.JSX.Eleme
       className={`flex min-h-[48px] min-w-0 flex-1 flex-col justify-center border-2 border-gabi-dusk bg-gabi-night px-4 py-1 ${className}`}
     >
       {showPartial && (
-        <p className="truncate leading-[24px] text-gabi-mist">
+        <p className="flex min-w-0 items-center gap-3 leading-[24px] text-gabi-mist">
           {partial.speaker !== null && (
-            <span className="mr-2 text-gabi-lantern">{partial.speaker}:</span>
+            <SpeakerChip slot={speakerSlot(partial.speaker, players)} live />
           )}
-          <span>{partial.text}</span>
+          <span className="min-w-0 truncate">{partial.text}</span>
         </p>
       )}
       {final !== null && !showPartial && (
-        <p className="truncate leading-[24px] text-gabi-moon">
-          {final.speaker !== null && (
-            <span className="mr-2 text-gabi-lantern">{final.speaker}:</span>
-          )}
-          <span>{final.text}</span>
+        <p className="flex min-w-0 items-center gap-3 leading-[24px] text-gabi-moon">
+          {final.speaker !== null && <SpeakerChip slot={speakerSlot(final.speaker, players)} />}
+          <span className="min-w-0 truncate">{final.text}</span>
         </p>
       )}
     </section>
