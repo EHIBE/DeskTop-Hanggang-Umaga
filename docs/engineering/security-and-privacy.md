@@ -49,6 +49,9 @@ DeskTop has no accounts, so the main assets are the Meta API key, the players' c
 | Summon name | Yes | Yes (Spark), after the profanity filter | Per call, `store: false` |
 | Mic audio | Live only | Streamed (Voice), plus recognizer keywords with creature words and unit names, never player names | Not stored locally. Transcripts are not stored |
 | Highlight proxy clip | Yes | With consent (Files, SAM video), a 960 px 10 FPS cut of 4 to 6 highlights only | 24 h `expires_after`, deleted in a `finally` after tracking (built Phase 14) |
+| Barrio map desk photo | Yes | Opt-in only (`generated_map` setting on, not Demo Safe): one empty-desk baseline frame resized to 768 px, sent to Muse Image once per campaign with `store: false` | Per call. The generated map file is deleted with the campaign, and orphan map files are swept at startup |
+| Spark fallback transcript | Yes | Only a final transcript that looks like a command (it names a unit, an enemy or a grammar verb), plus unit names, classes and enemy types. At most 1 call in flight, a 2 s cooldown and 40 calls per night. Never while an order confirm is open or in Demo Safe. Other speech never leaves | Per call, `store: false`. Transcripts are not stored |
+| Recap | Yes | Spark writes the Kagabi recap from unit names, classes, badges and counts. Players appear only as P1 to P4 and the names are swapped back locally | Per call, `store: false`. The saved recap row is cleared when the next night starts and with the campaign |
 | Database, sprites, recordings | Yes | Never | Until delete campaign |
 
 All calls in Standard mode, never Contributor mode. Every `responses.create` call sets `store: false` (Spark summon and narration, SAM, Muse Image), so no response is kept for chaining.

@@ -72,6 +72,10 @@ A 1280 px image adds about 1,300 to 1,500 tokens. System prompt about 1,200 toke
 
 The command fallback line returns now that F12 is built (2026-11-04), but it only runs when the grammar fails and Demo Safe is off. Recompute from api_usage after Playtest 2.
 
+## Enforced fallback caps
+
+The Spark command fallback is gated in `game/night.py`. It runs only for a transcript that names a known unit or alias, an enemy word or a grammar verb. It allows 1 call in flight, a 2 s cooldown between starts and 40 calls per night, and it is skipped while an order confirm is open. A result that arrives after the turn changed is dropped. When a gate refuses, the player gets the normal `cmd.unknown` notice. The worst case is 40 calls x $0.0032 = $0.128 per night, and the 2 s cooldown makes that reachable only with sustained command-like speech.
+
 ## Post-freeze additions (ADR-0113)
 
 | Item | Cost | When |
@@ -79,7 +83,7 @@ The command fallback line returns now that F12 is built (2026-11-04), but it onl
 | Generated barrio map (Muse Image) | $0.01 per campaign, cached by campaign id, one attempt per run | Only when the `generated_map` setting is on, not in Demo Safe, and skipped after a content policy block |
 | Kagabi recap (Spark) | About $0.008 | Only when Glimmer is not configured or fails, not offline |
 | Glimmer recap and banter | $0, logged in `api_usage` with kind `glimmer` | Only when `DESKTOP_GLIMMER_URL` is set |
-| Spark fallback parser | About $0.003 per call | Grammar failed and Demo Safe off |
+| Spark fallback parser | About $0.003 per call | Grammar failed, the transcript looks like a command and Demo Safe is off |
 | Returning object match | $0, local | Next night |
 
 ## Whole hackathon
