@@ -111,6 +111,7 @@ export class BackendProcess {
       if (value !== undefined) env[name] = value
     }
     env['PYTHONUNBUFFERED'] = '1'
+    env['PYTHONNOUSERSITE'] = '1'
     env['DESKTOP_TOKEN'] = config.token
     env['DESKTOP_PORT'] = String(config.port)
     env['DESKTOP_DATA_DIR'] = this.options.userDataDir

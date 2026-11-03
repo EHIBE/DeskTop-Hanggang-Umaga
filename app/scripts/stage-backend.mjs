@@ -24,8 +24,8 @@ const SKIP_LIB = new Set([
 const SKIP_DLL = /^(_tkinter|tcl.*|tk.*)\.(pyd|dll)$/i
 const PACKAGES = ['capture', 'db', 'game', 'gm', 'replay', 'rules', 'vision', 'voice']
 const SKIP_SOURCE =
-  /(^|[\/])(__pycache__|\.env|\.env\..*)$|\.(sqlite|sqlite-wal|sqlite-shm|log|mp4|pyc)$/i
-const SKIP_SITE = /(^|[\/])(__pycache__|tests?)$|\.pyc$/i
+  /(^|[\\/])(__pycache__|\.env|\.env\..*)$|\.(sqlite|sqlite-wal|sqlite-shm|log|mp4|pyc)$/i
+const SKIP_SITE = /(^|[\\/])(__pycache__|tests?)$|\.pyc$/i
 const DEV_PREFIXES = [
   'mypy',
   '_pytest',
@@ -92,7 +92,10 @@ function stageSource() {
 }
 
 function verify() {
-  const env = { SYSTEMROOT: process.env.SYSTEMROOT ?? 'C:\Windows', PATH: 'C:\Windows\System32' }
+  const env = {
+    SYSTEMROOT: process.env.SYSTEMROOT ?? String.raw`C:\Windows`,
+    PATH: String.raw`C:\Windows\System32`
+  }
   const python = join(pythonOut, 'python.exe')
   const code =
     'import cv2, numpy, fastapi, uvicorn, openai, sys; sys.path.insert(0, r"' +
