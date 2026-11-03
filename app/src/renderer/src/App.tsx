@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import CostMeter from './components/CostMeter'
 import Bilingual from './components/Bilingual'
 import NightScene from './components/NightScene'
 import Stage from './components/Stage'
 import RecIndicator from './hud/RecIndicator'
+import { AssetsContext } from './lib/assets'
 import { isCopyKey, say, type CopyKey } from './lib/copy'
 import { useLang } from './lib/lang'
 import { armSoundUnlock } from './lib/sound'
@@ -14,6 +15,7 @@ import type {
   CopyParams,
   CostMessage,
   KeyStatus,
+  MomentMessage,
   NarrationMessage,
   StateMessage
 } from './lib/types'
@@ -23,6 +25,8 @@ import LanguagePick from './screens/LanguagePick'
 import Start from './screens/Start'
 import Defeat from './screens/Defeat'
 import Night from './screens/Night'
+import Recap from './screens/Recap'
+import Settings from './screens/Settings'
 import Summon from './screens/Summon'
 import Sunrise from './screens/Sunrise'
 import VoiceClaim from './screens/VoiceClaim'
@@ -48,7 +52,11 @@ const NARRATION_PHASES: ReadonlySet<AppPhase> = new Set([
 
 type ActiveNotice = Readonly<{ id: number; key: CopyKey; params: CopyParams }>
 
+const RECAP_PHASES: ReadonlySet<AppPhase> = new Set(['CALIBRATE', 'SUMMON', 'VOICE_CLAIM'])
+const SETTINGS_PHASES: ReadonlySet<AppPhase> = new Set(['START', 'PAUSED'])
+
 const NOTICE_MS = 6000
+const MOMENT_MS = 8000
 const CONNECT_STALL_MS = 45000
 
 function Connecting(): React.JSX.Element {
@@ -82,6 +90,11 @@ function App(): React.JSX.Element {
   const [cost, setCost] = useState<CostMessage | null>(null)
   const [notice, setNotice] = useState<ActiveNotice | null>(null)
   const [narration, setNarration] = useState<NarrationMessage | null>(null)
+  const [moment, setMoment] = useState<MomentMessage | null>(null)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [mapPng, setMapPng] = useState<string | null>(null)
+  const [crops, setCrops] = useState<Readonly<Record<string, string>>>({})
+  const [dismissedRecap, setDismissedRecap] = useState<string | null>(null)
 
   useEffect(() => {
     return subscribe((message) => {
@@ -90,6 +103,12 @@ function App(): React.JSX.Element {
         if (!NARRATION_PHASES.has(message.phase)) setNarration(null)
       } else if (message.type === 'narration') {
         setNarration(message)
+      } else if (message.type === 'moment') {
+        setMoment(message)
+      } else if (message.type === 'map') {
+        setMapPng(message.png)
+      } else if (message.type === 'crops') {
+        setCrops(message.crops)
       } else if (message.type === 'cost') {
         setCost(message)
       } else if (message.type === 'notice' && message.copy_key !== 'endturn.blocked') {
@@ -121,9 +140,48 @@ function App(): React.JSX.Element {
     return () => clearTimeout(timer)
   }, [notice])
 
+  useEffect(() => {
+    if (moment === null) return
+    const timer = setTimeout(() => setMoment(null), MOMENT_MS)
+    return () => clearTimeout(timer)
+  }, [moment])
+
   useEffect(() => armSoundUnlock(), [])
 
   const ready = status === 'open' && state !== null && keyStatus !== null
+  const campaignId = state?.campaign?.id ?? null
+  const mapReady = ready && state.map.ready
+  const wantCrops = ready && state.settings.show_real_objects
+  const unitsKey = ready ? state.units.map((unit) => unit.unit_id).join(',') : ''
+  const savedCaption = ready ? state.settings.caption_language : null
+
+  useEffect(() => {
+    if (mapReady) send({ type: 'map.get' })
+  }, [mapReady, campaignId, send])
+
+  useEffect(() => {
+    if (wantCrops) send({ type: 'crops.get' })
+  }, [wantCrops, unitsKey, send])
+
+  useEffect(() => {
+    if (lang !== null && savedCaption !== null && savedCaption !== lang) {
+      send({ type: 'settings.set', key: 'caption_language', value: lang })
+    }
+  }, [lang, savedCaption, send])
+
+  if (settingsOpen && ready && !SETTINGS_PHASES.has(state.phase)) setSettingsOpen(false)
+
+  const assets = useMemo(
+    () => ({ map: mapReady ? mapPng : null, crops: wantCrops ? crops : null }),
+    [mapReady, mapPng, wantCrops, crops]
+  )
+  const recapKey = ready && state.recap !== null ? `${campaignId}:${state.recap.night}` : null
+  const showRecap =
+    ready &&
+    state.recap !== null &&
+    recapKey !== dismissedRecap &&
+    RECAP_PHASES.has(state.phase) &&
+    !settingsOpen
 
   let screen: React.JSX.Element
   if (lang === null) {
@@ -139,26 +197,53 @@ function App(): React.JSX.Element {
       />
     )
   } else if (state.phase === 'START') {
-    screen = <Start state={state} send={send} subscribe={subscribe} />
+    screen = (
+      <Start
+        state={state}
+        send={send}
+        subscribe={subscribe}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
+    )
   } else if (state.phase === 'CALIBRATE') {
     screen = <Calibration state={state} send={send} subscribe={subscribe} />
   } else if (state.phase === 'VOICE_CLAIM') {
     screen = <VoiceClaim state={state} send={send} subscribe={subscribe} />
   } else if (NIGHT_PHASES.has(state.phase)) {
-    screen = <Night state={state} send={send} subscribe={subscribe} narration={narration} />
+    screen = (
+      <Night
+        state={state}
+        send={send}
+        subscribe={subscribe}
+        narration={narration}
+        moment={moment}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
+    )
   } else if (state.phase === 'SUNRISE') {
-    screen = <Sunrise state={state} send={send} narration={narration} />
+    screen = <Sunrise state={state} send={send} narration={narration} moment={moment} />
   } else if (state.phase === 'DEFEAT') {
-    screen = <Defeat state={state} send={send} narration={narration} />
+    screen = <Defeat state={state} send={send} narration={narration} moment={moment} />
   } else {
-    screen = <Summon state={state} send={send} subscribe={subscribe} />
+    screen = <Summon state={state} send={send} subscribe={subscribe} moment={moment} />
   }
   const inNight = ready && NIGHT_PHASES.has(state.phase)
   useSoundCues(ready ? state : null, inNight)
 
   return (
     <Stage>
-      {screen}
+      <AssetsContext.Provider value={assets}>{screen}</AssetsContext.Provider>
+      {ready && settingsOpen && SETTINGS_PHASES.has(state.phase) && (
+        <Settings
+          state={state}
+          send={send}
+          subscribe={subscribe}
+          onBack={() => setSettingsOpen(false)}
+        />
+      )}
+      {showRecap && state.recap !== null && (
+        <Recap recap={state.recap} onContinue={() => setDismissedRecap(recapKey)} />
+      )}
       {ready && lang !== null && (cost !== null || state.demo_safe) && (
         <div
           className={`absolute right-4 flex items-center gap-4 ${inNight ? 'bottom-[120px]' : 'top-4'}`}

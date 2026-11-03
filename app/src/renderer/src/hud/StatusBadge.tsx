@@ -3,7 +3,12 @@ import type { StatusEntry } from './status'
 
 type StatusBadgeProps = Readonly<{ entry: StatusEntry }>
 
-const COLORS = { out: palette.ember, stolen: palette.sindak, lost: palette.mist } as const
+const COLORS = {
+  out: palette.ember,
+  stolen: palette.sindak,
+  lost: palette.mist,
+  smoked: palette.moon
+} as const
 
 function Shape({ kind }: Readonly<{ kind: StatusEntry['kind'] }>): React.JSX.Element {
   const color = COLORS[kind]
@@ -12,6 +17,12 @@ function Shape({ kind }: Readonly<{ kind: StatusEntry['kind'] }>): React.JSX.Ele
       {kind === 'out' && <polygon points="1,2 15,2 8,15" fill={color} />}
       {kind === 'stolen' && (
         <path d="M2 2L14 14M14 2L2 14" stroke={color} strokeWidth="3" fill="none" />
+      )}
+      {kind === 'smoked' && (
+        <>
+          <rect x="2" y="8" width="12" height="6" fill={color} />
+          <rect x="5" y="3" width="7" height="6" fill={color} />
+        </>
       )}
       {kind === 'lost' && (
         <>

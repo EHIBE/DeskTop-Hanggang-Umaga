@@ -12,20 +12,24 @@ import {
   drawReturnMark,
   drawStartGhost
 } from '../canvas/rings'
-import { MIN_SCALE, drawSprite, useUnitImages } from '../canvas/sprites'
+import { drawSmoke } from '../canvas/smoke'
+import { MIN_SCALE, drawSprite, useBitmap, useUnitImages } from '../canvas/sprites'
 import Bilingual from '../components/Bilingual'
 import GlossaryPanel from '../components/GlossaryPanel'
 import SoundToggle from '../components/SoundToggle'
 import Captions from '../hud/Captions'
+import ConfirmDialog from '../hud/ConfirmDialog'
 import HintStrip from '../hud/HintStrip'
+import MomentLine from '../hud/MomentLine'
 import Narration from '../hud/Narration'
 import OrderChips from '../hud/OrderChips'
 import TapMenu from '../hud/TapMenu'
 import TopBar from '../hud/TopBar'
 import UnitStrip from '../hud/UnitStrip'
 import VoiceControls from '../hud/VoiceControls'
-import { parseStatus, statusEntries } from '../hud/status'
+import { nightUnitEntries, parseStatus } from '../hud/status'
 import { actionTarget, enemyLabel } from '../hud/targets'
+import { useAssets } from '../lib/assets'
 import { pick as pickText, say, t, type CopyKey } from '../lib/copy'
 import { prefersReducedMotion } from '../lib/motion'
 import { palette } from '../lib/palette'
@@ -35,6 +39,7 @@ import type {
   ClientMessage,
   CopyParams,
   IntentAction,
+  MomentMessage,
   NarrationMessage,
   Point,
   StateMessage
@@ -45,6 +50,8 @@ type NightProps = Readonly<{
   send: (message: ClientMessage) => boolean
   subscribe: (handler: MessageHandler) => () => void
   narration: NarrationMessage | null
+  moment: MomentMessage | null
+  onOpenSettings: () => void
 }>
 
 type Selection = Readonly<{ turnKey: string; unitId: string; pending: IntentAction | null }>
@@ -68,7 +75,14 @@ const ARROW_PHASES: ReadonlySet<string> = new Set([
   'VALIDATE'
 ])
 
-function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Element {
+function Night({
+  state,
+  send,
+  subscribe,
+  narration,
+  moment,
+  onOpenSettings
+}: NightProps): React.JSX.Element {
   const night = state.night
   const [selection, setSelection] = useState<Selection | null>(null)
   const [hitCount, setHitCount] = useState(0)
@@ -76,6 +90,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
   const [pulse, setPulse] = useState(0)
   const [camMoved, setCamMoved] = useState(false)
   const [glossaryOpen, setGlossaryOpen] = useState(false)
+  const [quitAsk, setQuitAsk] = useState(false)
   const [returns, setReturns] = useState<Readonly<Record<string, Spot>>>({})
   const [note, setNote] = useState<EventNote | null>(null)
   const noteIdRef = useRef(0)
@@ -87,6 +102,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
   const latestRef = useRef(state)
   const unitImages = useUnitImages(state.units)
   const enemyFrames = useEnemyFrames(night ? night.enemies : [])
+  const mapBitmap = useBitmap(useAssets().map)
 
   useEffect(() => {
     latestRef.current = state
@@ -161,7 +177,10 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
       } else if (message.type === 'state') {
         if (pausedRef.current && message.phase !== 'PAUSED') setCamMoved(false)
         pausedRef.current = message.phase === 'PAUSED'
-        if (!pausedRef.current) setGlossaryOpen(false)
+        if (!pausedRef.current) {
+          setGlossaryOpen(false)
+          setQuitAsk(false)
+        }
       }
     })
   }, [subscribe, triggerFlash])
@@ -190,7 +209,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
     })
   }, [nightUnitsKey])
 
-  const hasEnemies = night !== null && night.enemies.length > 0
+  const hasEnemies = night !== null && (night.enemies.length > 0 || night.smoke.length > 0)
   useEffect(() => {
     if (!hasEnemies) return
     const timer = setInterval(() => setPulse((value) => value + 1), BOB_TICK_MS)
@@ -318,6 +337,16 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
       const pxPerCm = mapping.srcWidth / state.play_w_cm
       const [x0, y0] = mapping.toCanvas(0, 0)
       const [x1, y1] = mapping.toCanvas(mapping.srcWidth, mapping.srcHeight)
+      if (mapBitmap) {
+        ctx.imageSmoothingEnabled = false
+        ctx.drawImage(
+          mapBitmap,
+          Math.round(x0),
+          Math.round(y0),
+          Math.round(x1 - x0),
+          Math.round(y1 - y0)
+        )
+      }
       ctx.globalAlpha = 0.6
       ctx.fillStyle = palette.ink
       ctx.fillRect(Math.round(x0), Math.round(y0), Math.round(x1 - x0), Math.round(y1 - y0))
@@ -417,7 +446,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
           ctx.setLineDash([])
           ctx.strokeRect(box.left - 4, box.top - 4, box.width + 8, box.height + 8)
         }
-        const badges = statusEntries(unitStatus)
+        const badges = nightUnitEntries(nu)
         const label = nu.is_down
           ? `${unit.name} ${say('hud.down')}`
           : [unit.name, ...badges.map((entry) => entry.text)].join(' ')
@@ -429,7 +458,18 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
         else if (unitStatus.outTurns !== null) {
           drawBadge(ctx, box.left + box.width, box.top, palette.ember, 'zz')
         }
+        if (nu.smoked) drawBadge(ctx, box.left, box.top, palette.mist, 'smoke')
       })
+
+      drawSmoke(
+        ctx,
+        night.smoke,
+        toCanvas,
+        pxPerCm * mapping.scale,
+        mapping.now,
+        prefersReducedMotion(),
+        say('smoke.label')
+      )
 
       if (phase === 'PHYSICAL_EFFECTS') {
         night.effects.forEach((effect) => {
@@ -513,7 +553,8 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
       activeSelection,
       targetKind,
       returns,
-      samRan
+      samRan,
+      mapBitmap
     ]
   )
 
@@ -537,7 +578,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
       : null
 
   return (
-    <main className="flex h-full w-full flex-col" data-pulse={pulse}>
+    <main className="relative flex h-full w-full flex-col" data-pulse={pulse}>
       <TopBar
         night={night}
         phase={phase}
@@ -563,6 +604,10 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
               <Bilingual copyKey={note.key} params={note.params} />
             </div>
           )}
+          <MomentLine
+            moment={moment}
+            className="absolute bottom-4 left-1/2 w-[900px] -translate-x-1/2"
+          />
           {phase === 'PAUSED' && (
             <div className="absolute inset-0 flex items-center justify-center bg-gabi-ink/80">
               <div
@@ -607,8 +652,38 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
                   <button type="button" className="btn" onClick={() => setGlossaryOpen(true)}>
                     {say('gloss.open')}
                   </button>
+                  <button type="button" className="btn" onClick={onOpenSettings}>
+                    {say('settings.title')}
+                  </button>
                   <SoundToggle />
                 </div>
+                {quitAsk ? (
+                  <div className="flex flex-col items-center gap-4">
+                    <Bilingual copyKey="pause.quit_confirm" />
+                    <div className="flex flex-wrap justify-center gap-4">
+                      <button
+                        type="button"
+                        className="btn"
+                        autoFocus
+                        onClick={() => setQuitAsk(false)}
+                      >
+                        {say('tap.cancel')}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-danger"
+                        data-armed="true"
+                        onClick={() => send({ type: 'pause.quit' })}
+                      >
+                        {say('sunrise.quit')}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" className="btn btn-danger" onClick={() => setQuitAsk(true)}>
+                    {say('sunrise.quit')}
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -727,6 +802,14 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
       </footer>
       {glossaryOpen && phase === 'PAUSED' && (
         <GlossaryPanel onClose={() => setGlossaryOpen(false)} />
+      )}
+      {state.pending_confirm !== null && playerPhase && (
+        <ConfirmDialog
+          key={state.pending_confirm.confirm_id}
+          confirm={state.pending_confirm}
+          onAccept={(confirmId) => send({ type: 'confirm.accept', confirm_id: confirmId })}
+          onCancel={(confirmId) => send({ type: 'confirm.cancel', confirm_id: confirmId })}
+        />
       )}
     </main>
   )

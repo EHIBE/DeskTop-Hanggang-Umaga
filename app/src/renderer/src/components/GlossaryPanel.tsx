@@ -14,6 +14,8 @@ const TERMS: readonly GlossaryTerm[] = [
   { name: 'gloss.name_kapre', text: 'gloss.kapre' },
   { name: 'gloss.name_manananggal', text: 'gloss.manananggal' },
   { name: 'gloss.name_duwende', text: 'gloss.duwende' },
+  { name: 'gloss.name_usok', text: 'gloss.usok' },
+  { name: 'gloss.name_liwanag', text: 'gloss.liwanag' },
   { name: 'gloss.name_albularyo', text: 'gloss.albularyo' },
   { name: 'gloss.name_anting', text: 'gloss.anting' },
   { name: 'gloss.name_kubo', text: 'gloss.kubo' }

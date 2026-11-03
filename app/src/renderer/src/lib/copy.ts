@@ -525,6 +525,90 @@ const entries = {
   'gloss.kubo': {
     tl: 'A traditional Filipino house made of bamboo and nipa',
     en: 'A traditional Filipino house made of bamboo and nipa'
+  },
+  'gloss.name_usok': { tl: 'Usok ng Kapre', en: 'Kapre smoke' },
+  'gloss.usok': {
+    tl: 'Usok ng malaking tabako ng kapre. Natatakpan nito ang nasa loob hanggang may magpaliwanag',
+    en: "The smoke of the kapre's big cigar. It hides whatever stands inside until a light clears it"
+  },
+  'gloss.name_liwanag': { tl: 'Liwanag', en: 'Liwanag' },
+  'gloss.liwanag': {
+    tl: 'Kapangyarihan ng liwanag na nag-aalis ng usok ng kapre sa paligid ng piyesa',
+    en: "A power of light that clears the kapre's smoke around a piece"
+  },
+  'nav.back': { tl: 'Bumalik', en: 'Back' },
+  'settings.title': { tl: 'Mga Setting', en: 'Settings' },
+  'settings.camera': { tl: 'Camera', en: 'Camera' },
+  'settings.camera_locked': {
+    tl: 'Hindi mapapalitan habang may gabi.',
+    en: 'Cannot change during a night.'
+  },
+  'settings.mic': { tl: 'Mikropono', en: 'Microphone' },
+  'settings.mic_default': { tl: 'Default', en: 'Default' },
+  'settings.captions': { tl: 'Wika ng caption', en: 'Caption language' },
+  'settings.difficulty': { tl: 'Hirap ng bagong kampanya', en: 'Difficulty of new campaigns' },
+  'settings.replay': { tl: 'Replay', en: 'Replay' },
+  'settings.replay_hint': {
+    tl: 'Kapag naka-off, walang recording at walang tanong.',
+    en: 'When off, nothing is recorded and nobody is asked.'
+  },
+  'settings.tts': { tl: 'Boses ng GM', en: 'GM voice' },
+  'settings.tts_unavailable': { tl: 'Wala pa ito', en: 'Not available yet' },
+  'settings.real': { tl: 'Ipakita ang tunay na gamit', en: 'Show real objects' },
+  'settings.real_hint': {
+    tl: 'Kuha ng camera sa halip na sprite sa card.',
+    en: 'The camera crop instead of the sprite on the card.'
+  },
+  'settings.strict': { tl: 'Mahigpit na pag-aari', en: 'Strict ownership' },
+  'settings.strict_hint': {
+    tl: 'Kapag iba ang nag-utos sa piyesa ng kasama, magtatanong muna.',
+    en: "When someone orders another player's piece, ask first."
+  },
+  'settings.map': { tl: 'Gawang mapa ng baryo', en: 'Generated barrio map' },
+  'settings.map_hint': {
+    tl: 'Gumagamit ng API key. Mga $0.01 isang beses kada kampanya.',
+    en: 'Uses the API key. About $0.01 once per campaign.'
+  },
+  'settings.on': { tl: 'Naka-on', en: 'On' },
+  'settings.off': { tl: 'Naka-off', en: 'Off' },
+  'settings.invalid': {
+    tl: 'Hindi tinanggap ang setting na iyon.',
+    en: 'That setting was not accepted.'
+  },
+  'replay.off': {
+    tl: 'Naka-off ang replay sa Settings.',
+    en: 'Replay is turned off in Settings.'
+  },
+  'map.none': { tl: 'Wala pang mapa ng baryo.', en: 'No barrio map yet.' },
+  'unit.lost': {
+    tl: 'Wala si [unit] sa mesa! Ibalik mo.',
+    en: '[unit] is off the table! Put it back.'
+  },
+  'unit.found': {
+    tl: 'Nakita na ulit si [unit] sa mesa!',
+    en: '[unit] is back on the table!'
+  },
+  'unit.returning': { tl: 'Bumalik!', en: 'Returned!' },
+  'status.smoked': { tl: 'Sa usok', en: 'In smoke' },
+  'smoke.label': { tl: 'Usok', en: 'Smoke' },
+  'model.glimmer': { tl: 'Muse Glimmer', en: 'Muse Glimmer' },
+  'recap.title': { tl: 'Kagabi...', en: 'Last night...' },
+  'recap.night': { tl: 'Gabi [n]', en: 'Night [n]' },
+  'recap.continue': { tl: 'Ituloy', en: 'Continue' },
+  'progress.level': { tl: 'Antas ng baryo: [n]', en: 'Barrio level: [n]' },
+  'badge.title': { tl: 'Pumili ng badge', en: 'Pick a badge' },
+  'badge.hp': { tl: 'Dagdag HP', en: 'Extra HP' },
+  'badge.cooldown': { tl: 'Maikling CD', en: 'Short cooldown' },
+  'badge.for': { tl: 'Badge para kay [unit]', en: 'Badge for [unit]' },
+  'scar.label': { tl: 'Peklat', en: 'Scar' },
+  'card.real': { tl: 'Tunay na gamit', en: 'Real object' },
+  'confirm.title': { tl: 'Kumpirmahin ang utos', en: 'Confirm the order' },
+  'confirm.yes': { tl: 'Ituloy', en: 'Go ahead' },
+  'confirm.no': { tl: 'Huwag', en: "Don't" },
+  'confirm.seconds': { tl: 'Mawawala sa [seconds] segundo', en: 'Expires in [seconds] seconds' },
+  'pause.quit_confirm': {
+    tl: 'Bumalik sa Start? Naka-save ang gabi mo.',
+    en: 'Quit to Start? Your night is saved.'
   }
 } as const satisfies Record<string, CopyEntry>
 

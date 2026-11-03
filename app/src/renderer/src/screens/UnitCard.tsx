@@ -1,6 +1,10 @@
 import { currentLang } from '../lib/lang'
 import { useEffect, useState } from 'react'
+import CropView from '../canvas/CropView'
 import SpriteView from '../canvas/SpriteView'
+import PixelIcon from '../components/PixelIcon'
+import UnitMarks from '../components/UnitMarks'
+import { useAssets } from '../lib/assets'
 import { isCopyKey, pick, say, t, type CopyKey } from '../lib/copy'
 import type { ClientMessage, UnitSummary } from '../lib/types'
 
@@ -15,6 +19,7 @@ type UnitCardProps = Readonly<{
 const NAME_MAX = 40
 const SPRITE = 48
 const SPRITE_SCALE = 4
+const CROP_SIZE = 256
 
 function classKey(unit: UnitSummary): CopyKey {
   return `class.${unit.class}`
@@ -33,6 +38,10 @@ function UnitCard({
 }: UnitCardProps): React.JSX.Element {
   const [renaming, setRenaming] = useState(false)
   const [draft, setDraft] = useState(unit.name)
+  const [showReal, setShowReal] = useState(true)
+  const crop = useAssets().crops?.[unit.unit_id] ?? null
+  const real = crop !== null && showReal
+  const artSize = real ? CROP_SIZE : SPRITE * SPRITE_SCALE
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
@@ -75,17 +84,38 @@ function UnitCard({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex gap-8">
-          <div
-            className="relative shrink-0 border-2 border-gabi-ink bg-gabi-dusk"
-            style={{ width: SPRITE * SPRITE_SCALE, height: SPRITE * SPRITE_SCALE }}
-            aria-hidden="true"
-          >
-            <SpriteView
-              unit={unit}
-              scale={SPRITE_SCALE}
-              fallback={<span className="text-gabi-lantern">{initials(unit)}</span>}
-            />
-            {unit.sprite_png === null && <div className="lantern absolute bottom-2 right-2" />}
+          <div className="flex shrink-0 flex-col gap-3">
+            <div
+              className="relative border-2 border-gabi-ink bg-gabi-dusk"
+              style={{ width: artSize, height: artSize }}
+              aria-hidden="true"
+            >
+              {real ? (
+                <CropView png={crop} size={CROP_SIZE} />
+              ) : (
+                <>
+                  <SpriteView
+                    unit={unit}
+                    scale={SPRITE_SCALE}
+                    fallback={<span className="text-gabi-lantern">{initials(unit)}</span>}
+                  />
+                  {unit.sprite_png === null && (
+                    <div className="lantern absolute bottom-2 right-2" />
+                  )}
+                </>
+              )}
+            </div>
+            {crop !== null && (
+              <button
+                type="button"
+                className="btn"
+                aria-pressed={showReal}
+                onClick={() => setShowReal(!showReal)}
+              >
+                <PixelIcon name={showReal ? 'check' : 'cross'} size={3} />
+                {say('card.real')}
+              </button>
+            )}
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-4">
             {renaming ? (
@@ -109,7 +139,19 @@ function UnitCard({
                 </button>
               </form>
             ) : (
-              <h2 className="break-words text-gabi-lantern">{unit.name}</h2>
+              <div className="flex flex-wrap items-center gap-4">
+                <h2 className="break-words text-gabi-lantern">{unit.name}</h2>
+                <UnitMarks badges={unit.badges} scars={unit.scars} size={3} />
+                {unit.returning && (
+                  <span
+                    role="status"
+                    className="inline-flex items-center gap-2 border-2 border-gabi-dahon px-3 text-gabi-dahon"
+                  >
+                    <PixelIcon name="arrow" size={3} />
+                    {say('unit.returning')}
+                  </span>
+                )}
+              </div>
             )}
             <p>
               {say('card.class')}: {pick(cls)}
@@ -136,7 +178,7 @@ function UnitCard({
           <button
             type="button"
             className="btn"
-            disabled={locked || unit.rerolls_left <= 0}
+            disabled={locked || unit.returning || unit.rerolls_left <= 0}
             onClick={() => send({ type: 'unit.reroll', unit_id: unit.unit_id })}
           >
             {say('summon.reroll')} ({unit.rerolls_left})

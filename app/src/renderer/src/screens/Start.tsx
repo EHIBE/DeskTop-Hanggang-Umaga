@@ -7,26 +7,40 @@ import SoundToggle from '../components/SoundToggle'
 import TitleMark from '../components/TitleMark'
 import { say, type CopyKey } from '../lib/copy'
 import type { MessageHandler } from '../lib/socket'
-import type { CampaignSummary, ClientMessage, Difficulty, StateMessage } from '../lib/types'
+import type {
+  CampaignSummary,
+  ClientMessage,
+  Difficulty,
+  SettingsDifficulty,
+  StateMessage
+} from '../lib/types'
 
 type StartProps = Readonly<{
   state: StateMessage
   send: (message: ClientMessage) => boolean
   subscribe: (handler: MessageHandler) => () => void
+  onOpenSettings: () => void
 }>
 
 const CONFIRM_MS = 4000
 
 const DIFFICULTIES: readonly Difficulty[] = ['madali', 'normal', 'mahirap']
 
+const FROM_SETTING: Readonly<Record<SettingsDifficulty, Difficulty>> = {
+  easy: 'madali',
+  normal: 'normal',
+  hard: 'mahirap'
+}
+
 function difficultyKey(difficulty: Difficulty): CopyKey {
   return `diff.${difficulty}`
 }
 
-function Start({ state, send, subscribe }: StartProps): React.JSX.Element {
+function Start({ state, send, subscribe, onOpenSettings }: StartProps): React.JSX.Element {
   const [campaigns, setCampaigns] = useState<readonly CampaignSummary[]>([])
   const [name, setName] = useState('')
-  const [difficulty, setDifficulty] = useState<Difficulty>('normal')
+  const [picked, setPicked] = useState<Difficulty | null>(null)
+  const difficulty = picked ?? FROM_SETTING[state.settings.difficulty]
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [glossaryOpen, setGlossaryOpen] = useState(false)
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -102,7 +116,7 @@ function Start({ state, send, subscribe }: StartProps): React.JSX.Element {
                   type="button"
                   role="radio"
                   aria-checked={level === difficulty}
-                  onClick={() => setDifficulty(level)}
+                  onClick={() => setPicked(level)}
                 >
                   {say(difficultyKey(level))}
                 </button>
@@ -205,6 +219,10 @@ function Start({ state, send, subscribe }: StartProps): React.JSX.Element {
           )}
           <button type="button" className="btn btn-quiet" onClick={() => setGlossaryOpen(true)}>
             {say('gloss.open')}
+          </button>
+          <button type="button" className="btn btn-quiet" onClick={onOpenSettings}>
+            <PixelIcon name="gear" size={3} />
+            {say('settings.title')}
           </button>
           <SoundToggle />
           <LangToggle />

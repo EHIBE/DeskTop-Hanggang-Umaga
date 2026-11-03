@@ -286,6 +286,9 @@ function Calibration({ state, send, subscribe }: CalibrationProps): React.JSX.El
             </button>
             <LangToggle />
           </div>
+          <button type="button" className="btn" onClick={() => send({ type: 'calibrate.back' })}>
+            {say('nav.back')}
+          </button>
         </div>
       </aside>
       <div className="window min-w-0 flex-1 p-3">

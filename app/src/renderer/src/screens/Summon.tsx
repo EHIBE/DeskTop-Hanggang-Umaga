@@ -5,6 +5,9 @@ import Board, { type BoardMapping } from '../canvas/Board'
 import { drawSummonOverlay } from '../canvas/made'
 import Bilingual from '../components/Bilingual'
 import MadePanel from '../components/MadePanel'
+import PixelIcon from '../components/PixelIcon'
+import UnitMarks from '../components/UnitMarks'
+import MomentLine from '../hud/MomentLine'
 import { isCopyKey, say, type CopyKey } from '../lib/copy'
 import { palette } from '../lib/palette'
 import type { MessageHandler } from '../lib/socket'
@@ -12,6 +15,7 @@ import { prefersReducedMotion } from '../lib/motion'
 import type {
   ClientMessage,
   Point,
+  MomentMessage,
   StateMessage,
   SummonResultMessage,
   UnitSummary
@@ -22,6 +26,7 @@ type SummonProps = Readonly<{
   state: StateMessage
   send: (message: ClientMessage) => boolean
   subscribe: (handler: MessageHandler) => () => void
+  moment: MomentMessage | null
 }>
 
 const MAX_UNITS = 12
@@ -44,7 +49,7 @@ type Anim = {
   start: number
 }
 
-function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
+function Summon({ state, send, subscribe, moment }: SummonProps): React.JSX.Element {
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
   const [cardUnit, setCardUnit] = useState<UnitSummary | null>(null)
@@ -319,8 +324,17 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
                   </span>
                 }
               />
-              <span className="min-w-0 flex-1 break-words">
-                {index + 1}. {unit.name}
+              <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2 break-words">
+                <span>
+                  {index + 1}. {unit.name}
+                </span>
+                <UnitMarks badges={unit.badges} scars={unit.scars} />
+                {unit.returning && (
+                  <span className="inline-flex items-center gap-1 text-gabi-dahon">
+                    <PixelIcon name="arrow" size={2} />
+                    {say('unit.returning')}
+                  </span>
+                )}
               </span>
               <span className="shrink-0">
                 {say(`class.${unit.class}`)} {unit.hp}/{unit.hp_max}
@@ -353,6 +367,18 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
           overlay={overlay}
           label={say(state.awaiting_tap ? 'summon.which' : 'summon.prompt')}
         />
+        <div className="absolute left-4 top-4 z-10 flex w-[720px] flex-col items-start gap-3">
+          {made !== null && made.returning && madeUnit !== undefined && (
+            <div
+              role="status"
+              className="banner flex items-center gap-3 border-gabi-dahon px-4 py-2 text-[24px] leading-[32px] text-gabi-dahon"
+            >
+              <PixelIcon name="arrow" size={4} />
+              {say('unit.returning')} {madeUnit.name}
+            </div>
+          )}
+          <MomentLine moment={moment} className="w-full" />
+        </div>
         {made !== null && madeUnit !== undefined && (
           <button
             type="button"

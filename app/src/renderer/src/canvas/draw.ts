@@ -26,7 +26,7 @@ export function drawBadge(
   centerX: number,
   centerY: number,
   border: string,
-  glyph: 'check' | 'cross' | 'bang' | 'zz' | 'question'
+  glyph: 'check' | 'cross' | 'bang' | 'zz' | 'question' | 'smoke'
 ): void {
   const left = Math.round(centerX - BADGE / 2)
   const top = Math.round(centerY - BADGE / 2)
@@ -54,7 +54,7 @@ export function drawBadge(
     ctx.lineTo(left + 8, top + 24)
     ctx.stroke()
   } else {
-    const label = glyph === 'bang' ? '!' : glyph === 'zz' ? 'zz' : '?'
+    const label = glyph === 'bang' ? '!' : glyph === 'zz' ? 'zz' : glyph === 'smoke' ? '~' : '?'
     ctx.font = FONT
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'

@@ -1,6 +1,7 @@
 import type { GameEvent } from './types'
 
-export type CueName = 'gong' | 'bell' | 'hit' | 'dodge' | 'sunrise' | 'defeat'
+export type CueName =
+  'gong' | 'bell' | 'hit' | 'dodge' | 'sunrise' | 'defeat' | 'smoke' | 'lost' | 'found' | 'badge'
 
 type Layer = Readonly<{
   kind: 'tone' | 'noise'
@@ -66,7 +67,18 @@ const CUES: Readonly<Record<CueName, readonly Layer[]>> = {
     ...NOTES_HZ.map((hz, index) => tone(hz, 0.45, 1, { at: index * 0.25, attack: 0.02 })),
     tone(500, 0.15, 0.5, { at: 1.3, to: 950, attack: 0.03, wave: 'triangle' })
   ],
-  defeat: [tone(98, 0.8, 2, { to: 65, attack: 0.05 })]
+  defeat: [tone(98, 0.8, 2, { to: 65, attack: 0.05 })],
+  smoke: [noise(700, 0.35, 0.7), tone(220, 0.2, 0.6, { to: 140, attack: 0.05, wave: 'triangle' })],
+  lost: [
+    tone(440, 0.4, 0.25, { to: 220 }),
+    tone(330, 0.3, 0.45, { at: 0.15, to: 165, attack: 0.02 })
+  ],
+  found: [tone(523.25, 0.4, 0.2), tone(783.99, 0.4, 0.4, { at: 0.12, attack: 0.02 })],
+  badge: [
+    tone(880, 0.4, 0.25),
+    tone(1318.5, 0.4, 0.25, { at: 0.1 }),
+    tone(1760, 0.3, 0.6, { at: 0.2, attack: 0.02 })
+  ]
 }
 
 let enabled = readEnabled()
@@ -359,6 +371,9 @@ export function cuesFromEvents(
   const out: CueName[] = []
   events.forEach((event) => {
     if (event.type === 'dodge') out.push('dodge')
+    else if (event.type === 'smoke') out.push('smoke')
+    else if (event.type === 'lost') out.push('lost')
+    else if (event.type === 'found') out.push('found')
     else if (isHit(event, attackTargets, isAlly)) out.push('hit')
   })
   return out

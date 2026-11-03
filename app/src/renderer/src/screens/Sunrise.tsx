@@ -1,20 +1,23 @@
 import { useEffect, useState } from 'react'
+import BadgePanel from '../components/BadgePanel'
 import PixelIcon from '../components/PixelIcon'
 import ReplayPanel from '../components/ReplayPanel'
 import ScorePanel from '../components/ScorePanel'
+import MomentLine from '../hud/MomentLine'
 import Narration from '../hud/Narration'
 import { say } from '../lib/copy'
-import type { ClientMessage, NarrationMessage, StateMessage } from '../lib/types'
+import type { ClientMessage, MomentMessage, NarrationMessage, StateMessage } from '../lib/types'
 
 type SunriseProps = Readonly<{
   state: StateMessage
   send: (message: ClientMessage) => boolean
   narration: NarrationMessage | null
+  moment: MomentMessage | null
 }>
 
 const DAWN_MS = 3000
 
-function Sunrise({ state, send, narration }: SunriseProps): React.JSX.Element {
+function Sunrise({ state, send, narration, moment }: SunriseProps): React.JSX.Element {
   const [dawn, setDawn] = useState(false)
 
   useEffect(() => {
@@ -56,9 +59,22 @@ function Sunrise({ state, send, narration }: SunriseProps): React.JSX.Element {
         >
           {say('win')}
         </p>
+        {state.progression !== null && (
+          <p className="rise-in flex flex-wrap items-center gap-x-6 gap-y-2 text-gabi-ink">
+            <span className="flex items-center gap-3">
+              <PixelIcon name="sun" size={3} />
+              {say('progress.level', { n: state.progression.barrio_level })}
+            </span>
+            <span className="flex items-center gap-3">
+              <PixelIcon name="moon" size={3} />
+              {say('start.nights', { n: state.progression.nights_survived })}
+            </span>
+          </p>
+        )}
         <Narration
           narration={narration !== null && narration.phase === 'sunrise' ? narration : null}
         />
+        <MomentLine moment={moment} />
         <ReplayPanel
           replay={state.replay}
           hadPlayers={(state.night?.players.length ?? 0) > 0}
@@ -82,6 +98,11 @@ function Sunrise({ state, send, narration }: SunriseProps): React.JSX.Element {
           </button>
         </div>
       </div>
+      {state.progression !== null && (
+        <div className="rise-in absolute right-[160px] top-[72px]">
+          <BadgePanel progression={state.progression} units={state.units} send={send} />
+        </div>
+      )}
       <div
         className="rise-in absolute right-[160px] top-[400px]"
         style={{ animationDelay: '200ms' }}

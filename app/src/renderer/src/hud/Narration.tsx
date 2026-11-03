@@ -1,35 +1,12 @@
 import { currentLang } from '../lib/lang'
-import { pick, say, t, type CopyKey } from '../lib/copy'
-import type { NarrationMessage, NarrationMood } from '../lib/types'
+import { pick, say, t } from '../lib/copy'
+import type { NarrationMessage } from '../lib/types'
+import { MOOD_BORDER, MOOD_KEY, MOOD_TEXT } from './mood'
 
 type NarrationProps = Readonly<{
   narration: NarrationMessage | null
   className?: string
 }>
-
-const MOOD_BORDER: Readonly<Record<NarrationMood, string>> = {
-  kalmado: 'border-gabi-kawayan',
-  kaba: 'border-gabi-ember',
-  takot: 'border-gabi-sindak',
-  tagumpay: 'border-gabi-lantern',
-  umaga: 'border-gabi-liwayway'
-}
-
-const MOOD_TEXT: Readonly<Record<NarrationMood, string>> = {
-  kalmado: 'text-gabi-dahon',
-  kaba: 'text-gabi-ember',
-  takot: 'text-gabi-moon',
-  tagumpay: 'text-gabi-lantern',
-  umaga: 'text-gabi-liwayway'
-}
-
-const MOOD_KEY: Readonly<Record<NarrationMood, CopyKey>> = {
-  kalmado: 'narration.mood.kalmado',
-  kaba: 'narration.mood.kaba',
-  takot: 'narration.mood.takot',
-  tagumpay: 'narration.mood.tagumpay',
-  umaga: 'narration.mood.umaga'
-}
 
 function Narration({ narration, className = '' }: NarrationProps): React.JSX.Element | null {
   if (narration === null) return null

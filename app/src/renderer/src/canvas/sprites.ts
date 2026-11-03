@@ -114,3 +114,22 @@ export function useUnitImages(units: readonly UnitSummary[]): ReadonlyMap<string
 
   return images
 }
+
+type DecodedBitmap = Readonly<{ data: string; bitmap: ImageBitmap | null }>
+
+export function useBitmap(data: string | null): ImageBitmap | null {
+  const [decoded, setDecoded] = useState<DecodedBitmap | null>(null)
+
+  useEffect(() => {
+    if (data === null || data === '') return
+    let active = true
+    void decode(data).then((bitmap) => {
+      if (active) setDecoded({ data, bitmap })
+    })
+    return () => {
+      active = false
+    }
+  }, [data])
+
+  return decoded !== null && decoded.data === data ? decoded.bitmap : null
+}

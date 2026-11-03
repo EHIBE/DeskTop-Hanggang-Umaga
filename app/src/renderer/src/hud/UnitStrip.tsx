@@ -1,7 +1,8 @@
 import SpriteView from '../canvas/SpriteView'
+import UnitMarks from '../components/UnitMarks'
 import { say } from '../lib/copy'
 import StatusBadge from './StatusBadge'
-import { parseStatus, statusEntries } from './status'
+import { nightUnitEntries, parseStatus } from './status'
 import type { NightUnit, UnitSummary } from '../lib/types'
 
 type UnitStripProps = Readonly<{
@@ -32,7 +33,7 @@ function UnitStrip({
       {rows.map(({ night, unit }) => {
         const isKubo = unit.class === 'kubo'
         const status = parseStatus(night.status)
-        const badges = statusEntries(status)
+        const badges = nightUnitEntries(night)
         const selected = selectedId === unit.id
         const detail = [isKubo ? null : `${say('hud.cd')} ${night.cooldown}`, night.owner].filter(
           (part): part is string => part !== null && part !== ''
@@ -57,7 +58,10 @@ function UnitStrip({
             </span>
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="flex justify-between gap-2">
-                <span className="min-w-0 truncate">{unit.name}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="min-w-0 truncate">{unit.name}</span>
+                  <UnitMarks badges={night.badges} scars={night.scars} />
+                </span>
                 <span className="shrink-0">
                   {say('hud.hp')} {night.hp}/{night.hp_max}
                 </span>

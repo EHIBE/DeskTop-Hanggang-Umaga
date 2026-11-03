@@ -2,15 +2,17 @@ import NightScene from '../components/NightScene'
 import ReplayPanel from '../components/ReplayPanel'
 import PixelIcon from '../components/PixelIcon'
 import ScorePanel from '../components/ScorePanel'
+import MomentLine from '../hud/MomentLine'
 import Narration from '../hud/Narration'
 import { say } from '../lib/copy'
 import { palette } from '../lib/palette'
-import type { ClientMessage, NarrationMessage, StateMessage } from '../lib/types'
+import type { ClientMessage, MomentMessage, NarrationMessage, StateMessage } from '../lib/types'
 
 type DefeatProps = Readonly<{
   state: StateMessage
   send: (message: ClientMessage) => boolean
   narration: NarrationMessage | null
+  moment: MomentMessage | null
 }>
 
 function FallenKubo(): React.JSX.Element {
@@ -34,7 +36,7 @@ function FallenKubo(): React.JSX.Element {
   )
 }
 
-function Defeat({ state, send, narration }: DefeatProps): React.JSX.Element {
+function Defeat({ state, send, narration, moment }: DefeatProps): React.JSX.Element {
   return (
     <main className="relative h-full w-full">
       <NightScene dim />
@@ -51,6 +53,7 @@ function Defeat({ state, send, narration }: DefeatProps): React.JSX.Element {
         <Narration
           narration={narration !== null && narration.phase === 'defeat' ? narration : null}
         />
+        <MomentLine moment={moment} />
         <ReplayPanel
           replay={state.replay}
           hadPlayers={(state.night?.players.length ?? 0) > 0}
