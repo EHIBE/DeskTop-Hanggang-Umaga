@@ -180,6 +180,7 @@ async function startApp(): Promise<void> {
     userDataDir,
     allowedOrigins: allowedOrigins(),
     isDev: is.dev,
+    isPackaged: app.isPackaged,
     apiKey: () => keystore.load()
   })
   registerIpc(keystore, backend, userDataDir)

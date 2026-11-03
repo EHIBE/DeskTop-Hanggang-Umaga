@@ -74,7 +74,7 @@ $env:DESKTOP_DEV = "1"
 | Backend exits right after start in the app | Import error or bad env | Read `backend.log`. Run the manual command above to see the traceback |
 | `backend start failed: backend health check timed out` in the log | The backend took over 20 s, or the token header was wrong | Run manually and watch startup time. First import of OpenCV can be slow on a cold disk |
 | Smoke script says `MODEL_API_KEY is empty` | `backend\.env` missing or key blank | EHIBE edits `backend\.env`. Agents never read it |
-| `ffmpeg` not found though set in `DESKTOP_FFMPEG` | The Electron-spawned backend only passes a fixed list of env names, and `DESKTOP_FFMPEG` is not in it | Put ffmpeg on PATH. Fix planned in `app/src/main/backend.ts` |
+| `ffmpeg` not found though set in `DESKTOP_FFMPEG` | The variable was set after the app started, or the path is wrong. Main passes `DESKTOP_FFMPEG` to the backend since 2026-11-03 | Set the variable before launching, check the path, or put ffmpeg on PATH |
 | Port already in use on 8765 | An earlier manual backend still runs | Stop it, or pass another `--port` |
 | Backend exits when the app closes | The app sets `DESKTOP_PARENT_WATCH=1`, so the backend quits when its stdin closes | Expected. A manual run does not set it |
 | Black frames in the camera test | `is_black` found a mean brightness at or under the limit | Pick another camera index or free the camera. See the player table |

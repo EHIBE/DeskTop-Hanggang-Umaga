@@ -12,6 +12,7 @@ export type BackendOptions = Readonly<{
   userDataDir: string
   allowedOrigins: readonly string[]
   isDev: boolean
+  isPackaged: boolean
   apiKey: () => string | undefined
 }>
 
@@ -116,6 +117,7 @@ export class BackendProcess {
     env['DESKTOP_ALLOWED_ORIGINS'] = this.options.allowedOrigins.join(',')
     env['DESKTOP_PARENT_WATCH'] = '1'
     if (this.options.isDev) env['DESKTOP_DEV'] = '1'
+    if (this.options.isPackaged) env['DESKTOP_PACKAGED'] = '1'
     const apiKey = this.options.apiKey()
     if (apiKey !== undefined) {
       this.secrets.add(apiKey)

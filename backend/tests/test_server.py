@@ -19,7 +19,7 @@ from game.night import FramePump, GameController
 from gm.schemas import ContentFilter
 from meta_client import CostMeter
 from rules.units import Difficulty
-from server import Services, create_app
+from server import Services, create_app, websocket_origins
 from state import Broadcast, LiveState
 from tests.test_meta_client import MemoryLog
 from vision.sam import TrackerOnlySegmenter
@@ -178,6 +178,44 @@ def test_websocket_rejects_bad_token_or_origin(
     with (
         pytest.raises(WebSocketDisconnect) as info,
         connect(client, token, origin) as ws,
+    ):
+        ws.receive_text()
+    assert info.value.code == 1008
+
+
+PACKAGED_ORIGIN = "null"
+
+
+def packaged_client(tmp_path: Path, is_packaged: bool) -> TestClient:
+    settings = AppSettings(token=TOKEN, data_dir=tmp_path, port=8765, api_key=None)
+    origins = websocket_origins("file://", is_packaged)
+    return TestClient(create_app(settings, origins, make_factory(tmp_path)))
+
+
+def test_websocket_origins_add_null_only_when_packaged() -> None:
+    assert websocket_origins("file://", True) == frozenset({"file://", PACKAGED_ORIGIN})
+    assert websocket_origins("file://", False) == frozenset({"file://"})
+    assert websocket_origins(" , ", False) == frozenset()
+
+
+def test_packaged_renderer_origin_connects_with_the_token(tmp_path: Path) -> None:
+    with (
+        packaged_client(tmp_path, True) as test_client,
+        connect(test_client, TOKEN, PACKAGED_ORIGIN) as ws,
+    ):
+        assert receive_type(ws, "state")["type"] == "state"
+
+
+@pytest.mark.parametrize(
+    ("token", "is_packaged"), [("wrong", True), ("", True), (TOKEN, False)]
+)
+def test_null_origin_needs_packaged_build_and_token(
+    tmp_path: Path, token: str, is_packaged: bool
+) -> None:
+    with (
+        packaged_client(tmp_path, is_packaged) as test_client,
+        pytest.raises(WebSocketDisconnect) as info,
+        connect(test_client, token, PACKAGED_ORIGIN) as ws,
     ):
         ws.receive_text()
     assert info.value.code == 1008

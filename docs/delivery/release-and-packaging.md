@@ -80,7 +80,7 @@ Canonical code: `app/src/main/index.ts` (`FILE_ORIGINS`, `allowedOrigins()`) and
 - In a packaged build the renderer loads from `file://`. `allowedOrigins()` returns `['file://']`.
 - The backend closes the socket with code 1008 unless the `Origin` header is in `DESKTOP_ALLOWED_ORIGINS`.
 - Chromium sends the Origin of a `file://` page as the string `null`, not `file://`. Status: Unverified, believed true.
-- Planned fix: accept `null` in the packaged allow-list, or serve the renderer from a custom protocol with a real origin. Choose one and keep the token check, which still gates every request.
+- Fix (ADR-0111, done 2026-11-03): main sets `DESKTOP_PACKAGED=1` when `app.isPackaged`. Only then `websocket_origins` in `backend/server.py` adds `null` to the allow-list. The token check still gates every connection. Dev builds still refuse `null`. Tests in `backend/tests/test_server.py`.
 - Verify by running the unpacked app and watching `backend.log` for "rejected websocket from an unexpected origin". The UI will sit on Connecting if it fails.
 
 ## Planned Electron fuses
@@ -135,7 +135,6 @@ For the secret scan, extract the zip and search the tree with `Select-String` fo
 |---|---|---|
 | Unsigned | SmartScreen shows "Windows protected your PC" | Click More info, then Run anyway. See `docs/engineering/troubleshooting.md` |
 | ffmpeg not bundled | No recording or replay reel | `winget install Gyan.FFmpeg`, or set `DESKTOP_FFMPEG` |
-| `DESKTOP_FFMPEG` not passed to the backend | The Electron-spawned backend only receives the names in `PASSTHROUGH_ENV`, which does not include it | Put ffmpeg on PATH. A fix is planned in `app/src/main/backend.ts` |
 | Windows only | No Mac or Linux build is supported | None |
 | Large download | The venv carries OpenCV, numpy and more | Accepted |
 | No Python audit | `pip-audit` is not configured | Known gap |

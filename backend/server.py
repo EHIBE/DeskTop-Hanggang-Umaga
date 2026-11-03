@@ -69,6 +69,8 @@ INVALID_MESSAGE_KEY: Final = "cmd.unknown"
 FAILURE_KEY: Final = "restore"
 DEV_FLAG: Final = "DESKTOP_DEV"
 PARENT_WATCH_FLAG: Final = "DESKTOP_PARENT_WATCH"
+PACKAGED_FLAG: Final = "DESKTOP_PACKAGED"
+PACKAGED_RENDERER_ORIGIN: Final = "null"
 BACKEND_DIR: Final = Path(__file__).resolve().parent
 
 
@@ -458,6 +460,13 @@ def token_from_subprotocols(header: str | None) -> str | None:
 
 def allowed_origins_from_env(raw: str) -> frozenset[str]:
     return frozenset(origin.strip() for origin in raw.split(",") if origin.strip())
+
+
+def websocket_origins(raw: str, is_packaged: bool) -> frozenset[str]:
+    origins = allowed_origins_from_env(raw)
+    if not is_packaged:
+        return origins
+    return origins | {PACKAGED_RENDERER_ORIGIN}
 
 
 def campaign_json(campaign: Campaign) -> JsonObject:
@@ -957,5 +966,8 @@ def create_app_from_env() -> FastAPI:
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s"
     )
     settings = load_settings(os.environ)
-    origins = allowed_origins_from_env(os.environ.get("DESKTOP_ALLOWED_ORIGINS", ""))
+    origins = websocket_origins(
+        os.environ.get("DESKTOP_ALLOWED_ORIGINS", ""),
+        os.environ.get(PACKAGED_FLAG) == "1",
+    )
     return create_app(settings, origins)

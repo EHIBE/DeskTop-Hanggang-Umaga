@@ -31,8 +31,9 @@ Secrets and per-launch values arrive as environment variables from Electron main
 | `DESKTOP_DATA_DIR` | Electron main (`app.getPath('userData')`) | Runtime data root. Unset means `%APPDATA%\DeskTop` | Yes, empty |
 | `DESKTOP_PORT` | Electron main (free loopback port per start) | Backend port, default 8765 for manual runs. Blank means default | Yes, 8765 |
 | `DESKTOP_ALLOWED_ORIGINS` | Electron main | Comma list of WebSocket origins the backend accepts | No (set by main) |
+| `DESKTOP_PACKAGED` | Electron main when `app.isPackaged` | Adds the `null` origin of a `file://` page to the WebSocket allow-list. The token is still required (ADR-0111) | No (set by main) |
 | `DESKTOP_DEV` | Electron main in dev | Enables `.env` loading and the dev cost meter messages | No (set by main) |
-| `DESKTOP_FFMPEG` | Optional, user | Path to ffmpeg.exe when it is not on PATH. Used by the recorder and the replay | Yes, empty |
+| `DESKTOP_FFMPEG` | Optional, user | Path to ffmpeg.exe when it is not on PATH. Used by the recorder and the replay. Main passes it through to the spawned backend | Yes, empty |
 
 All four names are Established and listed in `backend/.env.example` with placeholders.
 
