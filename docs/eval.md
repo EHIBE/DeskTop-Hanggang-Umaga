@@ -5,7 +5,7 @@ read_when: [after an eval run, writing the README or video, tuning thresholds]
 canonical_for: [eval results]
 sources: [docs/engineering/testing-strategy.md]
 status: active
-last_verified: 2026-10-29
+last_verified: 2026-11-03
 related: [docs/engineering/testing-strategy.md, docs/game/balance-and-tuning.md, docs/delivery/readme-outline.md]
 ---
 
@@ -19,7 +19,7 @@ Real results only, from real runs. As of 2026-10-29 only E7 has run. The others 
 |---|---|---|---|
 | E1 Registration | 90%+ IoU 0.5 | Not run | |
 | E2 Re-anchor identity | 95%+ | Not run | |
-| E3 Taglish commands | 85%+ (40 of 50 done-when) | Not run | |
+| E3 Taglish commands | 85%+ (43 of 50 done-when) | Not run | |
 | E4 GM validity | 97% first try, 100% non-blocking | Not run | |
 | E5 Sprites | 80%+ first try | Not run | |
 | E6 Latency | NFR-01, 03, 05, 08 p90 met | Not run | |

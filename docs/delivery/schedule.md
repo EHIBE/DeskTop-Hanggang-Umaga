@@ -5,13 +5,13 @@ read_when: [start of each day, planning work, a day slips]
 canonical_for: [current schedule, phase list, freeze, deadlines, daily routine]
 sources: [docs/DeskTop_Build_Guide.md#the-honest-schedule, docs/DeskTop_Build_Guide.md#daily-routine, docs/DeskTop_PRD.md#17-milestones-and-timeline]
 status: active
-last_verified: 2026-10-29
+last_verified: 2026-11-03
 related: [docs/product/scope-and-cuts.md, docs/delivery/risk-register.md, docs/decisions/ADR-0109-schedule-source.md]
 ---
 
 # Schedule
 
-The Build Guide schedule replaces the PRD timeline (ADR-0109). The date is fixed and scope moves through the cut order in `product/scope-and-cuts.md`.
+The Build Guide schedule replaces the PRD timeline (ADR-0109). The date is fixed and scope moves through the cut order in `product/scope-and-cuts.md`. From Nov 3 the finalization cut order in `FINALIZATION_PLAN.md` applies.
 
 ## Key facts
 
@@ -55,7 +55,7 @@ The Build Guide schedule replaces the PRD timeline (ADR-0109). The date is fixed
 | 8 Core enemies (F07) | 2 | Aswang, Manananggal, stats for the rest, waves | Full 8-turn night with all waves and arrows. Done offline 2026-10-28 (test_night_flow.py). On-screen night Manual: EHIBE | None |
 | 9 GM narration (F09) | 3 | System prompt, gm_turn, repair, line bank | Every turn shows a caption within 6 s or a line bank line. Built 2026-10-28, live Spark timing Manual: EHIBE | Line bank only |
 | 10 Safety (F13, F14, F17, F24) | 5 | Tap controls, autosave, Demo Safe Mode, delete data, Playtest 1 | Whole night by taps, kill and resume at turn 5, Wi-Fi off night completes, no files remain. Built and tested offline 2026-10-28. Wi-Fi off run and Playtest 1 Manual: EHIBE | Fix rule bugs only |
-| 11 Voice (F10) | 4 | Two sessions, audio loop, events, grammar, PTT | 40 of 50 test orders parsed. Built 2026-10-28 with one DIARIZATION night session, grammar, captions, voice chips and PTT. No ENDPOINTING summon session. Live 40 of 50 run Manual: EHIBE | ENDPOINTING plus tap-to-claim |
+| 11 Voice (F10) | 4 | Two sessions, audio loop, events, grammar, PTT | 43 of 50 test orders parsed. Built 2026-10-28 with one DIARIZATION night session, grammar, captions, voice chips and PTT. No ENDPOINTING summon session. Live 43 of 50 run Manual: EHIBE | ENDPOINTING plus tap-to-claim |
 | 12 Voice claim, physical enemies (F11, F08) | 4 | Claim, overlap, push, steal | Both effects work in a test night. Overlap detection already built in M11. Built and tested offline 2026-10-29, table run Manual: EHIBE | Cut duwende steal first |
 | 13 Recording, evals, freeze, demo | 8 | Consent, recorder, evals, fixes, freeze, Playtest 2 | 2 complete nights recorded, footage backed up. Consent, recorder (fake ffmpeg tests), eval runner and E7 (100%) built 2026-10-29. ffmpeg, live evals, the freeze tag and Playtest 2 are Manual: EHIBE | Crash and demo-visible fixes only |
 | 14 Replay reel (F15) | 4 | Highlights, proxy, upload, SAM video, delete, render | 30 to 60 s reel from demo footage. Pipeline built and tested offline 2026-10-29, a real reel needs ffmpeg and the key | Keep a 10 s clip, move on by 2:00 PM SGT |

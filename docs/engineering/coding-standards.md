@@ -5,7 +5,7 @@ read_when: [writing or reviewing any code]
 canonical_for: [code conventions, naming, error handling rules, style tool settings]
 sources: [docs/prompts/FEATURE_PROMPT.md#4-implement, app/.prettierrc.yaml, app/.editorconfig, app/eslint.config.mjs]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-03
 related: [docs/architecture/backend-modules.md, docs/architecture/frontend-modules.md, docs/engineering/definition-of-done.md]
 ---
 
@@ -56,7 +56,7 @@ Short summary of the rules in `prompts/FEATURE_PROMPT.md` section 4 applied to t
 | Text | Only from `lib/copy.ts` |
 | Rendering | No `dangerouslySetInnerHTML`. Canvas `fillText` for board text |
 | Hooks | Follow eslint-plugin-react-hooks rules |
-| Electron | No Node APIs in renderer. Preload exposes port and token only |
+| Electron | No Node APIs in renderer. Preload exposes only the frozen `window.desktop` bridge (`getConfig`, `getKeyStatus`, `saveKey`, `showReel`) |
 
 ## Errors and messages
 

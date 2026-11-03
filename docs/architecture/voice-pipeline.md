@@ -5,7 +5,7 @@ read_when: [implementing voice/session.py, voice/grammar.py, voice/claim.py, cap
 canonical_for: [voice handshake, audio format, voice events, enrollment, local grammar, voice fallbacks, close codes]
 sources: [docs/DeskTop_PRD.md#voice-spec, docs/DeskTop_Build_Guide.md#phase-11-voice-nov-2-4-h-f10, docs/DeskTop_Build_Guide.md#121-voice-claim-fr-18-fr-23]
 status: active
-last_verified: 2026-10-29
+last_verified: 2026-11-03
 related: [docs/decisions/ADR-0007-voice-diarization-enrollment.md, docs/design/copy-deck.md, docs/architecture/reliability-and-fallbacks.md]
 ---
 
@@ -26,7 +26,7 @@ Built in M11 (2026-10-28): the night DIARIZATION session only, in `backend/voice
 | Language bias | English, Tagalog |
 | Session max | 60 min |
 | Cost | $0.18 per hour |
-| Eval | E3 Taglish intents 85%+ on 50 utterances (40 of 50 done-when) |
+| Eval | E3 Taglish intents 85%+ on 50 utterances (43 of 50 done-when) |
 
 ## Handshake (night session)
 

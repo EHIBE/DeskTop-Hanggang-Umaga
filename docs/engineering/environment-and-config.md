@@ -5,7 +5,7 @@ read_when: [adding a config key or env var, wiring backend spawn]
 canonical_for: [env var list, config.py groups, runtime paths]
 sources: [backend/.env.example, docs/DeskTop_Build_Guide.md#32-spawn-the-backend-from-electron-main, docs/DeskTop_PRD.md#12-technical-architecture]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-03
 related: [docs/game/balance-and-tuning.md, docs/engineering/security-and-privacy.md, docs/engineering/setup-windows.md]
 ---
 
@@ -33,9 +33,10 @@ Secrets and per-launch values arrive as environment variables from Electron main
 | `DESKTOP_ALLOWED_ORIGINS` | Electron main | Comma list of WebSocket origins the backend accepts | No (set by main) |
 | `DESKTOP_PACKAGED` | Electron main when `app.isPackaged` | Adds the `null` origin of a `file://` page to the WebSocket allow-list. The token is still required (ADR-0111) | No (set by main) |
 | `DESKTOP_DEV` | Electron main in dev | Enables `.env` loading and the dev cost meter messages | No (set by main) |
-| `DESKTOP_FFMPEG` | Optional, user | Path to ffmpeg.exe when it is not on PATH. Used by the recorder and the replay. Main passes it through to the spawned backend | Yes, empty |
+| `DESKTOP_FFMPEG` | Optional, user | Path to ffmpeg.exe when it is not on PATH. Used by the recorder and the replay. Main passes it through to the spawned backend | No |
+| `DESKTOP_PARENT_WATCH` | Electron main, always 1 | Backend exits when the Electron parent closes its stdin | No (set by main) |
 
-All four names are Established and listed in `backend/.env.example` with placeholders.
+`MODEL_API_KEY`, `DESKTOP_TOKEN`, `DESKTOP_DATA_DIR` and `DESKTOP_PORT` are listed in `backend/.env.example` with placeholders. Main passes only a fixed Windows allow-list (`SYSTEMROOT`, `WINDIR`, `PATH`, `PATHEXT`, `TEMP`, `TMP`, `APPDATA`, `LOCALAPPDATA`, `USERPROFILE`, `HOMEDRIVE`, `HOMEPATH`, `COMPUTERNAME`) plus `DESKTOP_FFMPEG` from its own environment.
 
 ## config.py groups
 

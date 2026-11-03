@@ -5,7 +5,7 @@ read_when: [changing this area, questioning this choice]
 canonical_for: [ADR-0103]
 sources: [CLAUDE.md#bugs-and-contradictions, docs/prompts/archive/FEATURE_PROMPT_docs_program.md#3-project]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-03
 related: [docs/decisions/README.md, CLAUDE.md]
 ---
 
@@ -29,9 +29,11 @@ The scaffold sets sandbox: false, exposes the full electronAPI and an empty api 
 
 ## Decision
 
-Set sandbox: true, contextIsolation: true, nodeIntegration: false. Expose only a typed object with port and token. Allowlist https URLs for shell.openExternal. Remove the ping IPC test handler. Add connect-src for the backend to the CSP.
+Set sandbox: true, contextIsolation: true, nodeIntegration: false. Expose only a frozen `window.desktop` bridge. Allowlist https URLs for shell.openExternal. Remove the ping IPC test handler. Add connect-src for the backend to the CSP. The port is a wildcard because main picks a free port per launch.
 
 Amendment 2026-10-28 (M3): KeySetup needs to save the key through main, so the preload also exposes `getKeyStatus()` and `saveKey(key)`. Both are sender-checked in main. The key passes through the renderer only while the player pastes it.
+
+Amendment 2026-11-03: the bridge is `getConfig`, `getKeyStatus`, `saveKey` and `showReel`. Main accepts only `reel_<name>.mp4`, checks the sender and refuses paths outside the campaign recordings folders. `@electron-toolkit/preload` was removed on 2026-11-03 (B13). The preload uses `contextBridge` and `ipcRenderer` from `electron` directly.
 
 ## Consequences
 

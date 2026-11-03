@@ -5,7 +5,7 @@ read_when: [touching main, preload, server.py, meta_client, recording, uploads, 
 canonical_for: [threat model, data inventory, hardening checklist, privacy rules]
 sources: [docs/prompts/FEATURE_PROMPT.md#5-security-guardrails-mapped-to-owasp-top-102025, docs/DeskTop_PRD.md#10-non-functional-requirements, app/src/main/index.ts, app/src/preload/index.ts, app/src/renderer/index.html]
 status: active
-last_verified: 2026-10-29
+last_verified: 2026-11-03
 related: [docs/decisions/ADR-0103-electron-hardening.md, docs/architecture/websocket-protocol.md, docs/architecture/data-model.md]
 ---
 
@@ -63,7 +63,7 @@ All calls in Standard mode, never Contributor mode. Every `responses.create` cal
 - [x] Remove the scaffold `ping` handler
 - [x] Permission requests and checks denied by default. Navigation, redirects and webviews blocked
 - [x] Free port and fresh token at every backend start (B11 closed in M3)
-- [ ] Electron fuses (B12, needs approval)
+- [ ] Electron fuses (B12, approved, lands with the Phase 6 zip through electron-builder `electronFuses`, ADR-0111)
 - [x] Disable auto-update publish (example.com placeholder)
 
 ## Local server checklist

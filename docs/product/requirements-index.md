@@ -5,7 +5,7 @@ read_when: [starting or finishing any feature, checking what is built, writing t
 canonical_for: [requirement status, FR to module map, NFR targets list, F01 to F24 feature groups]
 sources: [docs/DeskTop_PRD.md#9-functional-requirements, docs/DeskTop_PRD.md#10-non-functional-requirements, docs/DeskTop_PRD.md#203-feature-prioritization-rice, docs/DeskTop_Build_Guide.md]
 status: active
-last_verified: 2026-10-29
+last_verified: 2026-11-03
 related: [docs/product/scope-and-cuts.md, docs/engineering/testing-strategy.md, docs/architecture/backend-modules.md]
 ---
 
@@ -21,7 +21,7 @@ Every functional and non-functional requirement with where it lives and its buil
 | Non-functional | NFR-01 to NFR-31 |
 | Demo-critical (★) | 31 FRs |
 | Status values | Planned, Built, Tested, Cut, Could |
-| Status on 2026-10-29 | M0 to M11 and Phases 12 to 14 code built offline. Live runs, evals with real data, freeze, Playtest 2, video and submission remain. Rows below give each test |
+| Status on 2026-11-03 | M0 to M11 and Phases 12 to 14 code built offline. Live runs, evals with real data, freeze, Playtest 2, video and submission remain. Rows below give each test. F16 progression and F23 Settings cut by ADR-0112 |
 
 Update the Status column when a requirement is built (code merged) and tested (test green). Use the `desktop-docs-sync` skill.
 
@@ -44,14 +44,14 @@ Update the Status column when a requirement is built (code merged) and tested (t
 | F13 | Tap controls | Must (guardrail) | 2.53 | 1.5 | FR-25 | Built |
 | F14 | Autosave and restore | Must (guardrail) | 1.90 | 1 | FR-41 | Tested |
 | F15 | Replay | Should | 2.31 | 5 | FR-44 to FR-48 | Built (live reel needs ffmpeg and the key, Manual: EHIBE) |
-| F16 | Returning objects, recap, progression | Could | 0.60 | 3 | FR-42, FR-43, FR-56 | Could |
+| F16 | Returning objects, recap, progression | Could | 0.60 | 3 | FR-42, FR-43, FR-56 | Cut |
 | F17 | Demo Safe Mode | Must | 9.00 | 2 | FR-50 | Built (Wi-Fi off run Manual: EHIBE) |
 | F18 | Cost tracker and hard stop | Must (guardrail) | 0.95 | 1 | FR-51 | Tested |
 | F19 | Muse Glimmer recap | Could | 0.10 | 4 | FR-53 | Could |
 | F20 | Muse Image generated map | Could | 1.25 | 2 | FR-54 | Could |
 | F21 | Strict ownership | Could | 0.90 | 1 | FR-55 | Could |
 | F22 | Lost detection | Should | 2.10 | 1 | FR-30 | Cut |
-| F23 | Settings screen | Could | 0.90 | 1 | FR-49 | Could |
+| F23 | Settings screen | Could | 0.90 | 1 | FR-49 | Cut |
 | F24 | Delete campaign data | Must (guardrail) | 1.90 | 0.5 | FR-52 | Tested |
 
 RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3.99, Could under 2.0. Guardrail features are Must regardless. Full R, I, C values: PRD 20.3.
@@ -101,21 +101,21 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | FR-39 | ★ | Local line bank fallback for every moment | F09 | JS-10 | gm/narrator.py, assets/lines.json | test_narrator.py (every moment, priority, placeholders), test_narration_flow.py (timeout, failure, Demo Safe) | Tested |
 | FR-40 | ★ | Full HUD updates within 1 frame | F06 | JS-06 | hud/*, screens/Night.tsx | manual (HUD built, Manual: EHIBE run check) | Built |
 | FR-41 | | Autosave each turn, restore after crash | F14 | JS-10 | game/night.py, db/store.py | test_night_flow.py (restart resumes the saved turn exactly, interrupted night scores like a straight one, corrupt board refused), test_store.py (saved_night, v1 to v2 migration) | Tested |
-| FR-42 | | Recognize returning objects | F16 | JS-09 | vision/signature.py | n/a | Could |
-| FR-43 | | "Kagabi..." recap next night | F16 | JS-09 | gm/narrator.py | n/a | Could |
+| FR-42 | | Recognize returning objects | F16 | JS-09 | vision/signature.py | n/a | Cut |
+| FR-43 | | "Kagabi..." recap next night | F16 | JS-09 | gm/narrator.py | n/a | Cut |
 | FR-44 | | Recording consent from every player | F15 | JS-08 | game/night.py (give_consent), screens/VoiceClaim.tsx | test_night_flow.py (every claimed player, no consent still plays), test_recording_flow.py | Tested |
 | FR-45 | | Record warped feed to H.264 MP4 | F15 | JS-08 | backend/capture/recorder.py, game/night.py | test_recorder.py (fake ffmpeg), test_recording_flow.py. Real ffmpeg run Manual: EHIBE (not installed) | Built |
 | FR-46 | | Pick 4 to 6 highlights from turn_log | F15 | JS-08 | backend/replay/highlights.py | test_highlights.py (last turn, kubo hits up to 6, priority, no overlaps) | Tested |
 | FR-47 | | SAM video tracking on 10 FPS proxy, reel render | F15 | JS-08 | replay/proxy.py, vision/sam.py (SamVideoTracker), replay/render.py | test_proxy.py, test_sam_video.py, test_render.py (sprite hit counts), test_replay_flow.py. 90% on a real reel Manual: EHIBE | Built |
 | FR-48 | | Export 1080p MP4, 60 s max, dawn title card | F15 | JS-08 | replay/render.py, components/ReplayPanel.tsx | test_render.py (1920x1080, 30 FPS, 60 s cap, title card). Opens in Windows Media Player Manual: EHIBE | Built |
-| FR-49 | | Settings screen | F23 | JS-14 | screens/Settings.tsx | n/a | Could |
+| FR-49 | | Settings screen | F23 | JS-14 | screens/Settings.tsx | n/a | Cut |
 | FR-50 | ★ | Demo Safe Mode completes 8 turns offline | F17 | JS-10, JS-13 | backend/game/demo_safe.py | test_demo_safe.py (8 turns with no SAM or Spark calls when the SAM toggle is off). Wi-Fi off dry run Manual: EHIBE | Built |
 | FR-51 | | Cost tracker, warn $90, block at $120 | F18 | JS-13 | backend/meta_client.py, db/store.py, game/night.py, components/CostMeter.tsx | test_meta_client.py, test_server.py (hard stop turns Demo Safe on) | Tested |
 | FR-52 | | Delete campaign data, no files remain | F24 | JS-10 | db/store.py | test_store.py (rows, campaign folder, owned sprites, shared sprites kept, leftover files reported), test_server.py (campaign.delete) | Tested |
 | FR-53 | | Muse Glimmer recap | F19 | JS-09 | n/a | n/a | Could |
 | FR-54 | | Muse Image generated barrio map | F20 | JS-02 | n/a | n/a | Could |
 | FR-55 | | Strict ownership by voice label | F21 | JS-03 | n/a | n/a | Could |
-| FR-56 | | Barrio level, badges, scars | F16 | JS-09 | n/a | n/a | Could |
+| FR-56 | | Barrio level, badges, scars | F16 | JS-09 | n/a | n/a | Cut |
 
 ## Non-functional requirements
 

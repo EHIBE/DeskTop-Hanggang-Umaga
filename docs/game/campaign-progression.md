@@ -5,13 +5,13 @@ read_when: [touching campaign or next-night features after v1]
 canonical_for: [progression rules, F16 scope]
 sources: [docs/DeskTop_PRD.md#campaign-progression-could, docs/DeskTop_PRD.md#flow-f9-resume-next-night]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-03
 related: [docs/product/scope-and-cuts.md, docs/architecture/data-model.md]
 ---
 
 # Campaign progression
 
-Progression is a Could (F16) and is not built in v1 per the Build Guide. Autosave and Continue still exist (F14), so a campaign can resume, but badges, scars, recaps and object recognition wait.
+Progression (F16) is cut by ADR-0112 and is not built. Autosave and Continue still exist (F14), so a campaign can resume, but badges, scars, recaps and object recognition wait.
 
 ## Key facts
 

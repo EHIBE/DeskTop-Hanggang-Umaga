@@ -5,7 +5,7 @@ read_when: [Phase 15, the day of submission]
 canonical_for: [submission checklist, submission description draft]
 sources: [docs/DeskTop_PRD.md#submission-checklist, docs/DeskTop_PRD.md#project-description-draft-submission-form, docs/DeskTop_Build_Guide.md#153-submit]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-03
 related: [docs/delivery/readme-outline.md, docs/delivery/video-script.md, docs/rules-notes.md]
 ---
 
@@ -44,7 +44,7 @@ git log -p | Select-String -Pattern "MODEL_API_KEY|sk-|Bearer "
 
 ## Description draft
 
-> **DeskTop: Hanggang Umaga** turns any desk into a turn-based co-op game. Put everyday objects on the table and say what they are. A mug becomes the bahay kubo you protect, a coin becomes an anting-anting, keys become the albularyo. Then creatures from Filipino folklore crawl in from the edges of the desk, and 2 to 4 friends have 8 turns to survive until sunrise. Players move real objects by hand and give orders out loud in Taglish.
+> **DeskTop: Hanggang Umaga** turns any desk into a turn-based co-op game. Put everyday objects on the table and say what they are. A mug becomes the bahay kubo you protect, a coin becomes an anting-anting, keys become the albularyo. Then creatures from Filipino folklore crawl in from the edges of the desk, and 1 to 4 friends have 8 turns to survive until sunrise. Players move real objects by hand and give orders out loud in Taglish.
 >
 > Muse Spark 1.3 detects each new object and writes its unit card, then runs the Game Master with strict JSON output. SAM 3.1 gives every object an exact mask and a stable ID through box prompts, re-anchors all pieces at each End Turn, and tracks the recorded night for a replay reel. Muse Image redraws each object as a 16-bit sprite in one shared style. Muse Voice Transcribe handles Tagalog code-switching, speaker labels and turn detection. A local OpenCV tracker keeps sprites smooth between turns, and a deterministic rules engine decides every outcome.
 >

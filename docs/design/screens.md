@@ -5,7 +5,7 @@ read_when: [building or changing a screen in app/src/renderer/src/screens]
 canonical_for: [screen list, screen states, screen routing]
 sources: [docs/DeskTop_PRD.md#11-ux-and-ui, docs/DeskTop_PRD.md#7-solution-overview-and-key-flows, docs/DeskTop_PRD.md#14-edge-cases-and-failure-handling]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-03
 related: [docs/design/DESIGN.md, docs/design/hud-components.md, docs/design/copy-deck.md, docs/game/state-machine.md]
 ---
 
@@ -20,7 +20,7 @@ Twelve screens, each a component in `app/src/renderer/src/screens/`, routed by `
 | Screens | Start, KeySetup, Calibration, Summon, UnitCard, VoiceClaim, Night, Sunrise, Defeat, Replay, Campaign menu, Settings |
 | Router | `App.tsx`, driven by the backend game state |
 | Text | All from `lib/copy.ts` keys |
-| Settings screen | Could (F23), not built in v1 |
+| Settings screen | Cut (ADR-0112), not built |
 
 ## Shared states (every screen)
 

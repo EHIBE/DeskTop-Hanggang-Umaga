@@ -48,7 +48,7 @@ This file maps every document in `docs/` and says which ones to read for each ki
 | `architecture/` | overview, backend-modules, frontend-modules, websocket-protocol, data-model, meta-api-integration, ai-contracts, sprite-pipeline, tracking-and-reanchor, voice-pipeline, reliability-and-fallbacks, cost-and-budget | System and contracts |
 | `engineering/` | setup-windows, coding-standards, testing-strategy, security-and-privacy, environment-and-config, git-and-commits, definition-of-done, troubleshooting | How to work |
 | `delivery/` | schedule, risk-register, demo-runbook, video-script, submission-checklist, readme-outline, judging-scorecard, submission-text, release-and-packaging, live-api-runbook, handoff-ui-redesign | Shipping |
-| `decisions/` | README, template, ADR-0001 to ADR-0012, ADR-0101 to ADR-0110 | Why things are the way they are |
+| `decisions/` | README, template, ADR-0001 to ADR-0012, ADR-0101 to ADR-0112 | Why things are the way they are |
 | root | `glossary.md` | Terms and ID prefixes |
 
 ## Read order by task

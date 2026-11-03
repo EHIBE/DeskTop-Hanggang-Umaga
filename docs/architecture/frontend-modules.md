@@ -5,13 +5,13 @@ read_when: [creating or changing any file under app/]
 canonical_for: [frontend module responsibilities, Electron process roles, renderer folder map]
 sources: [docs/DeskTop_PRD.md#project-setup-and-folder-structure, app/src/main/index.ts, app/src/preload/index.ts, app/package.json, app/electron.vite.config.ts]
 status: active
-last_verified: 2026-10-29
+last_verified: 2026-11-03
 related: [docs/architecture/overview.md, docs/engineering/security-and-privacy.md, docs/design/hud-components.md]
 ---
 
 # Frontend modules
 
-The app is an electron-vite React TypeScript project. Main spawns the backend and holds the key, preload passes only the port and token, and the renderer draws the board and HUD.
+The app is an electron-vite React TypeScript project. Main spawns the backend and holds the key, preload exposes only `getConfig`, `getKeyStatus`, `saveKey` and `showReel`, and the renderer draws the board and HUD.
 
 ## Key facts
 
@@ -57,12 +57,12 @@ The app is an electron-vite React TypeScript project. Main spawns the backend an
 | Gap | Fix |
 |---|---|
 | `sandbox: false` | `sandbox: true`, `contextIsolation: true`, `nodeIntegration: false` |
-| Preload exposes full `electronAPI` | Expose only `{ port, token }` |
+| Preload exposes full `electronAPI` | Expose only `getConfig`, `getKeyStatus`, `saveKey` and `showReel` |
 | `shell.openExternal` on any URL | Allowlist https URLs |
 | `ipcMain.on('ping')` test handler | Remove |
 | Tailwind not wired | Add `tailwindcss()` to renderer plugins and `@import "tailwindcss"` in main.css |
 | Window title "Electron", productName "app" | Rename to DeskTop |
-| CSP lacks backend connect-src | Add `connect-src 'self' ws://127.0.0.1:8765 http://127.0.0.1:8765` |
+| CSP lacks backend connect-src | Add `connect-src 'self' ws://127.0.0.1:* http://127.0.0.1:*`, since the backend port is random per launch |
 
 ## Rules
 

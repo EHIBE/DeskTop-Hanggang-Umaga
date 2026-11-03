@@ -5,7 +5,7 @@ read_when: [before relying on an assumption, Official Rules arrive, after an eva
 canonical_for: [A1 to A16, Q1 to Q9]
 sources: [docs/DeskTop_PRD.md#21-assumptions-and-open-questions, docs/DeskTop_Build_Guide.md#01-account-and-rules-checks]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-03
 related: [docs/rules-notes.md, docs/eval.md, docs/playtests.md]
 ---
 
@@ -33,7 +33,7 @@ Sixteen assumptions and nine open questions remain from the PRD. Update the Stat
 | A7 | Spark boxes on 0 to 1000 grid seed SAM well enough | Unverified | E1 | Open |
 | A8 | KCF or CSRT reaches 10 Hz with 12 objects at 640 px | Unverified | Benchmark (Phase 6) | Open |
 | A9 | Muse Image returns a sprite within 30 s at low reasoning strength | Unverified | Time 20 calls | Open |
-| A10 | Diarization separates 2 to 4 people well enough for credit | Unverified | Playtest 2 | Open |
+| A10 | Diarization separates 1 to 4 people well enough for credit | Unverified | Playtest 2 | Open |
 | A11 | Voice Transcribe understands casual Taglish orders | Docs say Tagalog with code-switching | E3 | Open |
 | A12 | Players find it fun and want to share the replay | Unverified | Playtests 1 and 2 | Open |
 | A13 | Top-down camera setup is easy for most players | Unverified | Playtest setup time | Open |

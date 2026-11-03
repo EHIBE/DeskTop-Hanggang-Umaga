@@ -5,7 +5,7 @@ read_when: [writing tests, recording fixtures, running evals, before reporting a
 canonical_for: [test layout, fixture rules, E1 to E7 definitions, coverage target]
 sources: [docs/DeskTop_PRD.md#18-testing-and-qa, docs/DeskTop_PRD.md#eval-plan-run-oct-29-and-again-nov-2-before-recording, docs/DeskTop_Build_Guide.md#132-evals-15-h]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-03
 related: [docs/eval.md, docs/playtests.md, docs/product/requirements-index.md]
 ---
 
@@ -20,7 +20,7 @@ All automated tests run offline against recorded fixtures, so they cost nothing 
 | Framework | pytest (backend). No frontend test framework configured |
 | Command | `backend\.venv\Scripts\python -m pytest backend/tests -q` |
 | Coverage target | 90%+ of rules functions (NFR-31). Measure with `cd backend` then `.venv\Scripts\python -m pytest tests -q --cov=rules` |
-| Python static checks | ruff check, ruff format and mypy --strict (ADR-0101). All clean on 2026-10-29 with 1,219 backend tests passing |
+| Python static checks | ruff check, ruff format and mypy --strict (ADR-0101). All clean on 2026-11-03 with 1,229 backend tests passing |
 | Fixtures | `fixtures/` from Phase 1 smoke tests and later recordings |
 | Determinism | E7 must be 100% |
 | CI | NONE yet. PRD plans GitHub Actions with pytest and TypeScript typecheck |
