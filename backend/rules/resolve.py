@@ -52,6 +52,7 @@ __all__ = [
     "Intent",
     "Outcome",
     "Part",
+    "Smoke",
     "UnitState",
     "apply_enemy_tags",
     "apply_unit_tags",
@@ -78,6 +79,7 @@ OUT_PREFIX: Final = "out_"
 STOLEN_PREFIX: Final = "stolen_by:"
 CARRYING_PREFIX: Final = "carrying:"
 LOST_TAG: Final = "lost"
+OFF_DESK_TAG: Final = "off_desk"
 RETURNING_TAG: Final = "returning"
 HAMPAS_RADIUS_CM: Final = 6.0
 HAMPAS_DAMAGE: Final = 1
@@ -93,6 +95,9 @@ UNIT_SCORE: Final = 10
 KUBO_HP_SCORE: Final = 5
 DEFEAT_SCORE: Final = 3
 MIN_DAMAGE: Final = 1
+SMOKE_RADIUS_CM: Final = 10.0
+SMOKE_CLEAR_RADIUS_CM: Final = 12.0
+SMOKE_TURNS_ALIVE: Final = frozenset({2, 4})
 
 POWER_COOLDOWN: Final[Mapping[PowerId, int]] = {
     PowerId.NONE: 0,
@@ -141,6 +146,10 @@ class EventType(StrEnum):
     REFORM = "reform"
     KUBO_HIT = "kubo_hit"
     DEFEAT_ENEMY = "defeat_enemy"
+    SMOKE = "smoke"
+    SMOKE_CLEARED = "smoke_cleared"
+    LOST = "lost"
+    FOUND = "found"
     WIN = "win"
     LOSE = "lose"
 
@@ -172,6 +181,8 @@ class UnitState:
     stolen_by: str | None = None
     is_lost: bool = False
     is_returning: bool = False
+    off_desk: bool = False
+    cooldown_cut: int = 0
 
     @property
     def is_down(self) -> bool:
@@ -179,7 +190,7 @@ class UnitState:
 
     @property
     def is_absent(self) -> bool:
-        return self.stolen_by is not None or self.is_lost
+        return self.stolen_by is not None or self.is_lost or self.off_desk
 
     @property
     def is_out(self) -> bool:
@@ -227,6 +238,19 @@ class EnemyState:
 
 
 @dataclass(frozen=True)
+class Smoke:
+    source_id: str
+    center: Point
+    radius_cm: float = SMOKE_RADIUS_CM
+
+    def covers_point(self, point: Point) -> bool:
+        return displacement(self.center, point) <= self.radius_cm
+
+    def covers_hull(self, hull: Hull) -> bool:
+        return hull_point_distance(hull, self.center, 0.0) <= self.radius_cm
+
+
+@dataclass(frozen=True)
 class Intent:
     unit_id: str
     action: Action
@@ -256,6 +280,7 @@ class BoardState:
     enemies_defeated: int = 0
     enemy_counter: tuple[tuple[str, int], ...] = ()
     damage_by_owner: tuple[tuple[str, int], ...] = ()
+    smoke: tuple[Smoke, ...] = ()
 
     @property
     def kubo(self) -> UnitState | None:
@@ -297,7 +322,7 @@ def with_positions(
     offsets = hull_offsets or {}
     units: list[UnitState] = []
     for u in state.units:
-        if u.is_out:
+        if u.out_turns > 0 or u.stolen_by is not None or u.is_lost:
             units.append(u)
             continue
         position = positions.get(u.id, u.position)
@@ -402,6 +427,7 @@ class _Round:
         self.used: dict[str, int] = {}
         self.thrown: set[str] = set()
         self.returned: set[str] = set()
+        self.smoke: list[Smoke] = list(state.smoke)
 
     def emit(self, event: Event) -> None:
         self.events.append(event)
@@ -453,7 +479,15 @@ class _Round:
         return target
 
     def mark_used(self, unit: UnitState) -> None:
-        self.used[unit.id] = POWER_COOLDOWN[unit.power_id]
+        self.used[unit.id] = max(0, POWER_COOLDOWN[unit.power_id] - unit.cooldown_cut)
+
+    def is_smoked(self, unit: UnitState) -> bool:
+        return any(cloud.covers_hull(unit.hull) for cloud in self.smoke)
+
+    def smoke_blocks(self, unit: UnitState, enemy: EnemyState) -> bool:
+        if not self.is_smoked(unit):
+            return False
+        return not any(cloud.covers_point(enemy.position) for cloud in self.smoke)
 
     def power_reach(self, unit: UnitState) -> float:
         reach = RANGE_CM[unit.range]
@@ -464,6 +498,8 @@ class _Round:
     ) -> EnemyState | None:
         enemy = self.alive_enemy(target_id)
         if enemy is None or not in_range(self.edge_dist(unit, enemy), reach):
+            return None
+        if self.smoke_blocks(unit, enemy):
             return None
         return enemy
 
@@ -545,6 +581,21 @@ class _Round:
 
     def p_light(self, unit: UnitState, target_id: str | None) -> None:
         self.announce(unit, target_id)
+        kept: list[Smoke] = []
+        for cloud in self.smoke:
+            reach = hull_point_distance(unit.hull, cloud.center, 0.0)
+            if in_range(reach, SMOKE_CLEAR_RADIUS_CM):
+                self.emit(
+                    Event(
+                        EventType.SMOKE_CLEARED,
+                        unit.id,
+                        cloud.source_id,
+                        pos=cloud.center,
+                    )
+                )
+            else:
+                kept.append(cloud)
+        self.smoke = kept
 
     def p_shout(self, unit: UnitState, target_id: str | None) -> None:
         self.announce(unit, target_id)
@@ -758,6 +809,7 @@ def resolve_turn(
         enemies=_cleanup_enemies(rnd.enemies),
         enemies_defeated=rnd.defeated,
         damage_by_owner=tuple(rnd.damage.items()),
+        smoke=tuple(rnd.smoke),
     )
     events = list(rnd.events)
     outcome = check_outcome(new_state)
@@ -888,6 +940,16 @@ def _spawn_wave(
     return events
 
 
+def _kapre_smoke(enemies: Sequence[EnemyState], turn: int) -> tuple[Smoke, ...]:
+    return tuple(
+        Smoke(enemy.id, enemy.position)
+        for enemy in enemies
+        if enemy.is_alive
+        and enemy.type is EnemyType.KAPRE
+        and turn - enemy.spawn_turn + 1 in SMOKE_TURNS_ALIVE
+    )
+
+
 def begin_turn(state: BoardState) -> tuple[BoardState, tuple[Event, ...]]:
     units = tuple(
         replace(u, shield=0, atk_bonus=0, start=u.position) for u in state.units
@@ -933,11 +995,16 @@ def begin_turn(state: BoardState) -> tuple[BoardState, tuple[Event, ...]]:
         events.append(
             Event(EventType.INTENT, enemy.id, target_id, intent, pos=position)
         )
+    smoke = _kapre_smoke(moved, current.turn)
+    events.extend(
+        Event(EventType.SMOKE, cloud.source_id, pos=cloud.center) for cloud in smoke
+    )
     new_state = replace(
         current,
         units=tuple(by_id[u.id] for u in current.units),
         enemies=tuple(moved),
         enemy_counter=tuple(counter.items()),
+        smoke=smoke,
     )
     return new_state, tuple(events)
 
@@ -950,6 +1017,8 @@ def unit_status_tags(unit: UnitState) -> tuple[str, ...]:
         tags.append(f"{STOLEN_PREFIX}{unit.stolen_by}")
     if unit.is_lost:
         tags.append(LOST_TAG)
+    if unit.off_desk:
+        tags.append(OFF_DESK_TAG)
     if unit.is_returning:
         tags.append(RETURNING_TAG)
     return tuple(tags)
@@ -960,6 +1029,7 @@ def apply_unit_tags(unit: UnitState, tags: Sequence[str]) -> UnitState:
     stolen_by: str | None = None
     is_lost = False
     is_returning = False
+    off_desk = False
     for tag in tags:
         if tag.startswith(OUT_PREFIX) and tag[len(OUT_PREFIX) :].isdigit():
             out_turns = int(tag[len(OUT_PREFIX) :])
@@ -967,6 +1037,8 @@ def apply_unit_tags(unit: UnitState, tags: Sequence[str]) -> UnitState:
             stolen_by = tag[len(STOLEN_PREFIX) :]
         elif tag == LOST_TAG:
             is_lost = True
+        elif tag == OFF_DESK_TAG:
+            off_desk = True
         elif tag == RETURNING_TAG:
             is_returning = True
     return replace(
@@ -975,6 +1047,7 @@ def apply_unit_tags(unit: UnitState, tags: Sequence[str]) -> UnitState:
         stolen_by=stolen_by,
         is_lost=is_lost,
         is_returning=is_returning,
+        off_desk=off_desk,
     )
 
 

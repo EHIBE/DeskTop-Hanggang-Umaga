@@ -1,0 +1,29 @@
+{
+  "eval": "e7",
+  "timestamp_utc": "2026-11-03T15:59:45.166727+00:00",
+  "commit": "c5989b2801a5615065750fe61e67a73a60be6772",
+  "commit_has_uncommitted_changes": true,
+  "inputs": {
+    "generator": "backend/tests/test_resolve.py random_state",
+    "seeds": 50
+  },
+  "counts": {
+    "boards": 50,
+    "identical": 50,
+    "differing_seeds": []
+  },
+  "metric_name": "boards with identical events",
+  "metric": 1.0,
+  "target": 1.0,
+  "target_met": true,
+  "conditions": {
+    "checks": [
+      "resolve_turn twice equal",
+      "begin_turn twice equal",
+      "begin_turn then resolve_turn chained twice equal"
+    ],
+    "seeds": "0 to 49",
+    "set_size_full": 50,
+    "set_size_min_for_verdict": 50
+  }
+}

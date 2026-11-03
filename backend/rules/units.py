@@ -103,7 +103,7 @@ CLASS_TEMPLATES: Final[Mapping[UnitClass, ClassTemplate]] = {
         0,
         MoveClass.NONE,
         RangeClass.NONE,
-        (PowerId.P06, PowerId.P07, PowerId.P12),
+        (PowerId.P06, PowerId.P07, PowerId.P08, PowerId.P12),
     ),
     UnitClass.HEALER: ClassTemplate(
         4, 1, MoveClass.SHORT, RangeClass.MELEE, (PowerId.P01, PowerId.P02)
@@ -126,7 +126,7 @@ CLASS_TEMPLATES: Final[Mapping[UnitClass, ClassTemplate]] = {
         (PowerId.P04, PowerId.P10, PowerId.P12),
     ),
     UnitClass.SCOUT: ClassTemplate(
-        3, 1, MoveClass.LONG, RangeClass.MELEE, (PowerId.P11,)
+        3, 1, MoveClass.LONG, RangeClass.MELEE, (PowerId.P11, PowerId.P08)
     ),
     UnitClass.WALL: ClassTemplate(
         7, 0, MoveClass.SHORT, RangeClass.NONE, (PowerId.P02, PowerId.P06)

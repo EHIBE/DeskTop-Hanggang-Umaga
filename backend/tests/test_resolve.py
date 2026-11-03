@@ -224,6 +224,10 @@ def test_event_type_members() -> None:
         "reform",
         "kubo_hit",
         "defeat_enemy",
+        "smoke",
+        "smoke_cleared",
+        "lost",
+        "found",
         "win",
         "lose",
     }
@@ -804,7 +808,7 @@ def test_p07_is_passive_and_not_usable() -> None:
     assert find_unit(new, "c").cooldown == 0
 
 
-def test_p08_valid_but_no_effect() -> None:
+def test_p08_without_smoke_has_no_effect() -> None:
     state = cd_state(
         [unit("c", UnitClass.CHARM, (5.0, 5.0), power=PowerId.P08)],
         [enemy("e1", pos=(40.0, 20.0))],
