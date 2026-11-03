@@ -11,7 +11,7 @@ related: [docs/product/user-journey.md, docs/design/accessibility.md, docs/desig
 
 # Onboarding and tutorial
 
-Four small features make the first night easier to learn and nicer to hear, with no new dependency and no audio files. This file is the spec. Nothing here is built yet and every copy line is Proposed and needs cultural review.
+Four small features make the first night easier to learn and nicer to hear, with no new dependency and no audio files. This file is the spec. Section A is built (2026-11-03). Sections B to D follow. Every copy line is Proposed and needs cultural review.
 
 ## Key facts
 
@@ -35,7 +35,7 @@ Teach the turn loop in the first three turns of a campaign without a separate tu
 
 ### Placement
 
-- A `.banner` strip above the captions row in `screens/Night.tsx`, same width as the captions row, height 48 px, one line, 24 px text.
+- A `.banner` strip above the captions row in `screens/Night.tsx`, same width as the captions row, height 56 px so the 48 px tap targets fit inside the border, one line, 24 px text. The 56 px slot stays reserved on turns 1 to 3 while any hint is unseen, so the board does not move when a hint appears or goes.
 - The strip sits below the board so it never covers sprites, rings or arrows.
 - A `PixelIcon` `arrow` in lantern leads the line. A `.btn-quiet` with `PixelIcon` `cross` dismisses it. Tap target at least 48 px.
 
@@ -49,24 +49,28 @@ Teach the turn loop in the first three turns of a campaign without a separate tu
 | `tut.end_turn` | Turn 1, once one order chip exists, or at turn 2 start | Teach finish |
 | `tut.push` | Turn 3 when a tikbalang is telegraphed (Normal teaches it on turn 3) | Teach the ghost outline |
 
-- Turn 2 shows only hints not yet seen. If all four were seen, turn 2 shows none.
+- Turn 2 shows only hints not yet seen. If all four turn 1 hints were seen, turn 2 shows none.
 - On Madali or Mahirap the tikbalang may arrive on another turn. Show `tut.push` on the first tikbalang telegraph within turns 1 to 3 only. Verify wave timing in `docs/game/waves-and-difficulty.md`.
 - Never show a hint in PAUSED, END_TURN_SNAPSHOT or any resolve phase.
 
-### Proposed copy (need cultural review)
+### Reviewed copy (Proposed, pending 2 Filipino playtesters)
+
+Reviewed by `desktop-cultural-reviewer` on 2026-11-03. Lines are short so each fits one line at 24 px.
 
 | Key | tl | en |
 |---|---|---|
-| `tut.telegraph` | Ang pulang palaso ay ang tatamaan nila ngayong turn. | Red arrows show who they will hit this turn. |
-| `tut.move` | Ilipat ang tunay na gamit. Berde ang singsing kung abot. | Slide a real object. A green ring means it can reach. |
-| `tut.order` | Sabihin o i-tap ang utos. Halimbawa: "Stapler, atake ang aswang!" | Say or tap an order. For example: "Stapler, atake ang aswang!" |
-| `tut.end_turn` | Kapag handa na, sabihin ang "Tapos na" o pindutin ang TAPOS. | When ready, say "Tapos na" or press End Turn. |
-| `tut.push` | Maaaring itulak ng tikbalang ang gamit mo. Ilipat ito sa anino. | A tikbalang can shove a unit. Slide it onto the ghost outline. |
+| `tut.telegraph` | Pulang arrow = ang tatamaan nila ngayong turn. | Red arrows show who they will hit this turn. |
+| `tut.move` | Ilipat ang tunay na gamit. Berdeng ring = abot. | Move a real object. Green ring = in reach. |
+| `tut.order` | Sabihin: "Stapler, atake ang aswang!" O i-tap. | Say "Stapler, atake ang aswang!" or tap. |
+| `tut.order_tap` | I-tap ang unit, pili ng aksyon, tapos target. | Tap a unit, pick an action, then a target. |
+| `tut.end_turn` | Handa na? Sabihin ang "Tapos na" o pindutin ang TAPOS. | Ready? Say "Tapos na" or press End turn. |
+| `tut.push` | Itutulak ng tikbalang ang unit. Ilipat sa anino. | A tikbalang shoves a unit. Slide it to the shadow. |
 | `tut.dismiss` | Sige | Got it |
 | `tut.skip_all` | Laktawan lahat | Skip all hints |
 
 - The Taglish example in `tut.order` is the same phrase used in `docs/how-to-run.md`.
 - `tut.push` describes the behavior already in the game. Wording avoids saying a tikbalang "attacks", per the respect rules.
+- If `tut.end_turn` tl overflows one line, drop "Handa na? ".
 
 ### States
 
@@ -76,7 +80,7 @@ Teach the turn loop in the first three turns of a campaign without a separate tu
 | Showing | Banner with arrow icon, one line in the chosen language, dismiss button |
 | Dismissed | Strip removed, next hint in the chain may show |
 | Skipped all | Strip removed, all five hints marked seen |
-| Demo Safe | Same hints. `tut.order` swaps to the tap-only wording if voice is off (key `tut.order_tap`, Proposed) |
+| Demo Safe | Same hints. `tut.order` swaps to the tap-only wording if voice is off (key `tut.order_tap`) |
 
 ### Storage
 
@@ -94,15 +98,15 @@ Teach the turn loop in the first three turns of a campaign without a separate tu
 
 ### Acceptance checks
 
-- [ ] Fresh campaign shows `tut.telegraph` at turn 1 PLAYER_PHASE. Ends with `tut.end_turn`.
-- [ ] Dismissed hint does not return after relaunch and Continue.
-- [ ] A second new campaign shows hints again.
-- [ ] No hint appears at turn 4 or later.
-- [ ] `tut.push` shows only when a tikbalang is telegraphed.
-- [ ] With storage blocked the Night screen still renders.
-- [ ] With reduced motion on, no animation runs.
-- [ ] Strip does not cover the board, chips, or End Turn.
-- [ ] Both languages fit on one line at 1920x1080. Shorten the copy if not.
+- [x] Fresh campaign shows `tut.telegraph` at turn 1 PLAYER_PHASE. Ends with `tut.end_turn`. Verified by code reading 2026-11-03
+- [x] Dismissed hint does not return after relaunch and Continue. Verified by code reading 2026-11-03
+- [x] A second new campaign shows hints again. Verified by code reading 2026-11-03
+- [x] No hint appears at turn 4 or later. Verified by code reading 2026-11-03
+- [x] `tut.push` shows only when a tikbalang is telegraphed. Verified by code reading 2026-11-03
+- [x] With storage blocked the Night screen still renders. Verified by code reading 2026-11-03
+- [x] With reduced motion on, no animation runs. Verified by code reading 2026-11-03
+- [x] Strip does not cover the board, chips, or End Turn. Verified by code reading 2026-11-03
+- [ ] Both languages fit on one line at 1920x1080. Shorten the copy if not. Estimated 1296 px of 1364 px for the longest line, Unverified on screen
 
 ## B. Folklore glossary
 

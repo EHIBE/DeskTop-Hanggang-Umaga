@@ -441,7 +441,33 @@ const entries = {
   'calib.area': { tl: 'Laki ng mesa', en: 'Table size' },
   'calib.title': { tl: 'Ayusin ang Camera', en: 'Set Up the Camera' },
   'sfx.on': { tl: 'Tunog: naka-on', en: 'Sound: on' },
-  'sfx.off': { tl: 'Tunog: naka-off', en: 'Sound: off' }
+  'sfx.off': { tl: 'Tunog: naka-off', en: 'Sound: off' },
+  'tut.telegraph': {
+    tl: 'Pulang arrow = ang tatamaan nila ngayong turn.',
+    en: 'Red arrows show who they will hit this turn.'
+  },
+  'tut.move': {
+    tl: 'Ilipat ang tunay na gamit. Berdeng ring = abot.',
+    en: 'Move a real object. Green ring = in reach.'
+  },
+  'tut.order': {
+    tl: 'Sabihin: "Stapler, atake ang aswang!" O i-tap.',
+    en: 'Say "Stapler, atake ang aswang!" or tap.'
+  },
+  'tut.order_tap': {
+    tl: 'I-tap ang unit, pili ng aksyon, tapos target.',
+    en: 'Tap a unit, pick an action, then a target.'
+  },
+  'tut.end_turn': {
+    tl: 'Handa na? Sabihin ang "Tapos na" o pindutin ang TAPOS.',
+    en: 'Ready? Say "Tapos na" or press End turn.'
+  },
+  'tut.push': {
+    tl: 'Itutulak ng tikbalang ang unit. Ilipat sa anino.',
+    en: 'A tikbalang shoves a unit. Slide it to the shadow.'
+  },
+  'tut.dismiss': { tl: 'Sige', en: 'Got it' },
+  'tut.skip_all': { tl: 'Laktawan lahat', en: 'Skip all hints' }
 } as const satisfies Record<string, CopyEntry>
 
 export type CopyKey = keyof typeof entries

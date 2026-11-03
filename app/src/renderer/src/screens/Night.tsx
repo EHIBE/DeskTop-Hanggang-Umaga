@@ -16,6 +16,7 @@ import { MIN_SCALE, drawSprite, useUnitImages } from '../canvas/sprites'
 import Bilingual from '../components/Bilingual'
 import SoundToggle from '../components/SoundToggle'
 import Captions from '../hud/Captions'
+import HintStrip from '../hud/HintStrip'
 import Narration from '../hud/Narration'
 import OrderChips from '../hud/OrderChips'
 import TapMenu from '../hud/TapMenu'
@@ -663,6 +664,13 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
           <Bilingual copyKey="voice.down_banner" />
         </div>
       )}
+      <HintStrip
+        key={state.campaign?.id ?? ''}
+        campaignId={state.campaign?.id ?? null}
+        phase={phase}
+        night={night}
+        voiceOff={state.demo_safe || state.voice.status === 'off' || state.voice.status === 'down'}
+      />
       <div className="mx-4 mb-2 flex shrink-0 items-center gap-4">
         <Captions subscribe={subscribe} />
         <VoiceControls voice={state.voice} send={send} />

@@ -18,7 +18,7 @@ The night HUD frames the warped desk feed with a top band for status and a botto
 | Fact | Value |
 |---|---|
 | Canvas | `canvas/Board.tsx`, `sprites.ts`, `rings.ts`, `arrows.ts` |
-| DOM HUD | `hud/TopBar.tsx`, `UnitStrip.tsx`, `Captions.tsx`, `OrderChips.tsx`, `TapMenu.tsx`, `Narration.tsx`, `VoiceControls.tsx`, `RecIndicator.tsx`, `StatusBadge.tsx` |
+| DOM HUD | `hud/TopBar.tsx`, `UnitStrip.tsx`, `Captions.tsx`, `OrderChips.tsx`, `TapMenu.tsx`, `Narration.tsx`, `VoiceControls.tsx`, `RecIndicator.tsx`, `StatusBadge.tsx`, `HintStrip.tsx` |
 | Screen | `screens/Night.tsx` combines Board and HUD |
 | Data | WebSocket messages, see `architecture/websocket-protocol.md` |
 
@@ -56,6 +56,7 @@ The night HUD frames the warped desk feed with a top band for status and a botto
 | Unit badge | sprites.ts | "?" uncertain, lock when stolen, scar mark (Could) |
 | Sprite | sprites.ts | Placeholder, real, greyed (down), blue night tint, dawn tint |
 | Speaker chip | Not built (M11 shows the label inline in Captions and OrderChips) | Label and name, pulses while speaking, "?" when unknown |
+| Hint strip | HintStrip, `lib/tutorial.ts` | `.banner` above the captions row, 56 px high, one 24 px line with an arrow icon, Got it and Skip all buttons. Shows only in PLAYER_PHASE of turns 1 to 3, one hint at a time, advances on dismiss or after 8 s. Seen ids per campaign in `desktop.tutorial`. The slot stays reserved on turns 1 to 3 while any hint is unseen, so the board never shifts mid-turn. Spec: `onboarding-and-tutorial.md` |
 | Captions | Captions | Partial (replaces, never appends), final, GM narration Taglish line plus English caption |
 | Order chips | OrderChips | Pending (cancelable by "hindi" or X), resolving, removed |
 | Unit strip | UnitStrip | Name, HP n/max, cooldown CD n, down, stolen, uncertain |

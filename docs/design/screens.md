@@ -70,6 +70,7 @@ Twelve screens, each a component in `app/src/renderer/src/screens/`, routed by `
 | Night | Recording | Red REC dot with `rec.on` |
 | Night | Checking | `endturn.checking`, `endturn.hands` |
 | Night | Blocked End Turn | `endturn.blocked`, ghosts |
+| Night | First-night hint | Hint strip above the captions row in PLAYER_PHASE of turns 1 to 3, one line, dismiss and skip all. Voice off swaps `tut.order` to `tut.order_tap` |
 | Replay | No consent | Replay button hidden on Sunrise |
 | Replay | SAM video failed | Fallback 10 s clip or skip |
 

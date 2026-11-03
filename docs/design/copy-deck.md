@@ -282,6 +282,14 @@ English text for these is a proposal for playtester review.
 | calib.title | Ayusin ang Camera | Set Up the Camera | UI redesign 2026-10-31, Proposed, playtester review |
 | sfx.on | Tunog: naka-on | Sound: on | Synthesized sound 2026-11-03, Proposed, playtester review |
 | sfx.off | Tunog: naka-off | Sound: off | Synthesized sound 2026-11-03, Proposed, playtester review |
+| tut.telegraph | Pulang arrow = ang tatamaan nila ngayong turn. | Red arrows show who they will hit this turn. | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
+| tut.move | Ilipat ang tunay na gamit. Berdeng ring = abot. | Move a real object. Green ring = in reach. | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
+| tut.order | Sabihin: "Stapler, atake ang aswang!" O i-tap. | Say "Stapler, atake ang aswang!" or tap. | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
+| tut.order_tap | I-tap ang unit, pili ng aksyon, tapos target. | Tap a unit, pick an action, then a target. | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
+| tut.end_turn | Handa na? Sabihin ang "Tapos na" o pindutin ang TAPOS. | Ready? Say "Tapos na" or press End turn. | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
+| tut.push | Itutulak ng tikbalang ang unit. Ilipat sa anino. | A tikbalang shoves a unit. Slide it to the shadow. | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
+| tut.dismiss | Sige | Got it | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
+| tut.skip_all | Laktawan lahat | Skip all hints | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
 | voice.region | Boses | Voice | M11, Proposed, playtester review |
 | voice.status.off | Naka-off ang mic | Mic off | M11, Proposed, playtester review |
 | voice.status.connecting | Kumokonekta ang mic | Connecting mic | M11, Proposed, playtester review |
