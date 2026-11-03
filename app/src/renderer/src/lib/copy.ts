@@ -304,6 +304,7 @@ const entries = {
     en: 'Something went wrong. Try again, or turn on Demo Safe.'
   },
   'calib.rescan': { tl: 'Hanapin ulit', en: 'Rescan' },
+  'calib.scanning': { tl: 'Hinahanap ang mga camera...', en: 'Looking for cameras...' },
   'made.image_step': { tl: 'Pixel sprite', en: 'Pixel sprite' },
   'made.drawing': { tl: 'Ginuguhit...', en: 'Drawing...' },
   'card.owner_none': { tl: 'Wala pa', en: 'None yet' },

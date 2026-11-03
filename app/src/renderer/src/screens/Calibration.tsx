@@ -57,6 +57,7 @@ function Step({
 function Calibration({ state, send, subscribe }: CalibrationProps): React.JSX.Element {
   const preview = state.calibration_preview
   const [cameras, setCameras] = useState<readonly CameraInfo[]>([])
+  const [scanning, setScanning] = useState(true)
   const [corners, setCorners] = useState<readonly Point[]>([])
   const [widthText, setWidthText] = useState(String(state.play_w_cm))
   const [heightText, setHeightText] = useState(String(state.play_h_cm))
@@ -75,12 +76,14 @@ function Calibration({ state, send, subscribe }: CalibrationProps): React.JSX.El
 
   useEffect(() => {
     const off = subscribe((message) => {
-      if (message.type === 'devices') setCameras(message.cameras)
-      else if (message.type === 'notice' && isCamProblem(message.copy_key)) {
+      if (message.type === 'devices') {
+        setCameras(message.cameras)
+        setScanning(false)
+      } else if (message.type === 'notice' && isCamProblem(message.copy_key)) {
         setCamProblem({ key: message.copy_key, index: latestIndex.current })
       }
     })
-    send({ type: 'devices.list' })
+    if (!send({ type: 'devices.list' })) queueMicrotask(() => setScanning(false))
     return off
   }, [subscribe, send])
 
@@ -163,10 +166,10 @@ function Calibration({ state, send, subscribe }: CalibrationProps): React.JSX.El
   const removeState: StepState = preview ? 'active' : 'todo'
   const rescan = (): void => {
     setCamProblem(null)
-    send({ type: 'devices.list' })
+    if (send({ type: 'devices.list' })) setScanning(true)
   }
   const rescanButton = (
-    <button type="button" className="btn self-start" onClick={rescan}>
+    <button type="button" className="btn self-start" disabled={scanning} onClick={rescan}>
       {say('calib.rescan')}
     </button>
   )
@@ -196,7 +199,11 @@ function Calibration({ state, send, subscribe }: CalibrationProps): React.JSX.El
             <PixelIcon name="camera" size={2} />
             {say('calib.camera')}
           </span>
-          {sortedCameras.length === 0 ? (
+          {scanning && sortedCameras.length === 0 ? (
+            <p role="status" className="text-gabi-mist">
+              {say('calib.scanning')}
+            </p>
+          ) : sortedCameras.length === 0 ? (
             <div className="flex flex-col gap-3">
               <p className="text-gabi-bukang">{say('calib.no_camera')}</p>
               {rescanButton}
