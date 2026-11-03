@@ -1,0 +1,14 @@
+{
+  "note": "Contract-shaped response for the FR-21 acceptance case. Hand written to the command_parse schema, not a live recording.",
+  "transcript": "pre, yung may susi, gamutin mo yung kubo",
+  "units": [
+    {"id": "u_albu", "name": "Albularyo", "class": "healer"},
+    {"id": "u_spear", "name": "Spearman", "class": "reach"},
+    {"id": "u_kubo", "name": "Kubo", "class": "kubo"}
+  ],
+  "enemies": [{"id": "e_aswang_1", "type": "aswang"}],
+  "response": {
+    "output_text": "{\"kind\": \"heal\", \"unit_id\": \"u_albu\", \"target_id\": \"u_kubo\"}",
+    "usage": {"input_tokens": 210, "cached_tokens": 0, "output_tokens": 18}
+  }
+}

@@ -12,6 +12,8 @@ TRIGGER_FUZZY_MIN_LEN: Final = 5
 MAX_TEXT_CHARS: Final = 400
 MAX_ALIAS_TOKENS: Final = 3
 MIN_ALIAS_CHARS: Final = 3
+MIN_FUZZY_WINDOW_CHARS: Final = 4
+KUBO_CLASS: Final = "kubo"
 MAX_INSTANCE_DIGITS: Final = 2
 
 ENEMY_FUZZY_CUTOFF: Final = 80
@@ -314,6 +316,8 @@ def find_unit_mentions(
                         score = fuzz.ratio(alias, window)
                         cutoff = SHORT_ALIAS_CUTOFF
                     else:
+                        if len(window) < MIN_FUZZY_WINDOW_CHARS:
+                            continue
                         score = fuzz.partial_ratio(alias, window)
                         cutoff = FUZZY_CUTOFF
                     if score >= cutoff:
@@ -444,5 +448,8 @@ def _parse_order(tokens: list[str], context: GrammarContext) -> Command | None:
         return None
     actor = unit_mentions[0]
     kind = action[0]
+    is_kubo_healer = kind is CommandKind.HEAL and actor.unit.unit_class == KUBO_CLASS
+    if is_kubo_healer and len(unit_mentions) == 1:
+        return None
     target = _resolve_target(kind, actor, unit_mentions, enemy_mentions, context)
     return Command(kind, actor.unit.game_id, target)

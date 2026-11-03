@@ -498,3 +498,15 @@ def test_parse_is_fast() -> None:
         parse(texts[i % len(texts)])
         durations.append((time.perf_counter() - started) * 1000)
     assert statistics.median(durations) < 20.0
+
+
+def test_descriptive_phrase_does_not_fuzzy_match_a_unit() -> None:
+    context = GrammarContext(
+        units=(
+            GrammarUnit("u_albu", "Albularyo", "healer", 10, 10),
+            GrammarUnit("u_spear", "Spearman", "reach", 20, 20),
+            GrammarUnit("u_kubo", "Kubo", "kubo", 0, 0),
+        ),
+        enemies=(GrammarEnemy("e_aswang_1", "aswang", 30, 30),),
+    )
+    assert parse_command("pre, yung may susi, gamutin mo yung kubo", context) is None
