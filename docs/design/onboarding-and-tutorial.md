@@ -1,17 +1,17 @@
 ---
 title: Onboarding and tutorial
-purpose: Design spec for four features approved 2026-11-03 - first-night hints, folklore glossary, speaker chip and synthesized sound
+purpose: Design spec for four features approved 2026-11-03: first-night hints, folklore glossary, speaker chip and synthesized sound
 read_when: [building or reviewing hints, the glossary panel, the speaker chip or sound effects, writing the copy keys for them]
 canonical_for: [first-night hint rules, glossary panel behavior, speaker chip look, synthesized sound cue recipes, sound mute setting]
 sources: [docs/design/cultural-care.md, docs/design/hud-components.md, docs/design/audio.md, docs/design/screens.md, docs/design/DESIGN.md, app/src/renderer/src/screens/Night.tsx, app/src/renderer/src/lib/lang.ts]
-status: draft
+status: active
 last_verified: 2026-11-03
 related: [docs/product/user-journey.md, docs/design/accessibility.md, docs/design/copy-deck.md, docs/game/enemies.md]
 ---
 
 # Onboarding and tutorial
 
-Four small features make the first night easier to learn and nicer to hear, with no new dependency and no audio files. This file is the spec. Section A is built (2026-11-03). Sections B to D follow. Every copy line is Proposed and needs cultural review.
+Four small features make the first night easier to learn and nicer to hear, with no new dependency and no audio files. This file is the spec. All four sections are built (2026-11-03). Every copy line is Proposed and needs cultural review.
 
 ## Key facts
 
@@ -175,7 +175,7 @@ Descriptions reuse the cultural-care wording word for word. Keep them in sync wi
 
 ### Purpose
 
-Show which player spoke, so overlap, "Hindi" cancels and claims are clear. This is the component marked "Not built" in `docs/design/hud-components.md`.
+Show which player spoke, so overlap, "Hindi" cancels and claims are clear. Built 2026-11-03, row in `docs/design/hud-components.md`.
 
 ### Look
 
@@ -218,7 +218,7 @@ Show which player spoke, so overlap, "Hindi" cancels and claims are clear. This 
 
 ### Accessibility
 
-- `aria-label` reads "Player 1", "Player 2" and so on, from keys `speaker.p1` to `speaker.p4` (Proposed: tl "Manlalaro 1", en "Player 1").
+- `aria-label` reads "Player 1", "Player 2" and so on, from keys `speaker.p1` to `speaker.p4` (Proposed: tl and en "Player 1").
 - Pulse is replaced by a steady 2 px thicker border when reduced motion is on.
 - Shape plus label plus colour. Colour-blind players read shape and label.
 - Chip text stays at 16 px or larger.
@@ -237,7 +237,7 @@ Show which player spoke, so overlap, "Hindi" cancels and claims are clear. This 
 
 ### Purpose
 
-Add night mood and clear event feedback with no audio files and no licenses. All sounds are built at runtime with the WebAudio API from oscillators, noise and gain envelopes. This replaces the file-based plan in `docs/design/audio.md` for licensing. That file needs a sync (docs-sync task).
+Add night mood and clear event feedback with no audio files and no licenses. All sounds are built at runtime with the WebAudio API from oscillators, noise and gain envelopes. This replaces the file-based plan in `docs/design/audio.md` for licensing. That file was synced on 2026-11-03.
 
 ### Cues
 

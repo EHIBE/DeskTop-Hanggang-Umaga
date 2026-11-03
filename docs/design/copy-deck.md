@@ -5,7 +5,7 @@ read_when: [adding or changing any player-facing text, building lib/copy.ts or a
 canonical_for: [copy keys, line bank, unit card template]
 sources: [docs/DeskTop_PRD.md#copy-deck, docs/DeskTop_PRD.md#content-list, docs/DeskTop_PRD.md#14-edge-cases-and-failure-handling]
 status: active
-last_verified: 2026-10-29
+last_verified: 2026-11-03
 related: [docs/design/cultural-care.md, docs/architecture/ai-contracts.md]
 ---
 
@@ -17,7 +17,7 @@ All player-facing text, keyed. `app/src/renderer/src/lib/copy.ts` and `assets/li
 
 | Fact | Value |
 |---|---|
-| UI keys | 245 in copy.ts (48 from PRD, the rest Proposed) |
+| UI keys | 296 in copy.ts on 2026-11-03 (48 from PRD, the rest Proposed) |
 | Line bank moments | 19 (14 from PRD, 4 aswang edge variants, quiet) |
 | Placeholders | [name], [unit], [object], [player], [feature], [HP], [n], [action], [target], [pangalan], [turn], [seconds] |
 | Review | 2 Filipino playtesters review every Taglish line before recording |

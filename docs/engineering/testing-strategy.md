@@ -20,7 +20,7 @@ All automated tests run offline against recorded fixtures, so they cost nothing 
 | Framework | pytest (backend). No frontend test framework configured |
 | Command | `backend\.venv\Scripts\python -m pytest backend/tests -q` |
 | Coverage target | 90%+ of rules functions (NFR-31). Measure with `cd backend` then `.venv\Scripts\python -m pytest tests -q --cov=rules` |
-| Python static checks | ruff check, ruff format and mypy --strict (ADR-0101). All clean on 2026-11-03 with 1,229 backend tests passing |
+| Python static checks | ruff check, ruff format and mypy --strict (ADR-0101). All clean on 2026-11-03 with 1,232 backend tests passing |
 | Fixtures | `fixtures/` from Phase 1 smoke tests and later recordings |
 | Determinism | E7 must be 100% |
 | CI | `.github/workflows/ci.yml` (Windows, Python 3.13, Node 22): ruff, ruff format, mypy strict, pytest, typecheck, lint, prettier. First run after EHIBE pushes |

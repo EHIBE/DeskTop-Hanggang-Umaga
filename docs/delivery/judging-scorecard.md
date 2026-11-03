@@ -85,7 +85,7 @@ Code paths: `backend/vision/` (summon, SAM, sprites), `backend/gm/` (narrator), 
 | Item | Detail |
 |---|---|
 | What judges look for | Sound architecture, graceful recovery, edge-case resilience, production code quality |
-| Evidence today | Pure rules engine owns every number (`backend/rules/`). Hybrid tracking with re-anchor ladder. Token-gated backend on 127.0.0.1, key in safeStorage. Cost meter with hard stop. Schema v2 with stepped migration. Tests, ruff, mypy --strict, tsc, eslint and prettier clean. Test count: [MEASURED: re-read from the test run on submit day] (1,229 on 2026-11-03). E7 50 of 50. Rules resolve 1.1 ms median, tracker 31.9 ms median (`README.md`) |
+| Evidence today | Pure rules engine owns every number (`backend/rules/`). Hybrid tracking with re-anchor ladder. Token-gated backend on 127.0.0.1, key in safeStorage. Cost meter with hard stop. Schema v2 with stepped migration. Tests, ruff, mypy --strict, tsc, eslint and prettier clean. Test count: [MEASURED: re-read from the test run on submit day] (1,232 on 2026-11-03). E7 50 of 50. Rules resolve 1.1 ms median, tracker 31.9 ms median (`README.md`) |
 | Gaps | CI workflow added, first run after push. No Electron fuses yet (Phase 6). No Python dependency audit (known gap, accepted). Packaged origin fixed (ADR-0111), backend bundling still to do. E1 to E6 not run |
 | Finalization tasks | Set fuses through the electron-builder `electronFuses` config. Fix the code-check bugs listed in the shared brief. Run E1, E2, E4, E6 and record real numbers. State the Python audit gap honestly |
 | Video proof | Under-the-hood shot with architecture, hybrid tracking, rules engine, eval numbers and cost per night (current script 2:05 to 2:20). Show only numbers from `docs/eval.md` |

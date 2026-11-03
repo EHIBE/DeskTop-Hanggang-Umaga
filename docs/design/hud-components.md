@@ -5,7 +5,7 @@ read_when: [building app/src/renderer/src/hud or canvas components]
 canonical_for: [HUD layout, component states, component to file map]
 sources: [docs/DeskTop_PRD.md#hud-layout-1920x1080, docs/DeskTop_PRD.md#12-technical-architecture, docs/DeskTop_Build_Guide.md#74-hud]
 status: active
-last_verified: 2026-10-29
+last_verified: 2026-11-03
 related: [docs/design/DESIGN.md, docs/design/screens.md, docs/architecture/websocket-protocol.md]
 ---
 
@@ -34,7 +34,7 @@ The night HUD frames the warped desk feed with a top band for status and a botto
 |                                                              |
 |                     WARPED DESK FEED + SPRITES               |
 |                                                              |
-| [Speaker: A Migs]  caption: "Spearman, saksakin ang aswang!" |
+| [P1 chip] caption: "Spearman, saksakin ang aswang!" |
 | Orders: [Spearman → atake Aswang 2  x] [Albularyo → gamot  x]|
 | Units: Spearman 4/4 | Albularyo 3/4 (CD 0) | Anting 3/3 (CD 1)|
 |                                      [ TAPOS / END TURN ]    |

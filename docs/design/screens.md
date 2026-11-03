@@ -11,13 +11,13 @@ related: [docs/design/DESIGN.md, docs/design/hud-components.md, docs/design/copy
 
 # Screens
 
-Twelve screens, each a component in `app/src/renderer/src/screens/`, routed by `App.tsx` from backend state. Every screen handles loading, error, offline and Demo Safe Mode states.
+Ten screens, each a component in `app/src/renderer/src/screens/`, routed by `App.tsx` from backend state. Every screen handles loading, error, offline and Demo Safe Mode states.
 
 ## Key facts
 
 | Fact | Value |
 |---|---|
-| Screens | Start, KeySetup, Calibration, Summon, UnitCard, VoiceClaim, Night, Sunrise, Defeat, Replay, Campaign menu, Settings |
+| Screens | LanguagePick, KeySetup, Start, Calibration, Summon, UnitCard, VoiceClaim, Night, Sunrise, Defeat. Replay is `components/ReplayPanel.tsx` on Sunrise and Defeat. The campaign list lives on Start |
 | Router | `App.tsx`, driven by the backend game state |
 | Text | All from `lib/copy.ts` keys |
 | Settings screen | Cut (ADR-0112), not built |
@@ -38,18 +38,18 @@ Twelve screens, each a component in `app/src/renderer/src/screens/`, routed by `
 | Screen | Purpose | Key elements | Enter | Exit |
 |---|---|---|---|---|
 | LanguagePick | First-run language | Logo, Filipino and English buttons | No language stored | Language saved, routes to KeySetup or Start |
-| Start | Begin or continue | Logo, tagline, New Campaign, Continue, Settings, Demo Safe Mode toggle, Folklore button (`gloss.open`, opens the glossary panel), sound switch, credit meter (dev build only), `start.ready` | App launch | New, Continue, Settings |
+| Start | Begin or continue | Logo, tagline, New Campaign, Continue, Demo Safe Mode toggle, Folklore button (`gloss.open`, opens the glossary panel), sound switch, credit meter (dev build only), `start.ready` | App launch | New, Continue |
 | KeySetup | First-run API key | Paste field (masked), Save, short privacy note | No stored key | Key saved through main process safeStorage |
-| Calibration | Map the desk | Live feed, A4 outline guide, 4 corner handles, play-area rectangle (default 60 x 40 cm), ruler check, Done. Copy `calib.place`, `calib.tap`, `calib.done`, `calib.dark`, "Itutok ang camera sa mesa lang." | First launch, camera moved, Settings recalibrate | Homography saved |
+| Calibration | Map the desk | Live feed, A4 outline guide, 4 corner handles, play-area rectangle (default 60 x 40 cm), ruler check, Done. Copy `calib.place`, `calib.tap`, `calib.done`, `calib.dark`, "Itutok ang camera sa mesa lang." | First launch, camera moved, Recalibrate in the pause menu | Homography saved |
 | Summon | Create units | Warped feed, `summon.prompt`, roster sidebar (max 12), kubo slot highlighted first, Begin Night, typed name input | Start Night | Begin Night with valid roster |
 | UnitCard | Show a new unit | Sprite (placeholder then real), name, class, HP, ATK, move, range, power, Taglish and English text, owner chip, Rename, Re-roll (1 per unit) | New unit registered | Auto-dismiss or tap |
-| VoiceClaim | Map voices | `claim.prompt`, speaker chips A to D with names, Skip, `claim.who` | Begin Night | All claimed, Skip, 60 s timeout |
+| VoiceClaim | Map voices | `claim.prompt`, speaker chips P1 to P4 with names, Skip, `claim.who` | Begin Night | All claimed, Skip, 60 s timeout |
 | Night | Play | Board plus full HUD (see `hud-components.md`) | Voice claim done | Sunrise or Defeat |
 | Sunrise | End of night | Dawn sky, score, Bayani ng Gabi, badges (Could), Replay (consent only), Next Night, Quit, `win` | Turn 8 survived | Replay, Next Night, Quit |
 | Defeat | Lost night | Fallen kubo art, score, Try Again, `lose` | Kubo HP 0 or no units | Try Again, Quit |
 | Replay | Make and find the reel | `components/ReplayPanel.tsx` on Sunrise and Defeat: Make the Replay, `replay.making` while rendering, Show in folder when done, Try again on failure | Night ended with consent | Next Night or Quit |
-| Campaign menu | Manage saves | Campaign list, nights survived, units, Delete campaign with confirm | Continue | Select or back |
-| Settings (Could) | Preferences | Camera, mic, caption language, difficulty, replay on or off, TTS on or off (default off), show real objects, recalibrate | Start | Back |
+| Campaign list (on Start) | Manage saves | Campaign list, nights survived, Delete campaign with confirm | Start | Select or delete |
+| Settings (cut, ADR-0112) | Not built. Language and sound switches live on Start and the pause menu | Camera, mic, caption language, difficulty, replay on or off, TTS on or off (default off), show real objects, recalibrate | Start | Back |
 
 ## Screen-specific states
 
