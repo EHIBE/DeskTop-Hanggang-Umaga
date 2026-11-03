@@ -48,7 +48,7 @@ The app is an electron-vite React TypeScript project. Main spawns the backend an
 | `hud/Captions.tsx` | Live transcript with speaker label. Narration lives in `hud/Narration.tsx` |
 | `hud/VoiceControls.tsx` | Mic status, open or push-to-talk switch, hold Space or the hold button, Voice problems retry |
 | `hud/OrderChips.tsx` | Order chips |
-| `hud/SpeakerChip.tsx` | Not built. The speaker label shows inline in captions and voice chips |
+| `components/SpeakerChip.tsx`, `lib/speaker.ts` | Built 2026-11-03. P1 to P4 chip with colour and shape in Captions, OrderChips and VoiceClaim |
 | `hud/TapMenu.tsx` | Tap controls (FR-25) |
 | `screens/*.tsx` | Start, KeySetup, Calibration, Summon, UnitCard, VoiceClaim, Night, Sunrise, Defeat. Replay lives in `components/ReplayPanel.tsx` on Sunrise and Defeat. Settings is a Could and not built |
 

@@ -83,7 +83,7 @@ Real numbers only, from real runs. Full log: `docs/eval.md`.
 
 | Measure | Result |
 |---|---|
-| E7 Determinism (same board, same result) | 50 of 50 seeded boards identical, 100% (2026-10-29) |
+| E7 Determinism (same board, same result) | 50 of 50 seeded boards identical, 100% (2026-10-29, rerun 2026-11-03) |
 | Rules resolution speed | 1.1 ms median for 12 units and 8 enemies (target 50 ms) |
 | Tracker speed | 31.9 ms median per update for 12 KCF trackers on a 1200x800 frame |
 | Automated tests | 1,229 backend tests passing, plus typecheck, lint and format checks |
@@ -120,6 +120,7 @@ More: `docs/product/scope-and-cuts.md` and `docs/delivery/risk-register.md`.
 
 - Font: Press Start 2P by The Press Start 2P Project Authors, SIL Open Font License 1.1 (`assets/fonts/OFL.txt`).
 - Profanity lists: LDNOOBW, CC BY 4.0 (`backend/gm/data/ATTRIBUTION.md`).
+- Sound effects: synthesized in code at runtime with WebAudio, no audio files.
 - Folklore glossary and cultural care notes: `docs/glossary.md`, `docs/design/cultural-care.md`.
 
 ## License

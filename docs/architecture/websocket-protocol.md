@@ -5,7 +5,7 @@ read_when: [adding or changing a message, building lib/socket.ts or the /ws hand
 canonical_for: [local message types, envelope, handshake, event schema]
 sources: [docs/DeskTop_Build_Guide.md#33-fastapi-frame-stream, docs/DeskTop_PRD.md#12-technical-architecture, docs/DeskTop_PRD.md#gm-contract]
 status: active
-last_verified: 2026-10-29
+last_verified: 2026-11-03
 related: [docs/architecture/overview.md, docs/engineering/security-and-privacy.md, docs/design/hud-components.md]
 ---
 
@@ -19,7 +19,7 @@ The renderer and backend talk over one WebSocket at `ws://127.0.0.1:8765/ws`. Me
 |---|---|
 | URL | `ws://127.0.0.1:<port>/ws`. Port is free-picked by Electron main on each backend start |
 | Auth | Token sent as WebSocket subprotocols `["desktop", <DESKTOP_TOKEN>]` and compared with `hmac.compare_digest`. The server accepts with subprotocol `desktop`. Wrong or missing: close 1008 (HTTP 403 at handshake). The token is never in the URL, because uvicorn logs URLs |
-| Origin | Must be in `DESKTOP_ALLOWED_ORIGINS` (dev server origin, or `file://` and `null` in a packaged build) |
+| Origin | Must be in `DESKTOP_ALLOWED_ORIGINS` (dev server origin, or `file://` in a packaged build). `null` is added only when main sets `DESKTOP_PACKAGED=1` (ADR-0111). The token is always required |
 | HTTP auth | `X-Desktop-Token` header on every route, 401 when missing or wrong |
 | Encoding | JSON text frames with a `type` field |
 | Frame rate | About 25 per second |

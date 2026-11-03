@@ -11,7 +11,7 @@ related: [docs/engineering/testing-strategy.md, docs/design/cultural-care.md, do
 
 # Playtests
 
-Real sessions only, labeled qualitative and small sample. No playtest has run yet as of 2026-10-28.
+Real sessions only, labeled qualitative and small sample. No playtest has run yet as of 2026-11-03.
 
 ## Key facts
 

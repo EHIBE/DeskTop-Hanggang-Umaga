@@ -5,7 +5,7 @@ read_when: [planning demo footage, editing the video]
 canonical_for: [video shot list, video length default]
 sources: [docs/DeskTop_PRD.md#demo-video-script-230, docs/DeskTop_Build_Guide.md#151-demo-video]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-03
 related: [docs/market/judging-strategy.md, docs/delivery/demo-runbook.md]
 ---
 
@@ -28,7 +28,7 @@ A 2:30 video with a hook in the first 8 seconds, then each model shown doing its
 | 0:00 to 0:08 | Hook. Dark desk, a hand drops a coin. "Anting-anting!" The pixel charm glows | Caption: "Any desk is a game board." | Demo, Tooling |
 | 0:08 to 0:20 | Two friends at a plain table, phones away | VO: "No console. No board game. Just your table, your barkada and the stories you grew up with." | Impact |
 | 0:20 to 0:45 | Summon: mug becomes kubo, keys become albularyo, pen becomes spearman. Split screen of Spark box, SAM mask, Muse Image sprite with model names | VO: "Muse Spark finds the object, SAM 3.1 cuts its exact shape, Muse Image redraws it." | Tooling |
-| 0:45 to 0:55 | Voice claim: "Ako si Migs, hawak ko ang spearman." Speaker chips A and B | VO: "Muse Voice Transcribe knows who is talking, in Taglish." | Tooling, Impact |
+| 0:45 to 0:55 | Voice claim: "Ako si Migs, hawak ko ang spearman." Speaker chips P1 and P2 | VO: "Muse Voice Transcribe knows who is talking, in Taglish." | Tooling, Impact |
 | 0:55 to 1:35 | Night: arrows, Taglish arguing, slide the pen, "Spearman, saksakin ang aswang!", chip, "Tapos!", re-anchor flash, hit, "Nakaiwas!". Tikbalang shoves, player slides onto the ghost | Captions of real speech | Demo, Tech |
 | 1:35 to 1:50 | Turn 6: manananggal splits. Asin on the lower half | GM caption: "Humiwalay ang katawan!" | Demo |
 | 1:50 to 2:05 | Sunrise. Rooster. Replay reel of real hands with the pixel battle pinned | VO: "At sunrise, SAM 3.1 tracks the whole night into a replay." | Tooling, Demo |

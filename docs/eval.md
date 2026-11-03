@@ -37,6 +37,8 @@ Real results only, from real runs. As of 2026-10-29 only E7 has run. The others 
 | Date (SGT) | Eval | Set size | Conditions | Result | Target met | Commit | Notes |
 |---|---|---|---|---|---|---|---|
 | 2026-10-29 11:41 | E7 | 50 seeded boards resolved twice | Offline, seeded generator from backend/tests, includes push, steal and carry cases | 50 of 50 identical (100%) | Yes | ea8de41 | eval/results/e7-20261029T034135Z.json |
+| 2026-11-03 13:31 | E7 | 50 seeded boards resolved twice | Same generator, run with the P08 power list change uncommitted | 50 of 50 identical (100%) | Yes | feb69a1 plus changes | eval/results/e7-20261103T053107Z.json |
+| 2026-11-03 16:37 | E7 | 50 seeded boards resolved twice | Same generator, clean tree | 50 of 50 identical (100%) | Yes | 7ba0d44 | eval/results/e7-20261103T083746Z.json |
 
 ## Latency samples (E6)
 

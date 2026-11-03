@@ -45,7 +45,7 @@ Canonical: `app/electron-builder.yml`.
 | Backend source | `backend/` | Copy `*.py` and the package folders (`capture`, `db`, `game`, `gm`, `replay`, `rules`, `vision`, `voice`). Include `db/schema.sql` |
 | Backend exclusions | `backend/tests`, `backend/smoke`, `__pycache__`, `.mypy_cache`, `.ruff_cache`, `.pytest_cache`, `.coverage`, `.env` | Never ship `.env`. Tests and smoke scripts are not needed at runtime |
 | Python runtime | `backend/.venv` or an embeddable Python | Must be at `resources/backend/.venv/Scripts/python.exe` because the app hardcodes that path |
-| Assets | `assets/` (fonts, `lines.json`, `palette.json`, `sfx`, `sprites`, `tiles`) | Unverified: how the backend finds `assets/` when packaged. Verify by running the zip, see the checklist |
+| Assets | `assets/` (fonts, `lines.json`, `palette.json`, `LICENSE-ASSETS.md`, sprites once generated). No audio files, sound is synthesized | Unverified: how the backend finds `assets/` when packaged. Verify by running the zip, see the checklist |
 | Renderer and main | `app/out` | Produced by `electron-vite build` |
 
 The venv holds absolute paths in its launcher scripts and `pyvenv.cfg`, which point at the Python that built it. Unverified: whether a copied venv runs on a machine without that Python. Verify in step 3 of the checklist on a clean machine or a clean user account. If it fails, switch to an embeddable Python plus `pip install --target`.

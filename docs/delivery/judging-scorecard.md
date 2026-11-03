@@ -54,7 +54,7 @@ Code paths: `backend/vision/` (summon, SAM, sprites), `backend/gm/` (narrator), 
 |---|---|
 | What judges look for | Real-world utility, daily value, scalability, fit with the theme Build for Your World |
 | Evidence today | Positioning and named users: `docs/market/positioning-and-messaging.md`. Personas: `docs/product/personas-and-jobs.md`. Filipino folklore, Taglish and English captions in the copy deck. Needs only a laptop, a webcam and an A4 sheet (`README.md`). Cultural care notes: `docs/design/cultural-care.md` |
-| Gaps | No footage of real friends playing. No playtest quotes yet (`docs/playtests.md`). Folklore glossary not in the app. First-time players have no in-game hints. Taglish lines wait for playtester review. Market evidence on group play habits is thin |
+| Gaps | No footage of real friends playing. No playtest quotes yet (`docs/playtests.md`). Folklore glossary and first-night hints built 2026-11-03, the night screen parts not yet seen in the running app. Taglish lines wait for playtester review. Market evidence on group play habits is thin |
 | Finalization tasks | Film real players with written OK. Add the in-app folklore glossary and first-night tutorial hints (approved for Nov 3). Record playtest notes as a small sample, labeled. Ship the packaged zip so a judge can try it without a dev setup |
 | Video proof | Hook and shared-table shots, current script 0:00 to 0:20. The night shots, 0:55 to 1:35. Title card at the end. Timestamps may shift in the extended script |
 | Risk | R12: judges may discount a game on Impact. Lead with the shared-table problem and real players |
@@ -75,8 +75,8 @@ Code paths: `backend/vision/` (summon, SAM, sprites), `backend/gm/` (narrator), 
 |---|---|
 | What judges look for | Deterministic, crash-free live reliability. A seamless journey. A compelling 3-minute video |
 | Evidence today | Demo Safe Mode plays a full night offline. Autosave restore at the saved turn. 20 s narration timeout with a local line. Rules engine is deterministic (E7, 50 of 50). Runbook: `docs/delivery/demo-runbook.md`. UI redesign done 2026-10-31 |
-| Gaps | KeySetup, Calibration, Night, Sunrise and Defeat have not been seen in the running app. No packaged build. No sound. Zero crash-free dry runs logged. No video footage. Speaker chip not built |
-| Finalization tasks | Build the unsigned Windows zip with the backend bundled, then test it on a clean path. Add code-synthesized sound effects (WebAudio). Add the speaker chip. Run the Playtest 1 checklist and three consecutive clean runs before recording. Record the video to the script. Keep a backup recording |
+| Gaps | KeySetup, Calibration, Night, Sunrise and Defeat have not been seen in the running app. No packaged build. Sound cues and speaker chip built 2026-11-03, not yet heard or seen live. Zero crash-free dry runs logged. No video footage |
+| Finalization tasks | Build the unsigned Windows zip with the backend bundled, then test it on a clean path. Sound cues and speaker chip are built. Run the Playtest 1 checklist and three consecutive clean runs before recording. Record the video to the script. Keep a backup recording |
 | Video proof | Hook in the first 8 seconds. Full night (current script 0:55 to 1:35). Manananggal split (1:35 to 1:50). Sunrise (1:50 to 2:05). No cuts hiding failures |
 | Rule | 0 crashes in the last 3 runs before recording (`docs/product/goals-and-metrics.md`) |
 
@@ -86,8 +86,8 @@ Code paths: `backend/vision/` (summon, SAM, sprites), `backend/gm/` (narrator), 
 |---|---|
 | What judges look for | Sound architecture, graceful recovery, edge-case resilience, production code quality |
 | Evidence today | Pure rules engine owns every number (`backend/rules/`). Hybrid tracking with re-anchor ladder. Token-gated backend on 127.0.0.1, key in safeStorage. Cost meter with hard stop. Schema v2 with stepped migration. Tests, ruff, mypy --strict, tsc, eslint and prettier clean. Test count: [MEASURED: re-read from the test run on submit day] (1,229 on 2026-11-03). E7 50 of 50. Rules resolve 1.1 ms median, tracker 31.9 ms median (`README.md`) |
-| Gaps | No CI. No Electron fuses. No Python dependency audit (known gap, accepted). Packaged build has known path and Origin bugs to fix. E1 to E6 not run. No troubleshooting guide |
-| Finalization tasks | Add the GitHub Actions workflow (tests, ruff, mypy, typecheck, lint). Set fuses through the electron-builder `electronFuses` config. Fix the code-check bugs listed in the shared brief. Run E1, E2, E4, E6 and record real numbers. Write a troubleshooting section for judges in `docs/how-to-run.md`. State the Python audit gap honestly |
+| Gaps | CI workflow added, first run after push. No Electron fuses yet (Phase 6). No Python dependency audit (known gap, accepted). Packaged origin fixed (ADR-0111), backend bundling still to do. E1 to E6 not run |
+| Finalization tasks | Set fuses through the electron-builder `electronFuses` config. Fix the code-check bugs listed in the shared brief. Run E1, E2, E4, E6 and record real numbers. State the Python audit gap honestly |
 | Video proof | Under-the-hood shot with architecture, hybrid tracking, rules engine, eval numbers and cost per night (current script 2:05 to 2:20). Show only numbers from `docs/eval.md` |
 
 ## Finalization task list
@@ -97,13 +97,13 @@ Code paths: `backend/vision/` (summon, SAM, sprites), `backend/gm/` (narrator), 
 | Pre-built unsigned Windows zip with bundled backend | Demo, Technical | Build, then EHIBE verifies |
 | Live Muse pipeline proof (smoke, assets, one reel) | Tooling | EHIBE with key |
 | E1, E5, E6 real numbers in `docs/eval.md` | Tooling, Technical | EHIBE and test runner |
-| Code-synthesized sound effects | Demo | UI work, before 6:00 PM freeze |
-| In-app folklore glossary | Impact | UI work, before freeze |
-| First-night tutorial hints | Impact, Demo | UI work, before freeze |
-| Speaker chip | Demo, Tooling | UI and voice work, before freeze |
-| GitHub Actions workflow | Technical | Docs and config, EHIBE pushes |
+| Code-synthesized sound effects | Demo | Built 2026-11-03 |
+| In-app folklore glossary | Impact | Built 2026-11-03 |
+| First-night tutorial hints | Impact, Demo | Built 2026-11-03 |
+| Speaker chip | Demo, Tooling | Built 2026-11-03 |
+| GitHub Actions workflow | Technical | Built 2026-11-03, EHIBE pushes |
 | Electron fuses via `electronFuses` | Technical | Config |
-| Troubleshooting section | Demo, Technical | Docs |
+| Troubleshooting section | Demo, Technical | Done, `docs/engineering/troubleshooting.md` |
 | Real-player footage with written OK | Impact | EHIBE |
 
 ## Unverified items
