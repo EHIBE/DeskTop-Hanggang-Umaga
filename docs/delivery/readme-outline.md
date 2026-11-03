@@ -35,7 +35,7 @@ The root README was written on 2026-10-29 (Phase 15). The demo GIF, video link a
 | 9 | Cost per night | `architecture/cost-and-budget.md` plus measured api_usage |
 | 10 | Privacy (what is sent, what stays local) | `engineering/security-and-privacy.md` |
 | 11 | Known limits | `product/scope-and-cuts.md`, `delivery/risk-register.md` |
-| 12 | Credits (assets, fonts, sounds with licenses), folklore glossary | `design/audio.md`, `design/art-direction.md`, `design/cultural-care.md` |
+| 12 | Credits (assets, fonts, sounds (synthesized, no licenses)), folklore glossary | `design/audio.md`, `design/art-direction.md`, `design/cultural-care.md` |
 | 13 | License | This file |
 
 ## Rules

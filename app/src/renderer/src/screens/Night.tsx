@@ -14,6 +14,7 @@ import {
 } from '../canvas/rings'
 import { MIN_SCALE, drawSprite, useUnitImages } from '../canvas/sprites'
 import Bilingual from '../components/Bilingual'
+import SoundToggle from '../components/SoundToggle'
 import Captions from '../hud/Captions'
 import Narration from '../hud/Narration'
 import OrderChips from '../hud/OrderChips'
@@ -26,6 +27,7 @@ import { actionTarget, enemyLabel } from '../hud/targets'
 import { pick as pickText, say, t, type CopyKey } from '../lib/copy'
 import { prefersReducedMotion } from '../lib/motion'
 import { palette } from '../lib/palette'
+import { cuesFromEvents, playCue } from '../lib/sound'
 import type { MessageHandler } from '../lib/socket'
 import type {
   ClientMessage,
@@ -55,6 +57,8 @@ const FLASH_DEDUPE_MS = 1500
 const REANCHOR_PHASES: ReadonlySet<string> = new Set(['END_TURN_SNAPSHOT', 'PHYSICAL_EFFECTS'])
 const FLASH_PHASES: ReadonlySet<string> = new Set(['PLAYER_PHASE', 'SUNRISE', 'DEFEAT'])
 const HIT_PX = 56
+const CUE_STAGGER_S = 0.12
+const CUE_STAGGER_MAX = 3
 const ARROW_PHASES: ReadonlySet<string> = new Set([
   'SPAWN_TELEGRAPH',
   'PLAYER_PHASE',
@@ -119,6 +123,11 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
           escape: say('effect.escape_float')
         })
         floatersRef.current = [...floatersRef.current, ...made]
+        const isAlly = (id: string | null): boolean =>
+          latestRef.current.units.some((candidate) => candidate.id === id)
+        cuesFromEvents(message.events, isAlly).forEach((cue, index) =>
+          playCue(cue, Math.min(index, CUE_STAGGER_MAX) * CUE_STAGGER_S)
+        )
         if (message.events.some((event) => event.type === 'kubo_hit')) {
           setHitCount((count) => count + 1)
         }
@@ -585,6 +594,7 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
                     {say('hud.recalibrate')}
                   </button>
                 </div>
+                <SoundToggle />
               </div>
             </div>
           )}

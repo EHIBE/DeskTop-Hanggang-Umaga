@@ -6,7 +6,9 @@ import Stage from './components/Stage'
 import RecIndicator from './hud/RecIndicator'
 import { isCopyKey, say, type CopyKey } from './lib/copy'
 import { useLang } from './lib/lang'
+import { armSoundUnlock } from './lib/sound'
 import { useGameSocket } from './lib/socket'
+import { useSoundCues } from './lib/useSoundCues'
 import type {
   AppPhase,
   CopyParams,
@@ -110,6 +112,8 @@ function App(): React.JSX.Element {
     return () => clearTimeout(timer)
   }, [notice])
 
+  useEffect(() => armSoundUnlock(), [])
+
   const ready = status === 'open' && state !== null && keyStatus !== null
 
   let screen: React.JSX.Element
@@ -141,6 +145,7 @@ function App(): React.JSX.Element {
     screen = <Summon state={state} send={send} subscribe={subscribe} />
   }
   const inNight = ready && NIGHT_PHASES.has(state.phase)
+  useSoundCues(ready ? state : null, inNight)
 
   return (
     <Stage>

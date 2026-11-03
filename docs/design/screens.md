@@ -31,14 +31,14 @@ Twelve screens, each a component in `app/src/renderer/src/screens/`, routed by `
 | Slow network | p90 over 2x target for 3 calls | `net.slow` banner |
 | Credits low | Hard stop hit | `credits.low`, Demo Safe Mode on |
 | Demo Safe Mode | Toggle on | Small "Demo Safe" badge in the top band |
-| Paused | Camera moved | `cam.moved` overlay, Recalibrate action |
+| Paused | Camera moved | `cam.moved` overlay, Recalibrate action, sound switch (`sfx.on` or `sfx.off`) |
 
 ## Screen specs
 
 | Screen | Purpose | Key elements | Enter | Exit |
 |---|---|---|---|---|
 | LanguagePick | First-run language | Logo, Filipino and English buttons | No language stored | Language saved, routes to KeySetup or Start |
-| Start | Begin or continue | Logo, tagline, New Campaign, Continue, Settings, Demo Safe Mode toggle, credit meter (dev build only), `start.ready` | App launch | New, Continue, Settings |
+| Start | Begin or continue | Logo, tagline, New Campaign, Continue, Settings, Demo Safe Mode toggle, sound switch, credit meter (dev build only), `start.ready` | App launch | New, Continue, Settings |
 | KeySetup | First-run API key | Paste field (masked), Save, short privacy note | No stored key | Key saved through main process safeStorage |
 | Calibration | Map the desk | Live feed, A4 outline guide, 4 corner handles, play-area rectangle (default 60 x 40 cm), ruler check, Done. Copy `calib.place`, `calib.tap`, `calib.done`, `calib.dark`, "Itutok ang camera sa mesa lang." | First launch, camera moved, Settings recalibrate | Homography saved |
 | Summon | Create units | Warped feed, `summon.prompt`, roster sidebar (max 12), kubo slot highlighted first, Begin Night, typed name input | Start Night | Begin Night with valid roster |

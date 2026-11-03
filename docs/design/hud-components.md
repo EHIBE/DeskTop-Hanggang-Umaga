@@ -64,6 +64,7 @@ The night HUD frames the warped desk feed with a top band for status and a botto
 | REC dot | TopBar | Red dot plus `rec.on` while recording |
 | Banners | TopBar | `net.slow`, `net.down`, `credits.low`, Demo Safe badge |
 | Floating numbers | Board | Damage (ember), heal (dahon), "Nakaiwas!" |
+| Sound switch | SoundToggle | `.btn-quiet` switch, check when on, cross when off, `sfx.on` or `sfx.off`. In the Start footer and the Night pause overlay |
 
 ## Interaction rules
 

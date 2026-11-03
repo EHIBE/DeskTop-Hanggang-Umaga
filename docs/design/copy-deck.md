@@ -280,6 +280,8 @@ English text for these is a proposal for playtester review.
 | calib.step_remove | Alisin ang papel | Remove the sheet | UI redesign 2026-10-31, Proposed, playtester review |
 | calib.area | Laki ng mesa | Table size | UI redesign 2026-10-31, Proposed |
 | calib.title | Ayusin ang Camera | Set Up the Camera | UI redesign 2026-10-31, Proposed, playtester review |
+| sfx.on | Tunog: naka-on | Sound: on | Synthesized sound 2026-11-03, Proposed, playtester review |
+| sfx.off | Tunog: naka-off | Sound: off | Synthesized sound 2026-11-03, Proposed, playtester review |
 | voice.region | Boses | Voice | M11, Proposed, playtester review |
 | voice.status.off | Naka-off ang mic | Mic off | M11, Proposed, playtester review |
 | voice.status.connecting | Kumokonekta ang mic | Connecting mic | M11, Proposed, playtester review |

@@ -439,7 +439,9 @@ const entries = {
   'calib.step_tap': { tl: 'I-tap ang 4 na kanto', en: 'Tap its 4 corners' },
   'calib.step_remove': { tl: 'Alisin ang papel', en: 'Remove the sheet' },
   'calib.area': { tl: 'Laki ng mesa', en: 'Table size' },
-  'calib.title': { tl: 'Ayusin ang Camera', en: 'Set Up the Camera' }
+  'calib.title': { tl: 'Ayusin ang Camera', en: 'Set Up the Camera' },
+  'sfx.on': { tl: 'Tunog: naka-on', en: 'Sound: on' },
+  'sfx.off': { tl: 'Tunog: naka-off', en: 'Sound: off' }
 } as const satisfies Record<string, CopyEntry>
 
 export type CopyKey = keyof typeof entries

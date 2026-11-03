@@ -264,8 +264,8 @@ Recipes are starting points. Tune by ear. All values are Proposed.
 
 | Key | tl | en |
 |---|---|---|
-| `sfx.on` | Tunog: bukas | Sound: on |
-| `sfx.off` | Tunog: sarado | Sound: off |
+| `sfx.on` | Tunog: naka-on | Sound: on |
+| `sfx.off` | Tunog: naka-off | Sound: off |
 | `gloss.open` | Mga Alamat | Folklore |
 
 ### Accessibility
@@ -285,7 +285,7 @@ Recipes are starting points. Tune by ear. All values are Proposed.
 - [ ] Default master level is audibly low on the demo laptop speakers.
 - [ ] Ambience starts at turn 1 and stops at Sunrise, Defeat or Quit.
 - [ ] Pause fades the bed. Resume restores it.
-- [ ] No audio file exists under `assets/sfx/`. No license notes needed.
+- [x] No audio file exists under `assets/sfx/`. No license notes needed. Verified 2026-11-03, the folder does not exist
 - [ ] A night with sound on shows no phantom captions at normal speaker volume. If it does, record it as a risk.
 - [ ] Blocked localStorage still lets the game start with sound on.
-- [ ] Update `docs/design/audio.md` and the README credits section to say synthesized.
+- [ ] Update `docs/design/audio.md` (done 2026-11-03) and the README credits section to say synthesized.

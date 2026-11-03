@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import LangToggle from '../components/LangToggle'
 import NightScene from '../components/NightScene'
 import PixelIcon from '../components/PixelIcon'
+import SoundToggle from '../components/SoundToggle'
 import TitleMark from '../components/TitleMark'
 import { say, type CopyKey } from '../lib/copy'
 import type { MessageHandler } from '../lib/socket'
@@ -200,6 +201,7 @@ function Start({ state, send, subscribe }: StartProps): React.JSX.Element {
               {say('start.demo_safe_sam')}
             </button>
           )}
+          <SoundToggle />
           <LangToggle />
         </div>
       </footer>
