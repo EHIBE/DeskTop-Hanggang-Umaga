@@ -1,141 +1,112 @@
 ---
 title: Release and packaging
-purpose: How to produce the pre-built unsigned Windows zip with the Python backend bundled, and how to check it before release
+purpose: How the unsigned Windows zip with a portable Python backend is built, what was verified, and how to check it before release
 read_when: [building the release zip, changing electron-builder.yml, fixing a packaged-build bug, preparing the submission download]
-canonical_for: [release artifact, packaging plan, Electron fuses plan, release checklist]
-sources: [app/package.json, app/electron-builder.yml, app/src/main/backend.ts, app/src/main/index.ts, backend/requirements.txt, docs/engineering/setup-windows.md, docs/how-to-run.md]
-status: planned
-last_verified: 2026-11-03
-related: [docs/how-to-run.md, docs/engineering/setup-windows.md, docs/engineering/troubleshooting.md, docs/delivery/submission-checklist.md, docs/delivery/live-api-runbook.md]
+canonical_for: [release artifact, packaging steps, Electron fuses, release checklist]
+sources: [app/package.json, app/electron-builder.yml, app/scripts/stage-backend.mjs, app/src/main/backend.ts, app/src/main/index.ts, backend/requirements.txt, docs/engineering/setup-windows.md, docs/how-to-run.md]
+status: active
+last_verified: 2026-11-04
+related: [docs/how-to-run.md, docs/engineering/setup-windows.md, docs/engineering/troubleshooting.md, docs/delivery/submission-checklist.md, docs/delivery/live-api-runbook.md, docs/decisions/ADR-0111-packaged-build-and-origin.md]
 ---
 
 # Release and packaging
 
-The release is an unsigned zip of the unpacked Windows app with the Python backend and its venv inside, so a player can run it without installing Node or Python. None of this is built yet. Every step below is Planned or Unverified until someone runs it.
+The release is an unsigned zip of the unpacked Windows app. It carries its own portable Python 3.13 with every backend package, so a player needs neither Node nor Python. Built and smoke tested on 2026-11-04.
 
 ## Key facts
 
 | Fact | Value |
 |---|---|
-| Target artifact | Unsigned zip of the electron-builder `dir` output. NSIS installer is optional |
-| Status | Planned. No packaged build has been run |
-| Platform | Windows only. The `build:mac` and `build:linux` scripts exist but are not supported |
-| Build command | `npm --prefix app run build:unpack` (runs typecheck, `electron-vite build`, `electron-builder --dir`) |
-| Installer command | `npm --prefix app run build:win` (NSIS, `${name}-${version}-setup.exe`) |
-| App id | `com.ehibe.desktop`, product name `DeskTop`, executable `DeskTop` |
-| Backend location when packaged | `process.resourcesPath/backend` (from `backendDir()` in `app/src/main/index.ts`) |
-| Python the app launches | `<backendDir>/.venv/Scripts/python.exe` |
+| Artifact | `release/DeskTop-1.0.0-win.zip`, unsigned, from `app/dist/win-unpacked` |
+| Size | 327.1 MB zipped, 875 MB unpacked |
+| SHA-256 | `2D12235A0613FBDB8C68E5485BE3E5A0077E02B09814AF13AFE2A5F4C6A6881A` (first build, 2026-11-04. A rebuild changes it) |
+| Build command | `npm --prefix app run dist:win` |
+| Staging only | `npm --prefix app run bundle:backend` |
+| Platform | Windows only |
+| App id | `com.ehibe.desktop`, product name `DeskTop`, executable `DeskTop.exe` |
+| Backend when packaged | `resources/backend`, Python at `resources/backend/python/python.exe` |
+| Assets when packaged | `resources/assets` (the backend finds `assets/` two levels above `gm/` and `replay/`) |
+| Data and logs | `%APPDATA%\DeskTop`, passed by main as `DESKTOP_DATA_DIR`. Log at `logs\backend.log` |
 | Signing | None. SmartScreen will warn |
 | ffmpeg | Not bundled. Replay and recording need it on PATH or `DESKTOP_FFMPEG` |
 
-## What the current config does
+## How the build works
 
-Canonical: `app/electron-builder.yml`.
+1. `app/scripts/stage-backend.mjs` builds `app/staging` (git ignored). It asks the venv Python for `sys.base_prefix`, then copies `python*.exe`, `python*.dll`, `vcruntime*.dll`, `DLLs/` and `Lib/` from that base install. It skips tkinter, idlelib, ensurepip, test folders and `__pycache__`.
+2. It copies the venv `Lib/site-packages` into the staged `Lib/site-packages`, leaving out dev tools (mypy, pytest, coverage, ruff, pygments, pip and their helpers).
+3. It copies `backend/*.py` and the packages `capture`, `db`, `game`, `gm`, `replay`, `rules`, `vision`, `voice`, including `db/schema.sql` and `gm/data`. It leaves out tests, smoke, `.env`, databases, logs and recordings. It copies `assets/` beside the backend folder.
+4. It runs the staged Python with a minimal environment (no `PYTHONHOME`, venv off `PATH`) and imports cv2, numpy, fastapi, uvicorn, openai and `server`. The build stops if that fails.
+5. `electron-builder.yml` maps `staging/backend` to `resources/backend` and `staging/assets` to `resources/assets` through `extraResources`.
+6. `dist:win` then runs `npm run build` (typecheck and `electron-vite build`) and `electron-builder --win --dir`, which writes `app/dist/win-unpacked`.
 
-- It sets `appId`, `productName`, `win.executableName` and an NSIS block.
-- It has no `extraResources`, so the backend is not copied into a packaged build. A packaged app would fail to start the backend.
-- It has no signing and no fuses.
-- `asarUnpack` lists `resources/**`.
-- `npmRebuild` is false.
+Staging takes about a minute. Main uses `process.resourcesPath/backend` and `python/python.exe` when `app.isPackaged`. Dev still uses `backend/` and `.venv`.
 
-## What must be bundled
+## Electron fuses
 
-| Item | Source | Rule |
-|---|---|---|
-| Backend source | `backend/` | Copy `*.py` and the package folders (`capture`, `db`, `game`, `gm`, `replay`, `rules`, `vision`, `voice`). Include `db/schema.sql` |
-| Backend exclusions | `backend/tests`, `backend/smoke`, `__pycache__`, `.mypy_cache`, `.ruff_cache`, `.pytest_cache`, `.coverage`, `.env` | Never ship `.env`. Tests and smoke scripts are not needed at runtime |
-| Python runtime | `backend/.venv` or an embeddable Python | Must be at `resources/backend/.venv/Scripts/python.exe` because the app hardcodes that path |
-| Assets | `assets/` (fonts, `lines.json`, `palette.json`, `LICENSE-ASSETS.md`, sprites once generated). No audio files, sound is synthesized | Unverified: how the backend finds `assets/` when packaged. Verify by running the zip, see the checklist |
-| Renderer and main | `app/out` | Produced by `electron-vite build` |
-
-The venv holds absolute paths in its launcher scripts and `pyvenv.cfg`, which point at the Python that built it. Unverified: whether a copied venv runs on a machine without that Python. Verify in step 3 of the checklist on a clean machine or a clean user account. If it fails, switch to an embeddable Python plus `pip install --target`.
-
-## Planned extraResources mapping
-
-Planned change to `app/electron-builder.yml`. Not applied.
-
-```yaml
-extraResources:
-  - from: ../backend
-    to: backend
-    filter:
-      - '**/*'
-      - '!tests/**'
-      - '!smoke/**'
-      - '!**/__pycache__/**'
-      - '!.env'
-      - '!.mypy_cache/**'
-      - '!.ruff_cache/**'
-      - '!.pytest_cache/**'
-```
-
-- Result: `resources/backend` next to `app.asar` in the unpacked folder.
-- Check the `filter` globs against the electron-builder docs when applying. Unverified.
-- Add a second entry for `../assets` if the backend reads assets from a sibling folder. Unverified.
-
-## Packaged origin issue
-
-Canonical code: `app/src/main/index.ts` (`FILE_ORIGINS`, `allowedOrigins()`) and `backend/server.py` (the `/ws` origin check).
-
-- In a packaged build the renderer loads from `file://`. `allowedOrigins()` returns `['file://']`.
-- The backend closes the socket with code 1008 unless the `Origin` header is in `DESKTOP_ALLOWED_ORIGINS`.
-- Chromium sends the Origin of a `file://` page as the string `null`, not `file://`. Status: Unverified, believed true.
-- Fix (ADR-0111, done 2026-11-03): main sets `DESKTOP_PACKAGED=1` when `app.isPackaged`. Only then `websocket_origins` in `backend/server.py` adds `null` to the allow-list. The token check still gates every connection. Dev builds still refuse `null`. Tests in `backend/tests/test_server.py`.
-- Verify by running the unpacked app and watching `backend.log` for "rejected websocket from an unexpected origin". The UI will sit on Connecting if it fails.
-
-## Planned Electron fuses
-
-Set through the electron-builder `electronFuses` config. No new dependency (decision of 2026-11-03). Status: Planned. Not applied.
+Set in `app/electron-builder.yml` under `electronFuses`. The build log line `executing @electron/fuses` confirmed they were applied to `DeskTop.exe`.
 
 | Fuse | Setting |
 |---|---|
-| RunAsNode | Off |
-| EnableNodeOptionsEnvironmentVariable | Off |
-| EnableNodeCliInspectArguments | Off |
-| EnableEmbeddedAsarIntegrityValidation | On |
-| OnlyLoadAppFromAsar | On |
-| EnableCookieEncryption | On |
+| runAsNode | Off |
+| enableCookieEncryption | On |
+| enableNodeOptionsEnvironmentVariable | Off |
+| enableNodeCliInspectArguments | Off |
+| enableEmbeddedAsarIntegrityValidation | On |
+| onlyLoadAppFromAsar | On |
 
-- Unverified: exact key names in `electronFuses` for electron-builder 26. Check the electron-builder docs before editing.
-- `OnlyLoadAppFromAsar` is compatible with `extraResources` because the backend sits outside the asar.
-- The backend is spawned with `child_process.spawn` of `python.exe`, not with Electron as Node, so RunAsNode off does not affect it. Verify in step 3 of the checklist.
+The app still loaded from the asar and spawned the backend with these settings. `--remote-debugging-port` is a Chromium switch and still worked.
 
-## Build steps
+## Packaged origin
 
-All Planned. Run from the repo root in PowerShell.
+The packaged renderer loads from `file://` and Chromium sends Origin `null`. Main sets `DESKTOP_PACKAGED=1` and the backend then accepts `null` (ADR-0111). Verified on 2026-11-04: the unpacked app's `/ws` was accepted and the renderer showed the language pick.
 
-1. Confirm a clean tree and green checks: `backend\.venv\Scripts\python -m pytest backend/tests -q`, `npm --prefix app run typecheck`, `npm --prefix app run lint`.
-2. Apply the `extraResources` and fuses changes above.
-3. Build: `npm --prefix app run build:unpack`.
-4. Find the output folder under `app\dist`. The exact name is Unverified until the first build.
-5. Delete any `.env` found inside the output. Confirm none exists.
-6. Zip the unpacked folder, for example `Compress-Archive -Path app\dist\win-unpacked\* -DestinationPath DeskTop-1.0.0-win.zip`. Adjust the folder name to the real output.
-7. Record the SHA-256: `Get-FileHash DeskTop-1.0.0-win.zip -Algorithm SHA256`.
+## Smoke result, 2026-11-04
 
-## Release checklist
+Run from `app/dist/win-unpacked` with `DeskTop.exe --remote-debugging-port=9444` and no key. No campaign was created.
+
+- Backend log: `Uvicorn running on http://127.0.0.1:57193`, then `"WebSocket /ws" [accepted]` and `desktop.server websocket accepted`.
+- Renderer page text read over the debug port: the language pick (Filipino, English), so it got past Connecting.
+- The app was stopped by killing its processes, so the clean window close path and the child exit were not checked.
+
+## Secret scan of the unpacked tree
+
+- No `.env`, `model-key.bin`, `*.sqlite`, `backend.log`, `*.key`, recordings or wav files.
+- No `sk-` style string in `resources/backend` sources, `gm/data` or `resources/assets`.
+- One long-token hit: a URL slug in `gm/data/ATTRIBUTION.md` (a public word list name). Not a secret.
+- The scan covered backend sources, data files and assets. It did not scan binaries inside site-packages.
+
+## Zip step
+
+```powershell
+npm --prefix app run dist:win
+Compress-Archive -Path app\dist\win-unpacked\* -DestinationPath release\DeskTop-1.0.0-win.zip -Force
+Get-FileHash release\DeskTop-1.0.0-win.zip -Algorithm SHA256
+```
+
+## Checklist
 
 | # | Check | Status |
 |---|---|---|
-| 1 | Build runs without errors | Planned |
-| 2 | Unzip into a clean folder, for example `C:\Temp\DeskTop-test` | Planned |
-| 3 | Run `DeskTop.exe`. The window opens and the backend reaches healthy within 20 s | Planned |
-| 4 | First run shows the language pick, then KeySetup. Paste a test key or choose Demo Safe Mode | Planned |
-| 5 | Play a full Demo Safe night with Wi-Fi off | Planned |
-| 6 | Size check: record the zip size in MB. No target is set | Planned |
-| 7 | Secret scan of the zip contents: no `.env`, no `model-key.bin`, no `*.sqlite`, no string matching the key | Planned |
-| 8 | Record the zip SHA-256 in `docs/delivery/submission-checklist.md` | Planned |
-| 9 | `backend.log` appears under `%APPDATA%\DeskTop\logs` and holds no key or token | Planned |
-| 10 | Close the window. No `python.exe` child is left running | Planned |
-
-For the secret scan, extract the zip and search the tree with `Select-String` for the key prefix the owner knows. Do not paste the key into any tool output.
+| 1 | Build runs without errors | Done 2026-11-04. The renderer was built with `electron-vite build` that day because the renderer had a typecheck error mid-edit. Rerun `dist:win` on a green tree |
+| 2 | Unzip into a clean folder | Unverified. The unpacked folder was tested in place |
+| 3 | `DeskTop.exe` opens and the backend is healthy | Done |
+| 4 | First run shows the language pick, then KeySetup | Language pick seen. KeySetup Unverified |
+| 5 | Full Demo Safe night with Wi-Fi off | Planned |
+| 6 | Size recorded | Done, 327.1 MB zip |
+| 7 | Secret scan | Done, see above |
+| 8 | SHA-256 in `docs/delivery/submission-checklist.md` | Planned. Record after the final rebuild |
+| 9 | `backend.log` holds no key or token | Seen with no key set. Token redaction lives in `backend.ts` |
+| 10 | Close the window and no `python.exe` is left | Unverified, see smoke result |
+| 11 | Run on a machine or account without Python installed | Unverified |
 
 ## Known gaps
 
 | Gap | Effect | Workaround |
 |---|---|---|
-| Unsigned | SmartScreen shows "Windows protected your PC" | Click More info, then Run anyway. See `docs/engineering/troubleshooting.md` |
+| Unsigned | SmartScreen shows "Windows protected your PC" | More info, then Run anyway. See `docs/engineering/troubleshooting.md` |
 | ffmpeg not bundled | No recording or replay reel | `winget install Gyan.FFmpeg`, or set `DESKTOP_FFMPEG` |
-| Windows only | No Mac or Linux build is supported | None |
-| Large download | The venv carries OpenCV, numpy and more | Accepted |
+| Windows only | No Mac or Linux build | None |
+| Large download | OpenCV, numpy, shapely and the Python runtime | Accepted |
+| NSIS installer | `build:win` still builds it but it is untested | Use the zip |
 | No Python audit | `pip-audit` is not configured | Known gap |
-| Camera and mic untested in the packaged app | Permission handlers deny all by default | Unverified. Check in step 3 of the checklist |
+| Camera and mic untested in the packaged app | Permission handlers deny all by default | Unverified |
