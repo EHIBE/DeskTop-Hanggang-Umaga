@@ -3,6 +3,7 @@ import SpriteView from '../canvas/SpriteView'
 import { drawSprite, useUnitImages } from '../canvas/sprites'
 import Board, { type BoardMapping } from '../canvas/Board'
 import { drawSummonOverlay } from '../canvas/made'
+import BadgePanel from '../components/BadgePanel'
 import Bilingual from '../components/Bilingual'
 import MadePanel from '../components/MadePanel'
 import PixelIcon from '../components/PixelIcon'
@@ -378,6 +379,9 @@ function Summon({ state, send, subscribe, moment }: SummonProps): React.JSX.Elem
             </div>
           )}
           <MomentLine moment={moment} className="w-full" />
+          {state.progression !== null && (
+            <BadgePanel progression={state.progression} units={state.units} send={send} />
+          )}
         </div>
         {made !== null && madeUnit !== undefined && (
           <button
