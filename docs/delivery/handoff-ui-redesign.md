@@ -117,7 +117,7 @@ The redesign is done. What is left is checking it by eye and getting the new cop
 - [ ] Look at KeySetup, Calibration, Night HUD, Sunrise and Defeat in the running app, in both FIL and ENG
 - [ ] Have playtesters review the 16 new copy lines. They are marked Proposed in `docs/design/copy-deck.md`
 - [ ] Run the `desktop-cultural-reviewer` agent on the new Taglish lines (`lang.*`, `title.sub`, `start.tip`, `calib.step_*`)
-- [ ] Decide whether the untracked `docs/MVP_BUILD_PROMPT.md` belongs in the repo. It was left out of `1942e78`
+- [x] `MVP_BUILD_PROMPT.md` kept as history in `docs/prompts/archive/` (2026-11-03)
 
 Gotchas:
 
