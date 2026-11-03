@@ -53,7 +53,7 @@ Done when: a night completes all 8 turns with Wi-Fi off.
 |---|---|---|---|---|
 | 1 | Hand covers a piece | Tracker failure with motion | Freeze. Re-lock. After 5 s one SAM call | `endturn.hands` (after 5 s) |
 | 2 | Hands on desk at End Turn | Frame difference | Wait up to 3 s for stillness | `endturn.hands` |
-| 3 | Object falls off the desk | Centroid outside play area or no match | Lost (F22, `rules/lost.py`: `off_desk` flag at the End Turn snapshot, wiring in progress) | `unit.lost`, `lost.out` |
+| 3 | Object falls off the desk | Centroid outside play area or no match | Lost (F22, `rules/lost.py`: `off_desk` flag at the End Turn snapshot, wired 2026-11-04) | `unit.lost`, `lost.out` |
 | 4 | Lost object placed back | Signature match near edge | Found when the centroid is back inside the play area at the next End Turn snapshot, start reset to the new spot | `unit.found`, `lost.back` |
 | 5 | Voice misheard | "hindi" or X | Remove chip | `cmd.cancel` |
 | 6 | Order not understood | Grammar fails | No chip | `cmd.unknown` |

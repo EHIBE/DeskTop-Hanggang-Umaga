@@ -133,7 +133,7 @@ All three version 3 changes are additive. The step from version 2 uses `ALTER TA
 |---|---|---|
 | `camera_device` | Integer index | 0 |
 | `mic_device` | Text | `default` |
-| `caption_language` | `fil` or `en` | `fil` |
+| `caption_language` | `tl` or `en` | `tl` |
 | `difficulty` | `easy`, `normal` or `hard` | `normal` |
 | `replay_enabled` | Boolean | true |
 | `tts_enabled` | Boolean. No TTS engine exists, so it stays off | false |
