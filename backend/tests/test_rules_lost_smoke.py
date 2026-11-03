@@ -181,10 +181,6 @@ def test_smoked_unit_cannot_reach_out_of_the_cloud() -> None:
     assert any(e.type is EventType.DODGE for e in events)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="BUG: P05 Hampas sweep hits enemies outside every cloud while the caster is smoked",
-)
 def test_smoked_sweep_does_not_hit_outside_the_cloud() -> None:
     cloud = Smoke("e_kapre_1", (30.0, 20.0), radius_cm=2.0)
     smoked = make_unit("u_a", UnitClass.FIGHTER, (30.0, 20.0), PowerId.P05)
@@ -198,10 +194,6 @@ def test_smoked_sweep_does_not_hit_outside_the_cloud() -> None:
     assert not any(e.type is EventType.ATTACK and e.dst == "e_aswang_1" for e in events)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="BUG: P09 Tusok second target ignores smoke and is hit outside every cloud",
-)
 def test_smoked_pierce_does_not_hit_second_target_outside_the_cloud() -> None:
     cloud = Smoke("e_kapre_1", (30.0, 20.0), radius_cm=8.0)
     smoked = make_unit("u_a", UnitClass.REACH, (30.0, 20.0), PowerId.P09)

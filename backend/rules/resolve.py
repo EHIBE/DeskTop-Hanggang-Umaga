@@ -574,8 +574,10 @@ class _Round:
         self.announce(unit, target_id)
         for enemy_id in list(self.enemies):
             enemy = self.enemies[enemy_id]
-            if enemy.is_alive and in_range(
-                self.edge_dist(unit, enemy), HAMPAS_RADIUS_CM
+            if (
+                enemy.is_alive
+                and in_range(self.edge_dist(unit, enemy), HAMPAS_RADIUS_CM)
+                and not self.smoke_blocks(unit, enemy)
             ):
                 self.hurt_enemy(unit, enemy_id, HAMPAS_DAMAGE)
 
@@ -625,7 +627,11 @@ class _Round:
         first_gap = self.edge_dist(unit, first)
         candidates: list[tuple[float, int, str]] = []
         for index, other in enumerate(self.enemies.values()):
-            if other.id == first.id or not other.is_alive:
+            if (
+                other.id == first.id
+                or not other.is_alive
+                or self.smoke_blocks(unit, other)
+            ):
                 continue
             between = max(
                 0.0, displacement(first.position, other.position) - 2 * ENEMY_RADIUS_CM
