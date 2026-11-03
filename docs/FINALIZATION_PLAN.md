@@ -60,11 +60,13 @@ EHIBE answered "all defaults" to the 31 discovery questions. These are binding f
 
 ## Gate 0: approval
 
-- [ ] EHIBE approves this plan and the new docs. Nothing in Phase 1 onward starts before that.
+- [x] EHIBE approves this plan and the new docs. Nothing in Phase 1 onward starts before that. Approved 2026-11-03 with all defaults.
 
 ## Phase 1: docs and decisions (Claude, 1:30 PM to 2:00 PM)
 
 Raises Technical Depth. Every later step reads these files.
+
+Status: Done 2026-11-03. All four steps committed. desktop-docs-keeper drift findings applied.
 
 | Step | Task | Check | Commit |
 |---|---|---|---|
@@ -76,6 +78,8 @@ Raises Technical Depth. Every later step reads these files.
 ## Phase 2: code fixes (Claude, 2:00 PM to 3:00 PM)
 
 Raises Demo Quality and Technical Depth. Each fix gets a test where the stack allows it.
+
+Status: Done 2026-11-03. All six steps committed. Extra fix: three tests read content filter lists relative to the working directory and failed from the repo root. They now read from `gm.schemas.DATA_DIR`. 1229 tests pass from the repo root and from `backend`. CI waits on EHIBE's push.
 
 | Step | Task | Owner agent | Check | Commit |
 |---|---|---|---|---|
