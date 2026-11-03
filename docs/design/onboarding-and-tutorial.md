@@ -139,7 +139,7 @@ Descriptions reuse the cultural-care wording word for word. Keep them in sync wi
 - Term names use keys `gloss.name_<term>` (same text in both languages) so every visible word goes through `say()`.
 - Title key `gloss.title`: tl "Mga Alamat" (Proposed), en "Folklore" (Proposed). Close key `gloss.close`: tl "Isara", en "Close".
 - Tagalog versions of the eight descriptions are Pending. A Filipino reviewer writes them, `desktop-cultural-reviewer` checks them. Until then the panel shows the English line under both languages. Do not machine-translate folklore.
-- Kapre stays in the list even though Kapre smoke is cut from play, because the creature may be seen in art. Verified 2026-11-03: kapre spawns in `backend/rules/waves.py`, so it stays.
+- Kapre stays in the list. It spawns in `backend/rules/waves.py` and its smoke is in play (ADR-0113). The glossary also lists Usok ng Kapre and Liwanag.
 - No place names, no region claims, no gore, per the cultural-care rules.
 
 ### Layout

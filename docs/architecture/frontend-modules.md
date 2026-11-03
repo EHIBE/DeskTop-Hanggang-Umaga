@@ -5,7 +5,7 @@ read_when: [creating or changing any file under app/]
 canonical_for: [frontend module responsibilities, Electron process roles, renderer folder map]
 sources: [docs/DeskTop_PRD.md#project-setup-and-folder-structure, app/src/main/index.ts, app/src/preload/index.ts, app/package.json, app/electron.vite.config.ts]
 status: active
-last_verified: 2026-11-03
+last_verified: 2026-11-04
 related: [docs/architecture/overview.md, docs/engineering/security-and-privacy.md, docs/design/hud-components.md]
 ---
 
@@ -35,10 +35,16 @@ The app is an electron-vite React TypeScript project. Main spawns the backend an
 | Folder or file | Responsibility |
 |---|---|
 | `main.tsx` | Mount React in StrictMode |
-| `App.tsx` | Screen router driven by backend state |
+| `App.tsx` | Screen router driven by backend state. Also holds the moment line (cleared after 8 s), the Settings overlay (phases START and PAUSED only), the Recap dialog (phases CALIBRATE, SUMMON, VOICE_CLAIM), `map.get` and `crops.get` requests, and the `AssetsContext` provider. Sends `settings.set` for the caption language when the first-run pick differs from the saved one |
 | `lib/socket.ts` | WebSocket client with token, reconnect, typed messages |
 | `lib/copy.ts` | All Taglish and English text by copy key |
-| `lib/types.ts` | Unit, Enemy, Event, Intent, message types (mirror Pydantic) |
+| `lib/assets.ts` | `AssetsContext` and `useAssets` carrying the barrio map PNG and unit crops |
+| `lib/sound.ts` | Ten cues including smoke, lost, found and badge. Canonical: `design/audio.md` |
+| `canvas/smoke.ts`, `canvas/CropView.tsx` | Smoke cloud layer and the real object crop. Canonical: `design/hud-components.md` |
+| `hud/MomentLine.tsx`, `hud/ConfirmDialog.tsx`, `hud/mood.ts`, `hud/status.ts` | Line bank moment strip, held-order confirm, mood colours, status kinds including smoked |
+| `components/UnitMarks.tsx`, `components/BadgePanel.tsx`, `components/Dialog.tsx` | Badge and scar marks, Sunrise badge picker, shared modal |
+| `screens/Settings.tsx`, `screens/Recap.tsx` | Settings overlay and Kagabi recap dialog |
+| `lib/types.ts` | Unit, Enemy, Event, Intent, message types (mirror Pydantic), plus settings, progression, recap, pending_confirm, smoke and moment types |
 | `canvas/Board.tsx` | Draw desk feed and sprites |
 | `canvas/sprites.ts` | Sprite loading, integer scaling |
 | `canvas/rings.ts` | Move rings and ghosts |
@@ -50,7 +56,7 @@ The app is an electron-vite React TypeScript project. Main spawns the backend an
 | `hud/OrderChips.tsx` | Order chips |
 | `components/SpeakerChip.tsx`, `lib/speaker.ts` | Built 2026-11-03. P1 to P4 chip with colour and shape in Captions, OrderChips and VoiceClaim |
 | `hud/TapMenu.tsx` | Tap controls (FR-25) |
-| `screens/*.tsx` | Start, KeySetup, Calibration, Summon, UnitCard, VoiceClaim, Night, Sunrise, Defeat. Replay lives in `components/ReplayPanel.tsx` on Sunrise and Defeat. Settings is a Could and not built |
+| `screens/*.tsx` | Start, KeySetup, Calibration, Summon, UnitCard, VoiceClaim, Night, Sunrise, Defeat. Replay lives in `components/ReplayPanel.tsx` on Sunrise and Defeat. Settings (a full screen opened as an overlay from Start and the pause overlay) and Recap (a dialog) were built 2026-11-04 under ADR-0113 |
 
 ## Scaffold gaps (fixed 2026-10-28, ADR-0102, ADR-0103, ADR-0108)
 

@@ -5,7 +5,7 @@ read_when: [adding sounds, considering speech output]
 canonical_for: [sound cue list, TTS policy, audio licensing]
 sources: [docs/DeskTop_PRD.md#art-direction, docs/DeskTop_PRD.md#14-edge-cases-and-failure-handling, docs/design/onboarding-and-tutorial.md]
 status: active
-last_verified: 2026-11-03
+last_verified: 2026-11-04
 related: [docs/design/accessibility.md, docs/architecture/voice-pipeline.md, docs/design/onboarding-and-tutorial.md]
 ---
 
@@ -40,6 +40,10 @@ Recipes live as data in `sound.ts`. All values are Proposed and tuned by ear.
 | Dodge | `dodge` event, the "Nakaiwas!" floater | `Night` events handler through `cuesFromEvents` |
 | Sunrise chime | Phase becomes SUNRISE | `useSoundCues` phase effect |
 | Defeat tone | Phase becomes DEFEAT | `useSoundCues` phase effect |
+| Smoke | `smoke` event (a kapre cloud appears). Noise burst plus a falling triangle tone | `Night` events handler through `cuesFromEvents` |
+| Lost | `lost` event (a unit left the play area). Two falling tones | `cuesFromEvents` |
+| Found | `found` event (the unit is back). Two rising tones, 523 and 784 Hz | `cuesFromEvents` |
+| Badge | A badge pick on Sunrise. Three rising tones, 880, 1318 and 1760 Hz | `BadgePanel` calls `playCue('badge')` when `badge.pick` is sent |
 
 Footsteps are cut for v1. Every cue pairs with a visible signal, so sound is never the only cue. Reduced motion does not affect audio.
 

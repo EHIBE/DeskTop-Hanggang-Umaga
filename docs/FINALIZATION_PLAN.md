@@ -5,7 +5,7 @@ read_when: [start of any finalization work, choosing the next task, before the f
 canonical_for: [finalization steps, finalization owners, finalization acceptance checks, Nov 3 to Nov 5 task order]
 sources: [CLAUDE.md, docs/prompts/FEATURE_PROMPT.md, docs/delivery/schedule.md, docs/delivery/judging-scorecard.md, docs/market/judging-strategy.md, docs/delivery/demo-runbook.md, docs/delivery/submission-checklist.md]
 status: active
-last_verified: 2026-11-03
+last_verified: 2026-11-04
 related: [docs/delivery/release-and-packaging.md, docs/delivery/live-api-runbook.md, docs/delivery/submission-text.md, docs/product/user-journey.md, docs/design/onboarding-and-tutorial.md, docs/engineering/troubleshooting.md]
 ---
 
@@ -120,6 +120,10 @@ Status: Built 2026-11-03 by 4:10 PM SGT, nothing cut. Typecheck, lint, prettier 
 | 4.5 | Copy deck, screens, HUD and requirements-index synced | desktop-docs-sync done | `docs: Sync design docs after the game feel features` |
 
 At 5:30 PM, anything not done in Phase 4 is cut, not rushed.
+
+## Post-freeze features (ADR-0113)
+
+Status: Built 2026-11-04. Every feature cut at the freeze is now built, wired and on screen. Backend modules landed first, wiring into the night loop in 411142b, Settings, Recap, badges, Lost and smoked status, smoke layer, ownership confirm and barrio map screens in 1f7d3e7, and the cultural review of the new copy in 2da21ac. Offline tests pass. Live checks (Spark fallback parser, Glimmer through Ollama, the generated map, strict ownership by voice, the table run for smoke and Lost) stay Manual: EHIBE. The hours they took came out of Playtest 1, Playtest 2, the table run and the video time. Canonical: `docs/decisions/ADR-0113-post-freeze-cut-features.md`.
 
 ## Phase 5: look at every screen (Claude, 5:00 PM to 6:00 PM)
 

@@ -5,7 +5,7 @@ read_when: [adding or changing any player-facing text, building lib/copy.ts or a
 canonical_for: [copy keys, line bank, unit card template]
 sources: [docs/DeskTop_PRD.md#copy-deck, docs/DeskTop_PRD.md#content-list, docs/DeskTop_PRD.md#14-edge-cases-and-failure-handling]
 status: active
-last_verified: 2026-11-03
+last_verified: 2026-11-04
 related: [docs/design/cultural-care.md, docs/architecture/ai-contracts.md]
 ---
 
@@ -17,9 +17,9 @@ All player-facing text, keyed. `app/src/renderer/src/lib/copy.ts` and `assets/li
 
 | Fact | Value |
 |---|---|
-| UI keys | 296 in copy.ts on 2026-11-03 (48 from PRD, the rest Proposed) |
-| Line bank moments | 19 (14 from PRD, 4 aswang edge variants, quiet) |
-| Placeholders | [name], [unit], [object], [player], [feature], [HP], [n], [action], [target], [pangalan], [turn], [seconds] |
+| UI keys | 336 in copy.ts on 2026-11-04 (48 from PRD, the rest Proposed) |
+| Line bank moments | 31 in `assets/lines.json` (the 19 earlier moments plus kapre_smoke_telegraph, kapre_smoke_hit, unit_lost, unit_returned, ownership_confirm, badge_earned, scar_gained, object_recognized, recap_win, recap_lose, recap_badge, recap_scar). Canonical: the file |
+| Placeholders | [name], [unit], [object], [player], [feature], [HP], [n], [action], [target], [pangalan], [turn], [seconds], [beaten], [turns], [downed], [badge] |
 | Review | 2 Filipino playtesters review every Taglish line before recording |
 | Process | Add keys with the `desktop-add-copy-key` skill |
 
@@ -76,7 +76,62 @@ All player-facing text, keyed. `app/src/renderer/src/lib/copy.ts` and `assets/li
 | restore | Sandali, ibinabalik ko ang laro... | Hold on, restoring the game... |
 | welcome_back | Welcome back, [unit]. Kulang ng [n] HP mula kagabi. | Welcome back, [unit]. [n] HP short from last night. |
 
-`lost.out` and `lost.back` stay reserved while F22 is cut. `kapre.smoke` stays reserved while smoke is cut. `welcome_back` needs F16 (Could).
+`lost.out`, `lost.back`, `kapre.smoke` and `welcome_back` are still defined in `lib/copy.ts` but no component reads them. The live text for those moments comes from the line bank (`unit_lost`, `unit_returned`, `kapre_smoke_telegraph`, `kapre_smoke_hit`, `object_recognized`) and arrives as a `moment` message shown by `hud/MomentLine.tsx`. The four keys stay as spare strings.
+
+## Post-freeze keys (ADR-0113)
+
+Added 2026-11-04 in `lib/copy.ts` with the Settings, recap, badge, smoke, Lost, ownership confirm and barrio map screens. Cultural review applied in 2da21ac. Taglish text still waits on the 2 Filipino playtesters.
+
+| Key | Taglish | English | Used by |
+|---|---|---|---|
+| gloss.name_usok | Usok ng Kapre | Kapre smoke | GlossaryPanel |
+| gloss.usok | Usok ng malaking tabako ng kapre. Natatakpan nito ang nasa loob hanggang may magbigay ng liwanag | The smoke of the kapre's big cigar. It hides whatever stands inside until a light clears it | GlossaryPanel |
+| gloss.name_liwanag | Liwanag | Liwanag | GlossaryPanel |
+| gloss.liwanag | Kapangyarihan ng liwanag na nag-aalis ng usok ng kapre sa paligid ng piyesa | A power of light that clears the kapre's smoke around a piece | GlossaryPanel |
+| nav.back | Bumalik | Back | Calibration, Settings |
+| settings.title | Mga Setting | Settings | Settings, Start and pause buttons |
+| settings.camera | Camera | Camera | Settings |
+| settings.camera_locked | Hindi mapapalitan habang may laban. | Cannot change during a night. | Settings |
+| settings.mic | Mikropono | Microphone | Settings |
+| settings.mic_default | Default | Default | Settings |
+| settings.captions | Wika ng caption | Caption language | Settings |
+| settings.difficulty | Hirap ng bagong kampanya | Difficulty of new campaigns | Settings |
+| settings.replay | Replay | Replay | Settings |
+| settings.replay_hint | Kapag naka-off, walang recording at walang tanong. | When off, nothing is recorded and nobody is asked. | Settings |
+| settings.tts | Boses ng GM | GM voice | Settings |
+| settings.tts_unavailable | Wala pa ito | Not available yet | Settings |
+| settings.real | Ipakita ang tunay na gamit | Show real objects | Settings |
+| settings.real_hint | Kuha ng camera sa halip na sprite sa card. | The camera crop instead of the sprite on the card. | Settings |
+| settings.strict | Mahigpit na pag-aari | Strict ownership | Settings |
+| settings.strict_hint | Kapag iba ang nag-utos sa piyesa ng kasama, magtatanong muna. | When someone orders another player's piece, ask first. | Settings |
+| settings.map | Mapa ng baryo na gawa ng AI | Generated barrio map | Settings |
+| settings.map_hint | Gumagamit ng API key. Mga $0.01 isang beses kada kampanya. | Uses the API key. About $0.01 once per campaign. | Settings |
+| settings.on | Naka-on | On | Settings |
+| settings.off | Naka-off | Off | Settings |
+| settings.invalid | Hindi tinanggap ang setting na iyon. | That setting was not accepted. | Defined, not rendered |
+| replay.off | Naka-off ang replay sa Settings. | Replay is turned off in Settings. | Defined, not rendered |
+| map.none | Wala pang mapa ng baryo. | No barrio map yet. | Defined, not rendered |
+| unit.lost | Wala si [unit] sa mesa! Ibalik mo. | [unit] is off the table! Put it back. | Defined, not rendered |
+| unit.found | Nakita na ulit si [unit] sa mesa! | [unit] is back on the table! | Defined, not rendered |
+| unit.returning | Bumalik! | Returned! | Summon roster, UnitCard, Summon banner |
+| status.smoked | Sa usok | In smoke | Unit strip status, via `nightUnitEntries` |
+| smoke.label | Usok | Smoke | Smoke canvas layer tag |
+| model.glimmer | Muse Glimmer | Muse Glimmer | Recap source tag |
+| recap.title | Kagabi... | Last night... | Recap |
+| recap.night | Gabi [n] | Night [n] | Recap |
+| recap.continue | Ituloy | Continue | Recap |
+| progress.level | Antas ng baryo: [n] | Barrio level: [n] | Sunrise |
+| badge.title | Pumili ng badge | Pick a badge | BadgePanel |
+| badge.hp | Dagdag HP | Extra HP | BadgePanel, UnitMarks label |
+| badge.cooldown | Mas maikling cooldown | Short cooldown | BadgePanel, UnitMarks label |
+| badge.for | Badge para kay [unit] | Badge for [unit] | BadgePanel |
+| scar.label | Peklat | Scar | UnitMarks label |
+| card.real | Tunay na gamit | Real object | UnitCard toggle |
+| confirm.title | Kumpirmahin ang utos | Confirm the order | ConfirmDialog |
+| confirm.yes | Ituloy | Go ahead | ConfirmDialog |
+| confirm.no | Huwag | Don't | ConfirmDialog |
+| confirm.seconds | Mawawalan ng bisa sa loob ng [seconds] segundo | Expires in [seconds] seconds | ConfirmDialog timer |
+| pause.quit_confirm | Bumalik sa Start? Naka-save ang gabi mo. | Quit to Start? Your night is saved. | Night pause overlay |
 
 ## Proposed keys (lines in the PRD without a key)
 
@@ -336,7 +391,7 @@ English text for these is a proposal for playtester review.
 
 ## GM line bank (local fallback and Spark style reference)
 
-Goes into `assets/lines.json`.
+Goes into `assets/lines.json`. The table below holds the first 19 moments. The 12 post-freeze moments (ADR-0113) are listed after it.
 
 | Moment | Taglish | English caption |
 |---|---|---|
@@ -360,6 +415,23 @@ Goes into `assets/lines.json`.
 | quiet 1 | Tahimik ang gabi. Hinga muna, tapos handa ulit. | The night is quiet. Breathe, then get ready again. |
 | quiet 2 | Umiihip ang hangin sa bukid. Abangan ang susunod. | The wind stirs over the fields. Watch for what comes next. |
 | quiet 3 | Walang gumagalaw sa dilim. Sa ngayon. | Nothing moves in the dark. For now. |
+
+Post-freeze moments, built 2026-11-04. The file is canonical for their text. Each has a mood and the 2da21ac cultural pass.
+
+| Moment | Meaning | Placeholders |
+|---|---|---|
+| kapre_smoke_telegraph | A kapre will smoke next turn (2 lines) | none |
+| kapre_smoke_hit | A unit is inside a cloud (2 lines) | [unit] |
+| unit_lost | A unit's centroid left the play area at End Turn | [unit] |
+| unit_returned | A lost unit is back inside the play area | [unit] |
+| ownership_confirm | Strict ownership asks before the order is added | [player], [unit] |
+| badge_earned | A badge was picked | [unit], [badge] |
+| scar_gained | A unit gained a scar | [unit] |
+| object_recognized | A returning object matched at Summon | [unit] |
+| recap_win | Kagabi recap after a win (2 lines) | [beaten], [turns], [downed] |
+| recap_lose | Kagabi recap after a loss (2 lines) | [beaten], [turns] |
+| recap_badge | Recap line for a badge | [unit], [badge] |
+| recap_scar | Recap line for a scar | [unit] |
 
 The three new aswang edge lines and the three quiet lines are Proposed, playtester review. In `assets/lines.json` the north line is stored as `spawn_aswang_north` and also as `spawn_aswang`. The local pick uses the edge variant. `[HP]` and `[unit]` are literal placeholders. The cultural review on 2026-10-28 changed tabi_tabi, the unit_down caption and quiet 2.
 

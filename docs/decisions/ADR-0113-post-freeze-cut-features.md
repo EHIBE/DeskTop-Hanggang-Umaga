@@ -22,7 +22,7 @@ Status: Accepted. Decided 2026-11-03 at 11:45 PM SGT by EHIBE.
 | Owner | EHIBE |
 | Decision | Build every cut feature before the packaged zip |
 | Supersedes in part | ADR-0112 (cuts of the Settings screen and F16, and the removal of P08 from Charm and Scout) |
-| Built | Backend modules with offline tests, committed 2026-11-04. Wiring into the night loop and the screens is in progress |
+| Built | Backend modules with offline tests, committed 2026-11-04. Wired into the night loop and the screens 2026-11-04 (commits 411142b, 1f7d3e7) |
 | Not built | A Tagalog TTS engine. `tts_enabled` exists and stays off |
 
 ## Context
@@ -45,7 +45,7 @@ Build the features below. Each one has a default that keeps the earlier behavior
 | Strict ownership | FR-55 | `voice/ownership.py` | Off (`strict_ownership` is false) |
 | Generated barrio map | FR-54 | `vision/barrio_map.py` | Off (`generated_map` is false). $0.01 per campaign, cached |
 | Muse Glimmer recap | FR-53 | `gm/glimmer.py` | Off until `DESKTOP_GLIMMER_URL` is set. Loopback only, cost 0 |
-| Settings storage | FR-49 | `db/store.py` | Defaults match earlier behavior. The screen is in progress |
+| Settings storage | FR-49 | `db/store.py` | Defaults match earlier behavior. Settings screen built, opened from Start and pause |
 
 Schema moves to version 3 with additive changes only: `campaign.map_image_path`, `unit.scars_json` and the `campaign_recap` table. The nine preference keys live in the existing `settings` table. Canonical: `docs/architecture/data-model.md`.
 
@@ -56,7 +56,7 @@ The grammar fuzzy match now needs a window of at least 4 characters. This fixed 
 - Less time for Playtest 1, Playtest 2, the table run and the video. The finalization plan's hours for them shrink by the build time
 - Every feature needs a live check that needs the key, the camera or Ollama. Those checks are Manual: EHIBE and stay open
 - Rules numbers still come from the rules engine. Models only choose from enums or narrate
-- Wiring in progress means a feature can be tested offline and still be absent from a screen. Requirement statuses say so
+- Every feature is tested offline. Live checks that need the key, camera or Ollama are Manual: EHIBE
 - One extra Muse Image call per campaign only when the map setting is on. The $90 warn and $120 stop do not change
 - Glimmer needs a local Ollama server. Without it the recap uses Spark or the line bank
 - The finalization cut order in `docs/product/scope-and-cuts.md` still applies if time runs out. Turning a feature's default off is the first fallback

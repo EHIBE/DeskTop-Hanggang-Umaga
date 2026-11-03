@@ -5,7 +5,7 @@ read_when: [implementing backend/game/state_machine.py, adding a phase, writing 
 canonical_for: [game states, transitions, state timeouts, turn order]
 sources: [docs/DeskTop_PRD.md#turn-state-machine, docs/DeskTop_Build_Guide.md#72-turn-order-from-prd-section-7-and-8]
 status: active
-last_verified: 2026-10-29
+last_verified: 2026-11-04
 related: [docs/game/core-loop.md, docs/architecture/backend-modules.md, docs/design/hud-components.md]
 ---
 
@@ -18,7 +18,7 @@ The backend runs one state machine per night as an enum with a single `transitio
 | Fact | Value |
 |---|---|
 | Module | `backend/game/state_machine.py` (built 2026-10-28, transition table `TRANSITIONS`), driven by `NightSession` in `backend/game/night.py` |
-| States | 15 |
+| States | 16 (START added 2026-11-04) |
 | Requirement | FR-31 (every transition occurs in order in a scripted test) |
 | Logging | One turn_log row per transition |
 | Autosave | One transaction at CHECK_END |
@@ -27,7 +27,9 @@ The backend runs one state machine per night as an enum with a single `transitio
 
 ```mermaid
 stateDiagram-v2
-  [*] --> CALIBRATE
+  [*] --> START
+  START --> CALIBRATE
+  CALIBRATE --> START: back_to_start
   CALIBRATE --> SUMMON
   SUMMON --> VOICE_CLAIM: kubo + 2 units, Begin Night
   VOICE_CLAIM --> SPAWN_TELEGRAPH: claims done or Skip
@@ -48,12 +50,14 @@ stateDiagram-v2
   DEFEAT --> [*]
   PLAYER_PHASE --> PAUSED: pause, camera moved
   PAUSED --> PLAYER_PHASE: resume
+  PAUSED --> START: quit_to_start
 ```
 
 ## States
 
 | State | Entry | Exit | Timeout | Phase banner |
 |---|---|---|---|---|
+| START | App launch, Back from Calibration or Quit from the pause overlay. The backend phase when no night runs, shown as the Start screen | The app leaves it when a campaign starts, outside the transition table. No outbound transition in `TRANSITIONS` | None | n/a |
 | CALIBRATE | First launch or camera moved | Homography saved | None | n/a |
 | SUMMON | Start Night | Begin Night with valid roster | None | n/a |
 | VOICE_CLAIM | Roster valid | All players claimed or Skip | 60 s then Skip | n/a |
