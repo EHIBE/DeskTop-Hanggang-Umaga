@@ -29,6 +29,7 @@ This file maps every document in `docs/` and says which ones to read for each ki
 |---|---|
 | `DeskTop_PRD.md` | Full product requirements, 22 sections. Historical source of truth |
 | `DeskTop_Build_Guide.md` | Phase 0 to 15 build plan, schedule, cut order |
+| `prompts/SUPER_PROMPT.md` | EHIBE's original generator prompt, verbatim. It produced the feature prompt and the finalization plan |
 | `prompts/FEATURE_PROMPT.md` | Master prompt every feature run follows. Older prompts in `prompts/archive/` |
 | `FINALIZATION_PLAN.md` | Ordered Nov 3 to Nov 5 roadmap to a submitted, production-ready build |
 | `how-to-run.md` | Friendly guide to install, launch and play the game. Start here if you just want to play |
