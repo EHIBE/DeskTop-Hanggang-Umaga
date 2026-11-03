@@ -3,7 +3,7 @@ title: ADR-0012 MVP build defaults
 purpose: Record the defaults EHIBE approved at the MVP build clarification gate for rules, content, assets and runtime gaps the docs left open
 read_when: [implementing damage, enemy movement, targeting, waves, voice claim, content filters, assets, backend startup, stage scaling]
 canonical_for: [ADR-0012, damage with shields rule, duwende pre-steal hit, wall blocking rule, target tie-break, fail-closed token startup]
-sources: [docs/MVP_BUILD_PROMPT.md#2-clarify-gate, docs/game/combat-math.md, docs/game/enemies.md, docs/game/waves-and-difficulty.md]
+sources: [docs/prompts/archive/MVP_BUILD_PROMPT.md#2-clarify-gate, docs/game/combat-math.md, docs/game/enemies.md, docs/game/waves-and-difficulty.md]
 status: active
 last_verified: 2026-10-29
 related: [docs/decisions/README.md, docs/game/combat-math.md, docs/game/waves-and-difficulty.md, docs/game/powers.md]
@@ -73,6 +73,6 @@ The PRD and derived docs leave several rules and runtime details open or contrad
 
 ## Sources
 
-- `docs/MVP_BUILD_PROMPT.md#2-clarify-gate`
+- `docs/prompts/archive/MVP_BUILD_PROMPT.md#2-clarify-gate`
 - `docs/game/combat-math.md`
 - `docs/game/waves-and-difficulty.md`

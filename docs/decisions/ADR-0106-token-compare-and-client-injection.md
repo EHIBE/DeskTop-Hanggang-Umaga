@@ -3,7 +3,7 @@ title: ADR-0106 Constant-time token compare and an injected Meta client
 purpose: Record the decision on constant-time token compare and an injected Meta client
 read_when: [changing this area, questioning this choice]
 canonical_for: [ADR-0106]
-sources: [CLAUDE.md#bugs-and-contradictions, docs/FEATURE_PROMPT.md#3-project]
+sources: [CLAUDE.md#bugs-and-contradictions, docs/prompts/archive/FEATURE_PROMPT_docs_program.md#3-project]
 status: active
 last_verified: 2026-10-28
 related: [docs/decisions/README.md, CLAUDE.md]
@@ -39,4 +39,4 @@ Compare tokens with hmac.compare_digest. Create the client in one factory and in
 ## Sources
 
 - `CLAUDE.md#bugs-and-contradictions`
-- `docs/FEATURE_PROMPT.md#3-project`
+- `docs/prompts/archive/FEATURE_PROMPT_docs_program.md#3-project`

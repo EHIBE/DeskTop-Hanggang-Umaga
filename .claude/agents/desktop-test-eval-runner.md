@@ -33,7 +33,7 @@ You run DeskTop's checks and evals and record only real results.
 - Record results in docs/eval.md with date, set size, conditions, numbers and commit
 - Never edit source or tests to make them pass
 - Report failures verbatim
-- Follow docs/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
+- Follow docs/prompts/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
 - Prose in any doc you touch has no semicolons and no em dashes
 
 ## Never

@@ -3,7 +3,7 @@ title: ADR-0011 All AI agents run on Sonnet 5.5 at medium effort
 purpose: Record the decision on all AI agents run on Sonnet 5.5 at medium effort
 read_when: [changing this area, questioning this choice]
 canonical_for: [ADR-0011]
-sources: [docs/FEATURE_PROMPT.md, docs/engineering/git-and-commits.md]
+sources: [docs/prompts/FEATURE_PROMPT.md, docs/engineering/git-and-commits.md]
 status: active
 last_verified: 2026-10-28
 related: [docs/decisions/README.md, CLAUDE.md]
@@ -41,5 +41,5 @@ Every agent, built-in, user-level or project-level, runs on Sonnet 5.5 (claude-s
 
 ## Sources
 
-- `docs/FEATURE_PROMPT.md`
+- `docs/prompts/FEATURE_PROMPT.md`
 - `docs/engineering/git-and-commits.md`

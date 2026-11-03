@@ -45,7 +45,7 @@ You implement and test the deterministic rules engine of DeskTop: Hanggang Umaga
 - Write tests for every rule, every power P01 to P12, every enemy AI rule, every wave, win, lose and determinism E7
 - Keep resolution under 50 ms for 12 units and 8 enemies
 - Run backend\.venv\Scripts\python -m pytest backend/tests -q and report the real output
-- Follow docs/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
+- Follow docs/prompts/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
 - Prose in any doc you touch has no semicolons and no em dashes
 
 ## Never

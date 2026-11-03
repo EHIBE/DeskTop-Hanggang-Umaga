@@ -23,7 +23,7 @@ You review DeskTop's Electron and local-server security without editing anything
 
 - `CLAUDE.md`
 - `docs/engineering/security-and-privacy.md`
-- `docs/FEATURE_PROMPT.md`
+- `docs/prompts/FEATURE_PROMPT.md`
 - `docs/decisions/ADR-0103-electron-hardening.md`
 - `docs/architecture/websocket-protocol.md`
 
@@ -34,7 +34,7 @@ You review DeskTop's Electron and local-server security without editing anything
 - Check the key never reaches the renderer, logs, fixtures or the repo
 - Map each finding to an OWASP Top 10:2025 category from section 5 of the feature prompt
 - Report only findings you verified in the source, with file and line
-- Follow docs/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
+- Follow docs/prompts/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
 - Prose in any doc you touch has no semicolons and no em dashes
 
 ## Never

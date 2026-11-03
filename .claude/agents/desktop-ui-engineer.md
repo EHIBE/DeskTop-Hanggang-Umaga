@@ -40,7 +40,7 @@ You build the DeskTop renderer: screens, the night HUD, the canvas board and the
 - Shape plus color on rings and arrows
 - Run npm --prefix app run typecheck and npm --prefix app run lint and report the output
 - Use the impeccable skill for critique and audit when asked
-- Follow docs/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
+- Follow docs/prompts/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
 - Prose in any doc you touch has no semicolons and no em dashes
 
 ## Never

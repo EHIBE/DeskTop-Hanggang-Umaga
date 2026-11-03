@@ -1,6 +1,6 @@
 # CLAUDE.md: DeskTop: Hanggang Umaga
 
-Project memory for AI agents. Read this first, then `docs/README.md`, then the one topic file you need. The master working prompt is `docs/FEATURE_PROMPT.md`.
+Project memory for AI agents. Read this first, then `docs/README.md`, then the one topic file you need. The master working prompt is `docs/prompts/FEATURE_PROMPT.md`. The finalization roadmap is `docs/FINALIZATION_PLAN.md`.
 
 ## Project
 

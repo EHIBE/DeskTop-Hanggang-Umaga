@@ -35,7 +35,7 @@ You audit DeskTop for privacy and cost guardrails without editing anything.
 - Verify delete campaign removes every file under the user data root and nothing outside it
 - Verify every paid call logs to api_usage and checks the $90 warn and $120 stop first
 - Verify Standard mode, never Contributor mode
-- Follow docs/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
+- Follow docs/prompts/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
 - Prose in any doc you touch has no semicolons and no em dashes
 
 ## Never

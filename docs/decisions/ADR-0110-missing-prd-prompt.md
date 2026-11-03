@@ -3,7 +3,7 @@ title: ADR-0110 Missing DeskTop_PRD_Prompt.md
 purpose: Record the decision on missing DeskTop_PRD_Prompt.md
 read_when: [changing this area, questioning this choice]
 canonical_for: [ADR-0110]
-sources: [CLAUDE.md#bugs-and-contradictions, docs/FEATURE_PROMPT.md#3-project]
+sources: [CLAUDE.md#bugs-and-contradictions, docs/prompts/archive/FEATURE_PROMPT_docs_program.md#3-project]
 status: active
 last_verified: 2026-10-28
 related: [docs/decisions/README.md, CLAUDE.md]
@@ -39,4 +39,4 @@ Record Official Rules answers in docs/rules-notes.md and update the affected doc
 ## Sources
 
 - `CLAUDE.md#bugs-and-contradictions`
-- `docs/FEATURE_PROMPT.md#3-project`
+- `docs/prompts/archive/FEATURE_PROMPT_docs_program.md#3-project`

@@ -3,7 +3,7 @@ title: ADR-0109 Build Guide schedule supersedes the PRD timeline
 purpose: Record the decision on build Guide schedule supersedes the PRD timeline
 read_when: [changing this area, questioning this choice]
 canonical_for: [ADR-0109]
-sources: [CLAUDE.md#bugs-and-contradictions, docs/FEATURE_PROMPT.md#3-project]
+sources: [CLAUDE.md#bugs-and-contradictions, docs/prompts/archive/FEATURE_PROMPT_docs_program.md#3-project]
 status: active
 last_verified: 2026-10-28
 related: [docs/decisions/README.md, CLAUDE.md]
@@ -39,4 +39,4 @@ Treat the Build Guide schedule and cut list as current. docs/delivery/schedule.m
 ## Sources
 
 - `CLAUDE.md#bugs-and-contradictions`
-- `docs/FEATURE_PROMPT.md#3-project`
+- `docs/prompts/archive/FEATURE_PROMPT_docs_program.md#3-project`

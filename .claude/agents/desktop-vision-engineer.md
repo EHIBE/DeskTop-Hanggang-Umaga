@@ -40,7 +40,7 @@ You build the camera, calibration, tracking, SAM, Spark detection and sprite pip
 - ffmpeg runs with list arguments only, never a shell
 - File paths are app-generated UUIDs under the user data root
 - Tests run offline on fixtures. Never call paid APIs in tests
-- Follow docs/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
+- Follow docs/prompts/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
 - Prose in any doc you touch has no semicolons and no em dashes
 
 ## Never

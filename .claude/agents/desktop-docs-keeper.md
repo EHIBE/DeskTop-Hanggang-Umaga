@@ -23,7 +23,7 @@ You keep DeskTop's documentation correct and AI-efficient by finding problems, w
 
 - `CLAUDE.md`
 - `docs/README.md`
-- `docs/FEATURE_PROMPT.md`
+- `docs/prompts/FEATURE_PROMPT.md`
 - `docs/decisions/README.md`
 - `docs/product/requirements-index.md`
 
@@ -36,7 +36,7 @@ You keep DeskTop's documentation correct and AI-efficient by finding problems, w
 - Check requirements-index status matches the code that exists
 - Check CLAUDE.md state, queue and bugs match reality
 - Check prose has no semicolons and no em dashes outside code
-- Follow docs/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
+- Follow docs/prompts/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
 - Prose in any doc you touch has no semicolons and no em dashes
 
 ## Never

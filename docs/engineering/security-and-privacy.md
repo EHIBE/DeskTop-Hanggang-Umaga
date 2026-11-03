@@ -3,7 +3,7 @@ title: Security and privacy
 purpose: Threat model, data inventory, Electron and local server hardening, and the OWASP checklist for this stack
 read_when: [touching main, preload, server.py, meta_client, recording, uploads, any input path]
 canonical_for: [threat model, data inventory, hardening checklist, privacy rules]
-sources: [docs/FEATURE_PROMPT.md#5-security-guardrails-mapped-to-owasp-top-102025, docs/DeskTop_PRD.md#10-non-functional-requirements, app/src/main/index.ts, app/src/preload/index.ts, app/src/renderer/index.html]
+sources: [docs/prompts/FEATURE_PROMPT.md#5-security-guardrails-mapped-to-owasp-top-102025, docs/DeskTop_PRD.md#10-non-functional-requirements, app/src/main/index.ts, app/src/preload/index.ts, app/src/renderer/index.html]
 status: active
 last_verified: 2026-10-29
 related: [docs/decisions/ADR-0103-electron-hardening.md, docs/architecture/websocket-protocol.md, docs/architecture/data-model.md]
@@ -79,7 +79,7 @@ All calls in Standard mode, never Contributor mode. Every `responses.create` cal
 
 ## OWASP Top 10:2025 summary
 
-Summary. Canonical: `docs/FEATURE_PROMPT.md` section 5.
+Summary. Canonical: `docs/prompts/FEATURE_PROMPT.md` section 5.
 
 | Category | Key control here |
 |---|---|

@@ -3,7 +3,7 @@ title: ADR-0102 Wire Tailwind into the renderer
 purpose: Record the decision on wire Tailwind into the renderer
 read_when: [changing this area, questioning this choice]
 canonical_for: [ADR-0102]
-sources: [CLAUDE.md#bugs-and-contradictions, docs/FEATURE_PROMPT.md#3-project]
+sources: [CLAUDE.md#bugs-and-contradictions, docs/prompts/archive/FEATURE_PROMPT_docs_program.md#3-project]
 status: active
 last_verified: 2026-10-28
 related: [docs/decisions/README.md, CLAUDE.md]
@@ -39,4 +39,4 @@ Add tailwindcss() to the renderer plugins and @import of tailwindcss at the top 
 ## Sources
 
 - `CLAUDE.md#bugs-and-contradictions`
-- `docs/FEATURE_PROMPT.md#3-project`
+- `docs/prompts/archive/FEATURE_PROMPT_docs_program.md#3-project`

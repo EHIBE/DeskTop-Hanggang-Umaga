@@ -27,7 +27,7 @@ DeskTop speaks Taglish to Filipino players and English to everyone else, and it 
 
 ## Always
 
-- Follow `docs/FEATURE_PROMPT.md` sections 4, 5 and 9. Hard constraints win over this skill.
+- Follow `docs/prompts/FEATURE_PROMPT.md` sections 4, 5 and 9. Hard constraints win over this skill.
 - Any agent you spawn runs on Sonnet 5.5 at medium effort (pass model sonnet).
 - No code comments, no debug code, no new dependencies without EHIBE's approval.
 - Doc prose has no semicolons and no em dashes.

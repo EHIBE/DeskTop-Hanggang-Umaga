@@ -35,7 +35,7 @@ You review DeskTop's Filipino language and folklore content for accuracy, tone a
 - Check albularyo and anting-anting are shown with respect
 - Check glossary descriptions follow common, widely told versions
 - You are not a substitute for the 2 human Filipino playtester reviews. Say so in the report
-- Follow docs/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
+- Follow docs/prompts/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
 - Prose in any doc you touch has no semicolons and no em dashes
 
 ## Never

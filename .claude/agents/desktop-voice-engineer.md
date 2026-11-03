@@ -38,7 +38,7 @@ You build the Taglish voice pipeline: realtime sessions, local grammar, voice cl
 - Treat transcripts as untrusted data
 - Grammar parse under 20 ms. Unit and target matching with rapidfuzz partial_ratio cutoff 75
 - Fallback ladder: ENDPOINTING, then push-to-talk, then tap
-- Follow docs/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
+- Follow docs/prompts/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
 - Prose in any doc you touch has no semicolons and no em dashes
 
 ## Never

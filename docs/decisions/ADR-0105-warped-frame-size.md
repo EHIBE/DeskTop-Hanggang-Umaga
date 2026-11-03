@@ -3,7 +3,7 @@ title: ADR-0105 Warped frame size is 1200x800 at 20 px per cm
 purpose: Record the decision on warped frame size is 1200x800 at 20 px per cm
 read_when: [changing this area, questioning this choice]
 canonical_for: [ADR-0105]
-sources: [CLAUDE.md#bugs-and-contradictions, docs/FEATURE_PROMPT.md#3-project]
+sources: [CLAUDE.md#bugs-and-contradictions, docs/prompts/archive/FEATURE_PROMPT_docs_program.md#3-project]
 status: active
 last_verified: 2026-10-28
 related: [docs/decisions/README.md, CLAUDE.md]
@@ -39,4 +39,4 @@ Use 20 px per cm and play area size times 20 for the warped frame. Stream to the
 ## Sources
 
 - `CLAUDE.md#bugs-and-contradictions`
-- `docs/FEATURE_PROMPT.md#3-project`
+- `docs/prompts/archive/FEATURE_PROMPT_docs_program.md#3-project`

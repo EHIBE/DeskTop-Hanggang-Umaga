@@ -3,7 +3,7 @@ title: ADR-0107 Use Decimal for cost math
 purpose: Record the decision on use Decimal for cost math
 read_when: [changing this area, questioning this choice]
 canonical_for: [ADR-0107]
-sources: [CLAUDE.md#bugs-and-contradictions, docs/FEATURE_PROMPT.md#3-project]
+sources: [CLAUDE.md#bugs-and-contradictions, docs/prompts/archive/FEATURE_PROMPT_docs_program.md#3-project]
 status: active
 last_verified: 2026-10-28
 related: [docs/decisions/README.md, CLAUDE.md]
@@ -39,4 +39,4 @@ Compute all costs with Python Decimal from the unit price table. Keep the REAL c
 ## Sources
 
 - `CLAUDE.md#bugs-and-contradictions`
-- `docs/FEATURE_PROMPT.md#3-project`
+- `docs/prompts/archive/FEATURE_PROMPT_docs_program.md#3-project`

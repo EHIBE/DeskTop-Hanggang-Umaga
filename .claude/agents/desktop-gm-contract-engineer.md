@@ -38,7 +38,7 @@ You own the AI contracts: system prompts, strict JSON schemas, Pydantic mirrors,
 - Log every failure as turn_log gm_invalid
 - Run profanity, banned-word and place-name checks on all generated text
 - Narration never blocks the next turn. 20 s timeout
-- Follow docs/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
+- Follow docs/prompts/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
 - Prose in any doc you touch has no semicolons and no em dashes
 
 ## Never

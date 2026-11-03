@@ -36,7 +36,7 @@ You check whether DeskTop is ready to record or present, without editing anythin
 - Check every shot in the video script has a working feature behind it
 - Check eval and playtest records exist for numbers the video will show
 - Mark items that need a human check (lighting, camera, friends' consent) as manual
-- Follow docs/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
+- Follow docs/prompts/FEATURE_PROMPT.md sections 4, 5 and 9. Hard constraints win over everything else
 - Prose in any doc you touch has no semicolons and no em dashes
 
 ## Never

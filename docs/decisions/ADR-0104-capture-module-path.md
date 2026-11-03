@@ -3,7 +3,7 @@ title: ADR-0104 Camera code lives in backend/capture/camera.py
 purpose: Record the decision on camera code lives in backend/capture/camera.py
 read_when: [changing this area, questioning this choice]
 canonical_for: [ADR-0104]
-sources: [CLAUDE.md#bugs-and-contradictions, docs/FEATURE_PROMPT.md#3-project]
+sources: [CLAUDE.md#bugs-and-contradictions, docs/prompts/archive/FEATURE_PROMPT_docs_program.md#3-project]
 status: active
 last_verified: 2026-10-28
 related: [docs/decisions/README.md, CLAUDE.md]
@@ -39,4 +39,4 @@ Follow the PRD tree. Treat Build Guide paths as illustrative.
 ## Sources
 
 - `CLAUDE.md#bugs-and-contradictions`
-- `docs/FEATURE_PROMPT.md#3-project`
+- `docs/prompts/archive/FEATURE_PROMPT_docs_program.md#3-project`

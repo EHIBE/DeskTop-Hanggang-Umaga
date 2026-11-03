@@ -3,7 +3,7 @@ title: Coding standards
 purpose: Python and TypeScript rules for structure, naming, typing, errors and style
 read_when: [writing or reviewing any code]
 canonical_for: [code conventions, naming, error handling rules, style tool settings]
-sources: [docs/FEATURE_PROMPT.md#4-implement, app/.prettierrc.yaml, app/.editorconfig, app/eslint.config.mjs]
+sources: [docs/prompts/FEATURE_PROMPT.md#4-implement, app/.prettierrc.yaml, app/.editorconfig, app/eslint.config.mjs]
 status: active
 last_verified: 2026-10-28
 related: [docs/architecture/backend-modules.md, docs/architecture/frontend-modules.md, docs/engineering/definition-of-done.md]
@@ -11,7 +11,7 @@ related: [docs/architecture/backend-modules.md, docs/architecture/frontend-modul
 
 # Coding standards
 
-Short summary of the rules in `FEATURE_PROMPT.md` section 4 applied to this stack. When the two differ, the prompt wins.
+Short summary of the rules in `prompts/FEATURE_PROMPT.md` section 4 applied to this stack. When the two differ, the prompt wins.
 
 ## Key facts
 
