@@ -32,7 +32,7 @@ Each unit has one power chosen from its class's allowed list. Powers resolve in 
 | P05 | Hampas | 1 damage to every enemy within 6 cm | Area | 1 | Fighter |
 | P06 | Bantay | Kubo absorbs the next 3 damage this turn | Kubo, any distance | 2 | Charm, Wall |
 | P07 | Taboy | Passive aura, enemies cannot end a move within 8 cm | Self aura | Passive | Charm |
-| P08 | Liwanag | Clears kapre smoke within 12 cm | Area | 1 | Charm, Scout |
+| P08 | Liwanag | Clears kapre smoke within 12 cm | Area | 1 | None (unassigned while smoke is cut) |
 | P09 | Tusok | Hits target and one more enemy within 5 cm behind it | Line | 1 | Reach |
 | P10 | Sigaw | Allies within 10 cm get +1 ATK this turn | Area | 2 | Ranged |
 | P11 | Habol | +2 damage against a duwende | Enemy in melee | 0 | Fighter, Scout |
@@ -42,7 +42,7 @@ Asin (salt) follows the common folklore that salt on the lower half stops a mana
 
 ## Notes
 
-- P08 Liwanag has no effect while Kapre smoke is cut (Build Guide). Keep the power valid so cards stay legal. Unverified: whether to swap P08 out of Charm and Scout lists while smoke is cut. Default: keep it, card text still reads correctly.
+- P08 Liwanag has no effect while Kapre smoke is cut (Build Guide). Decision D5: it is removed from the Charm and Scout power lists. The definition stays in the rules engine and the schema enum. A card draft that picks P08 for a Charm or Scout is clamped by the existing rule to the first power in the class list, which is P06 for a Charm and P11 for a Scout.
 - Charms have ATK 0 and no move, so their value is entirely in the power.
 - P10 bonus counts in `ATK + bonuses` of the damage formula. ATK cap 3 applies to the base stat, not to this-turn bonuses. Unverified, PRD does not say. Default: cap applies to base stat only.
 - Badges (Could, F16) may reduce a power's cooldown by 1.

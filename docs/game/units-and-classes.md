@@ -31,12 +31,12 @@ Muse Spark picks one class and one power from fixed lists and writes flavor text
 | Class | HP | ATK | Move | Range | Allowed powers | Example objects |
 |---|---|---|---|---|---|---|
 | Kubo (objective) | 10 | 0 | 0 | none | none | Mug, tumbler, box |
-| Charm | 3 | 0 | 0 | none | P06, P07, P08, P12 | Coin, ring, bottle cap |
+| Charm | 3 | 0 | 0 | none | P06, P07, P12 | Coin, ring, bottle cap |
 | Healer | 4 | 1 | Short (8 cm) | Melee (5 cm) | P01, P02 | Keys, lip balm, small bottle |
 | Fighter | 6 | 2 | Medium (12 cm) | Melee (5 cm) | P03, P05, P11 | Stapler, phone, calculator |
 | Reach | 4 | 2 | Medium (12 cm) | Reach (9 cm) | P04, P09 | Pen, pencil, ruler |
 | Ranged | 3 | 1 | Medium (12 cm) | Far (15 cm) | P04, P10, P12 | Highlighter, earbuds case |
-| Scout | 3 | 1 | Long (16 cm) | Melee (5 cm) | P08, P11 | Eraser, USB stick |
+| Scout | 3 | 1 | Long (16 cm) | Melee (5 cm) | P11 | Eraser, USB stick |
 | Wall | 7 | 0 | Short (8 cm) | none | P02, P06 | Book, wallet, tape roll |
 
 Kubo HP changes with difficulty: Madali 12, Normal 10, Mahirap 8 (`waves-and-difficulty.md`).

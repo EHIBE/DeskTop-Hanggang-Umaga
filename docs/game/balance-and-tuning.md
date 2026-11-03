@@ -85,4 +85,5 @@ Note on tracker loss: PRD section 12 says 3 s, edge case 1 and Build Guide 6.1 s
 
 | Date | Constant | Old | New | Evidence |
 |---|---|---|---|---|
-| | | | | |
+| 2026-11-03 | Charm power list | P06, P07, P08, P12 | P06, P07, P12 | Decision D5, Kapre smoke is cut |
+| 2026-11-03 | Scout power list | P08, P11 | P11 | Decision D5, Kapre smoke is cut |

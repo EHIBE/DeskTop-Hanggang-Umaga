@@ -45,7 +45,7 @@ TEMPLATE_ROWS = [
         0,
         MoveClass.NONE,
         RangeClass.NONE,
-        (PowerId.P06, PowerId.P07, PowerId.P08, PowerId.P12),
+        (PowerId.P06, PowerId.P07, PowerId.P12),
     ),
     (
         UnitClass.HEALER,
@@ -85,7 +85,7 @@ TEMPLATE_ROWS = [
         1,
         MoveClass.LONG,
         RangeClass.MELEE,
-        (PowerId.P08, PowerId.P11),
+        (PowerId.P11,),
     ),
     (
         UnitClass.WALL,
@@ -279,9 +279,19 @@ def test_atk_floor_and_cap() -> None:
 
 
 def test_move_and_range_from_template() -> None:
-    card = clamp_card(draft(UnitClass.SCOUT, 0, 0, PowerId.P08), [K], Difficulty.NORMAL)
+    card = clamp_card(draft(UnitClass.SCOUT, 0, 0, PowerId.P11), [K], Difficulty.NORMAL)
     assert card.move is MoveClass.LONG
     assert card.range is RangeClass.MELEE
+
+
+@pytest.mark.parametrize(
+    ("cls", "expected"),
+    [(UnitClass.CHARM, PowerId.P06), (UnitClass.SCOUT, PowerId.P11)],
+)
+def test_p08_is_clamped_for_charm_and_scout(cls: UnitClass, expected: PowerId) -> None:
+    assert PowerId.P08 not in CLASS_TEMPLATES[cls].powers
+    card = clamp_card(draft(cls, 0, 0, PowerId.P08), [K], Difficulty.NORMAL)
+    assert card.power_id is expected
 
 
 @pytest.mark.parametrize("cls", list(UnitClass))
