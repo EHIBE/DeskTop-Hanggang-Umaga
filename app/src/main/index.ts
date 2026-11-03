@@ -131,7 +131,7 @@ function findReel(userDataDir: string, name: string): string | null {
     if (!entry.isDirectory() || !CAMPAIGN_DIR_NAME.test(entry.name)) continue
     const recordings = join(campaigns, entry.name, 'recordings')
     const candidate = join(recordings, name)
-    if (!existsSync(candidate)) continue
+    if (!existsSync(candidate) || lstatSync(recordings).isSymbolicLink()) continue
     const stats = lstatSync(candidate)
     if (!stats.isFile() || stats.isSymbolicLink()) continue
     if (!realpathSync(candidate).startsWith(realpathSync(recordings) + sep)) continue

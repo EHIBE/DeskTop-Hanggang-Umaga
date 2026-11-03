@@ -159,6 +159,10 @@ export class BackendProcess {
     )
     this.child = child
     this.pipeLogs(child)
+    child.once('error', (error) =>
+      this.writeLog(`backend spawn failed: ${error.message}
+`)
+    )
     child.once('exit', (code) => void this.onExit(generation, code))
     try {
       await this.waitHealthy(child, config)
@@ -198,7 +202,9 @@ export class BackendProcess {
   private async waitHealthy(child: ChildProcess, config: BackendConfig): Promise<void> {
     const deadline = Date.now() + HEALTH_TIMEOUT_MS
     while (Date.now() < deadline) {
-      if (child.exitCode !== null) throw new Error('backend exited before it was healthy')
+      if (child.exitCode !== null || child.pid === undefined) {
+        throw new Error('backend exited before it was healthy')
+      }
       if (await this.isHealthy(config)) return
       await delay(HEALTH_INTERVAL_MS)
     }
