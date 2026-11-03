@@ -19,9 +19,12 @@ def difficulty_from_setting(value: object) -> Difficulty:
     return Difficulty.NORMAL
 
 
+MIC_DIGITS_MAX = 4
+
+
 def mic_index(value: object, names: dict[str, int]) -> int | None:
     if not isinstance(value, str) or value == DEFAULT_MIC:
         return None
-    if value.isdigit():
+    if value.isascii() and value.isdigit() and len(value) <= MIC_DIGITS_MAX:
         return int(value)
     return names.get(value)

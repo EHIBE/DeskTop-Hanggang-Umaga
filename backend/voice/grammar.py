@@ -312,6 +312,8 @@ def find_unit_mentions(
                         continue
                     if len(window) > 1.5 * len(alias) + 2:
                         continue
+                    if len(window) < MIN_FUZZY_WINDOW_CHARS and window != alias:
+                        continue
                     if len(alias) <= SHORT_ALIAS_CHARS:
                         score = fuzz.ratio(alias, window)
                         cutoff = SHORT_ALIAS_CUTOFF

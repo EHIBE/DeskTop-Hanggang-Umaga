@@ -1,4 +1,5 @@
 import json
+import logging
 import math
 import re
 import shutil
@@ -14,6 +15,8 @@ from pathlib import Path
 from typing import Final
 
 from rules.units import Difficulty, MoveClass, PowerId, RangeClass, UnitClass
+
+logger = logging.getLogger("desktop.store")
 
 SCHEMA_VERSION: Final = 3
 MIGRATIONS: Final[dict[int, str]] = {
@@ -1346,7 +1349,11 @@ def _progress_ids(ids: Sequence[str]) -> tuple[str, ...]:
 def _json_ids(raw: object) -> tuple[str, ...]:
     if raw is None:
         return ()
-    parsed = json.loads(str(raw))
+    try:
+        parsed = json.loads(str(raw))
+    except (ValueError, TypeError):
+        logger.warning("progress ids are corrupt, using none")
+        return ()
     if not isinstance(parsed, list):
         return ()
     return tuple(str(item) for item in parsed)

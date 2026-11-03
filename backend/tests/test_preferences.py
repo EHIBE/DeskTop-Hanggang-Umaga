@@ -120,17 +120,9 @@ def test_mic_index_result_is_none_or_int_for_random_text() -> None:
             assert result == int(text)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="BUG: mic_index raises ValueError for a Unicode digit such as superscript two",
-)
 def test_unicode_digit_does_not_raise() -> None:
     assert mic_index("²", NAMES) is None
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="BUG: mic_index raises ValueError for a digit string longer than 4300 digits",
-)
 def test_huge_digit_string_does_not_raise() -> None:
     assert mic_index("9" * 5000, NAMES) is None

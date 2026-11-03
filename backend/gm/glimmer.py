@@ -48,15 +48,35 @@ def normalize_glimmer_url(raw: str | None) -> str | None:
     text = (raw or "").strip()
     if not text:
         return None
+    if "\\" in text or any(ch.isspace() for ch in text):
+        _reject()
+        return None
     try:
         parts = urlsplit(text)
         host = parts.hostname
+        port = parts.port
     except ValueError:
         return None
-    if parts.scheme != "http" or host not in LOOPBACK_HOSTS:
-        logger.warning("glimmer url ignored, only local http addresses are allowed")
+    if (
+        parts.scheme != "http"
+        or host not in LOOPBACK_HOSTS
+        or parts.username is not None
+        or parts.password is not None
+        or parts.query
+        or parts.fragment
+        or "?" in text
+        or "#" in text
+        or "@" in parts.netloc
+    ):
+        _reject()
         return None
-    return text.rstrip("/")
+    shown = f"[{host}]" if ":" in host else host
+    base = f"http://{shown}" + (f":{port}" if port is not None else "")
+    return base + parts.path.rstrip("/")
+
+
+def _reject() -> None:
+    logger.warning("glimmer url ignored, only local http addresses are allowed")
 
 
 class GlimmerClient:
@@ -120,7 +140,9 @@ class GlimmerClient:
         }
         try:
             async with httpx2.AsyncClient(
-                timeout=self._timeout_s, transport=self._transport
+                timeout=self._timeout_s,
+                transport=self._transport,
+                trust_env=False,
             ) as http:
                 response = await http.post(
                     self._base_url + GLIMMER_CHAT_PATH, json=body

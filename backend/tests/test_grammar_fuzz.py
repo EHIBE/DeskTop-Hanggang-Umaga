@@ -346,10 +346,6 @@ def test_exact_three_letter_name_matches_but_two_letter_cut_does_not() -> None:
     assert parse_command("B atake aswang", context) is None
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="BUG: a 3-letter token fuzzy-matches a 4-letter unit alias, balance doc says a window of at least 4 characters",
-)
 def test_three_letter_token_does_not_fuzzy_match_a_four_letter_alias() -> None:
     unit = GrammarUnit("u_tala", "Tala", "fighter", 1.0, 1.0)
     context = GrammarContext((unit,), (GrammarEnemy("e_aswang_1", "aswang", 2, 2),))
