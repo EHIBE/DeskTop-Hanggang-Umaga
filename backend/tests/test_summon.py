@@ -2,13 +2,12 @@ import asyncio
 import json
 from collections.abc import Sequence
 from decimal import Decimal
-from pathlib import Path
 
 import numpy as np
 import numpy.typing as npt
 import pytest
 
-from gm.schemas import ContentFilter
+from gm.schemas import DATA_DIR, ContentFilter
 from meta_client import CostMeter, MetaClient, create_openai_client
 from rules.units import CardDraft, Difficulty, PowerId, UnitClass
 from tests.test_meta_client import MemoryLog
@@ -31,10 +30,10 @@ Image = npt.NDArray[np.uint8]
 CONTENT = ContentFilter.from_data_dir()
 
 
-def first_line(path: str) -> str:
+def first_line(name: str) -> str:
     return next(
         line.strip()
-        for line in Path(path).read_text(encoding="utf-8").splitlines()
+        for line in (DATA_DIR / name).read_text(encoding="utf-8").splitlines()
         if line.strip()
     )
 
@@ -253,7 +252,7 @@ def test_offline_detector_falls_back_and_default_card_is_used() -> None:
 
 
 def test_profane_name_becomes_the_class_name() -> None:
-    bad_word = first_line("gm/data/blocklist_en.txt")
+    bad_word = first_line("blocklist_en.txt")
     pipeline = SummonPipeline(
         FixedDetector(spark_detection(PixelBox(500, 300, 600, 400))),
         FakeSegmenter(),
@@ -332,7 +331,7 @@ def test_spark_repairs_once_then_falls_back() -> None:
 
 
 def test_unsafe_card_text_is_dropped() -> None:
-    place = first_line("gm/data/ph_places.txt")
+    place = first_line("ph_places.txt")
     detector = spark_with_answers([card_json(text_tl=f"Aswang galing {place}")], [])
     detection = asyncio.run(detector.detect(frame(), "x", []))
     assert detection.text.card_text_tl == ""

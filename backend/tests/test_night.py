@@ -9,7 +9,7 @@ import pytest
 from capture.camera import VideoSource, list_microphones
 from db.store import Store
 from game.night import AppPhase, FramePump, GameController, GameError
-from gm.schemas import ContentFilter
+from gm.schemas import DATA_DIR, ContentFilter
 from rules.units import CardDraft, Difficulty, PowerId, UnitClass
 from state import FrameView, LiveState
 from tests.test_server import SCENE, SHEET, SceneSource
@@ -214,7 +214,7 @@ def test_summons_reroll_and_rename(tmp_path: Path) -> None:
     with pytest.raises(GameError):
         asyncio.run(controller.reroll_unit(pencil.unit_id))
     bad = (
-        Path("gm/data/blocklist_en.txt")
+        (DATA_DIR / "blocklist_en.txt")
         .read_text(encoding="utf-8")
         .splitlines()[0]
         .strip()
