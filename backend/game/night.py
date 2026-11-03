@@ -903,6 +903,7 @@ class GameController:
         if session.state not in (TurnState.SUNRISE, TurnState.DEFEAT):
             raise GameError("cmd.unknown")
         self._stop_narration()
+        self._reset_replay()
         self._session = None
         with self._lock:
             self._campaign = None
@@ -1431,11 +1432,10 @@ class GameController:
         runner = self._replay_runner
         if session.state not in (TurnState.SUNRISE, TurnState.DEFEAT) or night is None:
             raise GameError("cmd.unknown")
-        if (
-            sidecar is None
-            or runner is None
-            or not self._store.recording_consent(night.id)
-        ):
+        if sidecar is None or runner is None:
+            raise GameError("replay.none")
+        if not self._store.recording_consent(night.id):
+            logger.warning("replay refused, recording consent missing")
             raise GameError("replay.none")
         if self._ffmpeg is None:
             raise GameError("replay.no_ffmpeg")

@@ -81,6 +81,19 @@ def test_replay_runs_after_a_recorded_night(tmp_path: Path) -> None:
     store.close()
 
 
+def test_quit_clears_the_replay_so_the_next_campaign_cannot_reuse_it(
+    tmp_path: Path,
+) -> None:
+    store, controller, _ = finished_recorded_night(tmp_path)
+    controller._replay_runner = Runner()
+    assert controller.snapshot().can_replay
+    controller.quit_night()
+    assert not controller.snapshot().can_replay
+    assert controller._last_sidecar is None
+    controller.close()
+    store.close()
+
+
 def test_replay_failure_and_demo_safe(tmp_path: Path) -> None:
     store, controller, _ = finished_recorded_night(tmp_path)
     runner = Runner(ReplayError("ffmpeg was not found"))
