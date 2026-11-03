@@ -5,7 +5,7 @@ read_when: [making or questioning a design choice, resolving a contradiction]
 canonical_for: [ADR index, ADR process]
 sources: [docs/DeskTop_PRD.md#0-document-header, CLAUDE.md#bugs-and-contradictions]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-03
 related: [docs/decisions/TEMPLATE.md, CLAUDE.md]
 ---
 
@@ -17,7 +17,7 @@ Each record explains one decision: its context, the choice, and the cost. Accept
 
 | Fact | Value |
 |---|---|
-| Accepted | ADR-0001 to ADR-0012, ADR-0101 to ADR-0110 |
+| Accepted | ADR-0001 to ADR-0012, ADR-0101 to ADR-0112 |
 | Proposed | None |
 | Numbering | 0001+ for decisions, 0101+ for contradiction fixes |
 | Template | `TEMPLATE.md` |
@@ -48,6 +48,8 @@ Each record explains one decision: its context, the choice, and the cost. Accept
 | [0108](ADR-0108-scaffold-placeholders.md) | Replace scaffold placeholders (B8) | 2026-10-28 |
 | [0109](ADR-0109-schedule-source.md) | Build Guide schedule supersedes PRD timeline (B9) | 2026-10-28 |
 | [0110](ADR-0110-missing-prd-prompt.md) | Missing DeskTop_PRD_Prompt.md (B10) | 2026-10-28 |
+| [0111](ADR-0111-packaged-build-and-origin.md) | Packaged zip, fuses through electron-builder, `null` origin only when packaged | 2026-11-03 |
+| [0112](ADR-0112-finalization-scope.md) | Finalization scope: game feel features, cuts, P08 off Charm and Scout, no pip-audit | 2026-11-03 |
 
 ## Proposed
 
