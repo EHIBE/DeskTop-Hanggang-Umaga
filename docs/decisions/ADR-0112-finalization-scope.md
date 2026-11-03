@@ -5,7 +5,7 @@ read_when: [choosing finalization work, questioning a cut, changing powers or pr
 canonical_for: [ADR-0112]
 sources: [docs/FINALIZATION_PLAN.md#decisions-locked-on-2026-11-03, docs/game/powers.md, docs/product/scope-and-cuts.md]
 status: active
-last_verified: 2026-11-03
+last_verified: 2026-11-04
 related: [docs/decisions/README.md, docs/FINALIZATION_PLAN.md, docs/design/onboarding-and-tutorial.md, docs/game/powers.md]
 ---
 
@@ -21,8 +21,8 @@ Status: Accepted. Raised 2026-11-03. Accepted 2026-11-03 by EHIBE (D3, D4, D5, D
 | Decided | 2026-11-03 |
 | Owner | EHIBE |
 | Build before freeze | Code-made sound cues, first-night tutorial hints, folklore glossary, speaker chip |
-| Cut | Settings screen, campaign progression F16 |
-| Power change | P08 Liwanag leaves the Charm and Scout lists while Kapre smoke is cut |
+| Cut | Settings screen, campaign progression F16. Both reversed by ADR-0113 on 2026-11-04 |
+| Power change | P08 Liwanag leaves the Charm and Scout lists while Kapre smoke is cut. Reversed by ADR-0113 on 2026-11-04 |
 | Known gap | No Python dependency audit (pip-audit) |
 
 ## Context

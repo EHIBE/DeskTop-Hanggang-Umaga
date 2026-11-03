@@ -5,7 +5,7 @@ read_when: [tuning after evals or playtests, writing backend/config.py]
 canonical_for: [tunable constants list, tuning log]
 sources: [docs/DeskTop_PRD.md#re-anchor-and-drift-logic-per-object-at-end-turn, docs/DeskTop_PRD.md#unit-system, docs/DeskTop_PRD.md#10-non-functional-requirements, docs/DeskTop_Build_Guide.md]
 status: active
-last_verified: 2026-10-29
+last_verified: 2026-11-04
 related: [docs/engineering/environment-and-config.md, docs/architecture/tracking-and-reanchor.md, docs/playtests.md]
 ---
 
@@ -63,9 +63,10 @@ Rules constants as built (2026-10-28) live in `backend/rules`: `PUSH_CM` 8, `HAM
 | Camera moved | Grid shift over 2 cm | FR-04 |
 | Chroma key HSV distance | 40 (PRD) | PRD 12. Build Guide sample uses RGB sum tolerance 60 |
 | Sprite alpha coverage | 15% to 90% | FR-12 |
-| Signature match | 0.8, ties within 0.05 | PRD 12 |
+| Signature match (first summon dedupe) | 0.8, ties within 0.05 | PRD 12 |
+| Returning object match | 0.78, ambiguity margin 0.04, histogram floor 0.70, smoothed histogram | `vision/returning.py` |
 | Voice claim fuzzy match | Levenshtein ratio 0.75 | PRD 12 |
-| Grammar fuzzy cutoff | 75 (rapidfuzz partial_ratio) | Build Guide 11.4 |
+| Grammar fuzzy cutoff | 75 (rapidfuzz partial_ratio), window of at least 4 characters | Build Guide 11.4, `voice/grammar.py` |
 
 Note on tracker loss: PRD section 12 says 3 s, edge case 1 and Build Guide 6.1 say 5 s. Default to 5 s and confirm in Phase 6.
 
@@ -87,3 +88,8 @@ Note on tracker loss: PRD section 12 says 3 s, edge case 1 and Build Guide 6.1 s
 |---|---|---|---|---|
 | 2026-11-03 | Charm power list | P06, P07, P08, P12 | P06, P07, P12 | Decision D5, Kapre smoke is cut |
 | 2026-11-03 | Scout power list | P08, P11 | P11 | Decision D5, Kapre smoke is cut |
+| 2026-11-04 | Charm power list | P06, P07, P12 | P06, P07, P08, P12 | ADR-0113, Kapre smoke built |
+| 2026-11-04 | Scout power list | P11 | P11, P08 | ADR-0113, Kapre smoke built |
+| 2026-11-04 | Kapre smoke radius, clear radius, turns alive | none | 10 cm, 12 cm, 2nd and 4th turn alive | ADR-0113, `rules/resolve.py` |
+| 2026-11-04 | Barrio level max, HP badge cap, scar penalty | none | 5, 2 badges, 1 max HP (floor 1) | ADR-0113, `rules/progression.py` |
+| 2026-11-04 | Returning match threshold, ambiguity margin | 0.8, 0.05 | 0.78, 0.04 | `vision/returning.py` |

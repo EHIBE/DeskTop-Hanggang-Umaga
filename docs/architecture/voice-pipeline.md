@@ -5,7 +5,7 @@ read_when: [implementing voice/session.py, voice/grammar.py, voice/claim.py, cap
 canonical_for: [voice handshake, audio format, voice events, enrollment, local grammar, voice fallbacks, close codes]
 sources: [docs/DeskTop_PRD.md#voice-spec, docs/DeskTop_Build_Guide.md#phase-11-voice-nov-2-4-h-f10, docs/DeskTop_Build_Guide.md#121-voice-claim-fr-18-fr-23]
 status: active
-last_verified: 2026-11-03
+last_verified: 2026-11-04
 related: [docs/decisions/ADR-0007-voice-diarization-enrollment.md, docs/design/copy-deck.md, docs/architecture/reliability-and-fallbacks.md]
 ---
 
@@ -81,12 +81,13 @@ Two open turnIds at once: drop both orders, show `cmd.overlap`.
 | end_turn | tapos na, done, end, next, end turn, or a bare tapos. A lone tapos inside a longer sentence means then | "Tapos!" |
 | cancel | hindi, wag, huwag, mali, cancel, ayaw, kansela, stop, only when they open the utterance and the rest is not an order | "Hindi, mali" |
 
-- Unit and target by rapidfuzz `partial_ratio` with cutoff 75.
+- Unit and target by rapidfuzz `partial_ratio` with cutoff 75 and a window of at least 4 characters, so "pre" no longer matches "spear". A heal order by a kubo with no second unit named is not an order.
 - Target resolution: named target, else nearest enemy of that type, else nearest enemy in range.
 - Numbers after a creature pick an instance ("aswang dos", "aswang 2").
 - Parse under 20 ms.
 - Cancel removes that speaker's last chip in the same player phase.
-- Unparsed: `cmd.unknown`. Spark fallback (F12) is cut.
+- Unparsed: `cmd.unknown`, or the Spark fallback parser (F12, `voice/fallback.py`) when it is wired. It sends the transcript as data with an enum schema (`command_parse`, effort minimal), validates the reply against live unit and enemy ids, and is skipped offline and in Demo Safe.
+- Strict ownership (F21, `voice/ownership.py`, off by default) returns `needs_confirmation` when the speaker is not the unit owner. End turn and cancel are never gated. Unknown speaker or owner accepts.
 
 ## Fallback ladder
 

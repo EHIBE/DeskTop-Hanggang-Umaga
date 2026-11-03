@@ -5,13 +5,13 @@ read_when: [writing backend/db/schema.sql or store.py, adding a column, delete c
 canonical_for: [SQLite schema, ID schemes, autosave transaction, data lifecycle]
 sources: [docs/DeskTop_PRD.md#sqlite-schema, docs/DeskTop_PRD.md#sam-usage-spec]
 status: active
-last_verified: 2026-10-29
+last_verified: 2026-11-04
 related: [docs/architecture/backend-modules.md, docs/engineering/security-and-privacy.md, docs/decisions/ADR-0107-money-precision.md]
 ---
 
 # Data model
 
-All state lives in one SQLite file in the Electron user data folder. `backend/db/schema.sql` (schema version 2 in `PRAGMA user_version`) implements the schema below plus the changes under "Built schema changes".
+All state lives in one SQLite file in the Electron user data folder. `backend/db/schema.sql` (schema version 3 in `PRAGMA user_version`) implements the schema below plus the changes under "Built schema changes".
 
 ## Key facts
 
@@ -19,10 +19,10 @@ All state lives in one SQLite file in the Electron user data folder. `backend/db
 |---|---|
 | Engine | SQLite via Python `sqlite3` |
 | Location | `%APPDATA%\DeskTop\` (path passed from Electron main) |
-| Tables | campaign, calibration, player, object_signature, sprite, unit, night, night_unit, enemy, voice_map, turn_log, api_usage, settings |
+| Tables | campaign, calibration, player, object_signature, sprite, unit, night, night_unit, enemy, voice_map, turn_log, api_usage, settings, campaign_recap |
 | IDs | TEXT UUIDs for entities. Game-state IDs `u_*` and `e_<type>_<n>` |
 | Time | UTC ISO 8601 text, turn timing in `t_ms` |
-| Migrations | `PRAGMA user_version` is 2. `db/store.py` builds a fresh database, steps version 1 up with `MIGRATIONS`, and refuses a newer version. Schema changes after a database exists need approval and a stepped migration |
+| Migrations | `PRAGMA user_version` is 3. `db/store.py` builds a fresh database, steps version 1 and 2 up with `MIGRATIONS`, and refuses a newer version. Schema changes after a database exists need approval and a stepped migration |
 | Money | REAL columns, values rounded to 1e-8 USD on write and summed as integers, Decimal in code (ADR-0107) |
 
 ## Schema
@@ -120,6 +120,28 @@ CREATE INDEX idx_turn_log_night ON turn_log(night_id, turn);
 | `PRAGMA foreign_keys = ON` and WAL journal on every connection | Foreign keys are off by default in SQLite |
 | `PRAGMA secure_delete = ON` on every connection, WAL checkpoint after delete campaign | Deleted rows do not linger in free pages or the WAL file |
 | `night.board_json` (version 2, added M10, approval pending from EHIBE) | Restore needs rules counters the tables do not hold: players, player order, enemies defeated, enemy id counters, damage per owner, unit hulls. Manananggal reform timers ride in `enemy.status_json` as `reform_<n>` |
+| `campaign.map_image_path` (version 3, 2026-11-04, ADR-0113) | Path of the cached generated barrio map. Null when none. Set and read by `set_map_image` and `get_map_image` |
+| `unit.scars_json` (version 3) | JSON list of scar id strings, null for none. `unit.scars` keeps the count and `unit.badges_json` keeps the badge ids. Written together by `set_unit_progress` |
+| `campaign_recap` table (version 3) | One row per campaign: `text` (1 to 1000 characters), `source` (`spark`, `line_bank` or `glimmer`), `created_at`. Cascades on campaign delete. Methods `save_recap`, `get_recap`, `clear_recap` |
+| Settings keys (version 3, FR-49) | Stored in the existing `settings` table through `get_preference`, `set_preference` and `all_preferences`. Unknown keys and wrong types are refused. See the table below |
+
+All three version 3 changes are additive. The step from version 2 uses `ALTER TABLE ADD COLUMN` and `CREATE TABLE`, so existing data is kept.
+
+## Preference keys
+
+| Key | Type and values | Default |
+|---|---|---|
+| `camera_device` | Integer index | 0 |
+| `mic_device` | Text | `default` |
+| `caption_language` | `fil` or `en` | `fil` |
+| `difficulty` | `easy`, `normal` or `hard` | `normal` |
+| `replay_enabled` | Boolean | true |
+| `tts_enabled` | Boolean. No TTS engine exists, so it stays off | false |
+| `show_real_objects` | Boolean | true |
+| `strict_ownership` | Boolean | false |
+| `generated_map` | Boolean | false |
+
+The runtime keys `demo_safe` and `demo_safe_sam` use the same table but are not preferences.
 
 ## ID schemes
 

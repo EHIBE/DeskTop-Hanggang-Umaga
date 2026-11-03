@@ -5,7 +5,7 @@ read_when: [implementing backend/rules/geometry.py or resolve.py, writing rules 
 canonical_for: [distances, damage formula, resolution order, status effects, tolerance]
 sources: [docs/DeskTop_PRD.md#combat-math-deterministic, docs/DeskTop_PRD.md#unit-system, docs/DeskTop_Build_Guide.md#71-rules-engine-layout]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/game/units-and-classes.md, docs/game/powers.md, docs/game/enemies.md, docs/decisions/ADR-0003-deterministic-rules-engine.md]
 ---
 
@@ -55,9 +55,9 @@ Reference implementation shape (Build Guide 7.1): shapely `Polygon(unit_hull_cm)
 |---|---|
 | Shielded | Absorbs N damage this turn (P02, P06) |
 | Stunned | Skips its next attack (P04) |
-| Smoked | Inside kapre smoke (cut in v1, see `enemies.md`) |
+| Smoked | Hull touches a kapre smoke cloud. Cannot hit an enemy outside every cloud (see `enemies.md`) |
 | Stolen | Removed by a duwende |
-| Lost | Off the desk. Cannot act or be targeted (Lost detection F22 cut, objects keep last position) |
+| Lost | Off the desk (`off_desk`, centroid outside the play area at the End Turn snapshot). Counts as absent, cannot act or be targeted. Returns when the centroid is back inside, with its start set to the new position. Events `lost` and `found`. Module `rules/lost.py` |
 | Uncertain | Position unknown, "?" badge until tapped or re-found |
 
 ## Events

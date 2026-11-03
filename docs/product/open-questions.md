@@ -5,7 +5,7 @@ read_when: [before relying on an assumption, Official Rules arrive, after an eva
 canonical_for: [A1 to A16, Q1 to Q9]
 sources: [docs/DeskTop_PRD.md#21-assumptions-and-open-questions, docs/DeskTop_Build_Guide.md#01-account-and-rules-checks]
 status: active
-last_verified: 2026-11-03
+last_verified: 2026-11-04
 related: [docs/rules-notes.md, docs/eval.md, docs/playtests.md]
 ---
 
@@ -62,9 +62,9 @@ Unconfirmed public notes from other teams. Record the real answers in `docs/rule
 | Q2 | How does community voting work for bonus prizes? | Post clips anyway, follow published rules | Nov 3 |
 | Q3 | Code and asset license | MIT code, CC BY-NC 4.0 assets | Nov 3 |
 | Q4 | Repo name | DeskTop-Hanggang-Umaga | Resolved by scaffold |
-| Q5 | Strict ownership default if it ships | Off | Not shipping (Could cut) |
+| Q5 | Strict ownership default if it ships | Off | Resolved 2026-11-04: built, off by default (ADR-0113) |
 | Q6 | Consent from each player or one host? | Each claimed player taps Payag. Host confirm only when voice claim was skipped | Before recording |
-| Q7 | Use partner credits (Modal) for Glimmer? | Only if granted and all Must and Should are done | Not shipping (Could cut) |
+| Q7 | Use partner credits (Modal) for Glimmer? | No. Glimmer runs locally through `DESKTOP_GLIMMER_URL` and costs 0 | Resolved 2026-11-04 (ADR-0113). Live Ollama run Manual: EHIBE |
 | Q8 | Keep "Tabi tabi po" in v1? | Yes, one line of rules code | Phase 8 |
 | Q9 | Which friends play in the demo, likeness release | Two friends, written OK saved before recording | Before demo night |
 

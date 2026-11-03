@@ -5,7 +5,7 @@ read_when: [adding a config key or env var, wiring backend spawn]
 canonical_for: [env var list, config.py groups, runtime paths]
 sources: [backend/.env.example, docs/DeskTop_Build_Guide.md#32-spawn-the-backend-from-electron-main, docs/DeskTop_PRD.md#12-technical-architecture]
 status: active
-last_verified: 2026-11-03
+last_verified: 2026-11-04
 related: [docs/game/balance-and-tuning.md, docs/engineering/security-and-privacy.md, docs/engineering/setup-windows.md]
 ---
 
@@ -34,6 +34,8 @@ Secrets and per-launch values arrive as environment variables from Electron main
 | `DESKTOP_PACKAGED` | Electron main when `app.isPackaged` | Adds the `null` origin of a `file://` page to the WebSocket allow-list. The token is still required (ADR-0111) | No (set by main) |
 | `DESKTOP_DEV` | Electron main in dev | Enables `.env` loading and the dev cost meter messages | No (set by main) |
 | `DESKTOP_FFMPEG` | Optional, user | Path to ffmpeg.exe when it is not on PATH. Used by the recorder and the replay. Main passes it through to the spawned backend | No |
+| `DESKTOP_GLIMMER_URL` | Optional, user | Base URL of a local Ollama server for the Glimmer recap. Only `http` on `127.0.0.1`, `localhost` or `::1` is accepted, anything else is ignored. Unset means Glimmer is off (ADR-0113) | No |
+| `DESKTOP_GLIMMER_MODEL` | Optional, user | Model name sent to the Glimmer server. Blank or unset means `muse-glimmer` | No |
 | `DESKTOP_PARENT_WATCH` | Electron main, always 1 | Backend exits when the Electron parent closes its stdin | No (set by main) |
 
 `MODEL_API_KEY`, `DESKTOP_TOKEN`, `DESKTOP_DATA_DIR` and `DESKTOP_PORT` are listed in `backend/.env.example` with placeholders. Main passes only a fixed Windows allow-list (`SYSTEMROOT`, `WINDIR`, `PATH`, `PATHEXT`, `TEMP`, `TMP`, `APPDATA`, `LOCALAPPDATA`, `USERPROFILE`, `HOMEDRIVE`, `HOMEPATH`, `COMPUTERNAME`) plus `DESKTOP_FFMPEG` from its own environment.

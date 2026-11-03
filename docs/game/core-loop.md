@@ -5,7 +5,7 @@ read_when: [designing any screen or phase, explaining how a night plays]
 canonical_for: [core loop, session numbers, flows F1 to F10 summary]
 sources: [docs/DeskTop_PRD.md#8-game-design-specification, docs/DeskTop_PRD.md#7-solution-overview-and-key-flows]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/game/state-machine.md, docs/game/combat-math.md, docs/design/screens.md]
 ---
 
@@ -39,7 +39,7 @@ Step-by-step tables with models called and data written: PRD section 7. This is 
 | F6 Enemy phase | Spawn step | Spawn at listed edges, pick target by AI rule, move toward it stopping at range, draw arrow with damage number | None |
 | F7 Sunrise | Turn 8 survived | Dawn over 3 s, score, Bayani ng Gabi, recap line, Replay if consent | Spark (recap), SAM video |
 | F8 Replay | Replay tapped | Highlights from turn_log, 10 FPS proxy, upload with 24 h expiry, SAM video tracking, delete upload, render 1080p reel locally, 60 s max | SAM, Files API |
-| F9 Resume next night | Continue | Load campaign, match returning objects, reuse sprites, show "Kagabi..." recap | Spark (Could) |
+| F9 Resume next night | Continue | Load campaign, match returning objects locally, reuse sprites, show "Kagabi..." recap | Local Glimmer, Spark or line bank |
 | F10 Error recovery | Failure | Retries, circuit breaker, camera-moved pause, backend restart from autosave | None |
 
 Narration for turn N resolution and turn N+1 telegraph come back in one call.

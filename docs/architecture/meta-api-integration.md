@@ -5,7 +5,7 @@ read_when: [adding or changing any call in meta_client.py, vision, voice, gm or 
 canonical_for: [per-call parameters, model IDs, endpoints, model limits, SAM prompt format, verify list]
 sources: [docs/DeskTop_PRD.md#per-model-integration-table, docs/DeskTop_PRD.md#sam-usage-spec, docs/DeskTop_Build_Guide.md#phase-1-api-smoke-tests-oct-28-15-h]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/architecture/cost-and-budget.md, docs/architecture/reliability-and-fallbacks.md, docs/decisions/ADR-0010-openai-sdk-for-meta.md]
 ---
 
@@ -31,9 +31,10 @@ Four Meta models plus the Files API, all called from `backend/meta_client.py` in
 |---|---|---|---|---|---|---|---|
 | 1 | Detect new object and write unit card | muse-spark-1.3 | POST /v1/responses | `reasoning.effort: medium`, one `input_image` (warped JPEG, base64) plus `input_text` (name, known boxes JSON), `text.format` json_schema `unit_card`, `strict: true`, `store: false` | Each summon | 8 | $0.010 |
 | 2 | GM narration | muse-spark-1.3 | POST /v1/responses | `reasoning.effort: low`, `store: false` with no `previous_response_id` chain (privacy audit 2026-10-28, ADR-0012), json_schema `gm_turn`, strict, stable system prompt first for caching | Night start, each turn, sunrise | 10 | $0.008 |
-| 3 | Free-form command fallback | muse-spark-1.3 | POST /v1/responses | `reasoning.effort: minimal`, json_schema `command_parse` with enums from live IDs, `store: false` | Grammar fails | 15 | $0.003 (cut, F12) |
-| 4 | Recap | muse-spark-1.3 | POST /v1/responses | `reasoning.effort: low`, json_schema `recap` | Sunrise or defeat | 1 | $0.008 |
-| 5 | Returning object match | muse-spark-1.3 | POST /v1/responses | Up to 6 crops plus new crop, json_schema `match`, effort low | Next night ties | 0 to 3 | $0.004 (Could) |
+| 3 | Free-form command fallback | muse-spark-1.3 | POST /v1/responses | `reasoning.effort: minimal`, json_schema `command_parse` with enums from live IDs, `store: false` | Grammar fails, Demo Safe off, Spark available. Built as `voice/fallback.py` (2026-11-04). Needs the key to run live | 15 | $0.003 |
+| 4 | Recap | muse-spark-1.3 | POST /v1/responses | `reasoning.effort: low`, json_schema `recap` (sunrise line) | Sunrise or defeat | 1 | $0.008 |
+| 4b | Kagabi recap | muse-spark-1.3 | POST /v1/responses | json_schema `night_recap` (`recap_tl`, `recap_en`), `store: false`, built in `gm/recap.py`. Tried after local Glimmer, skipped offline | Next night start | 0 to 1 | $0.008 |
+| 5 | Returning object match | None, local | `vision/returning.py` | Signature compare only, threshold 0.78, ambiguity margin 0.04. No Spark tie-break was built | Next night | 0 | $0 |
 | 6 | Summon masks | sam-3.1 | POST /v1/responses | Box prompts for all known objects plus the new one, `stream: true`, `metadata: {include_confidence: "true", mask_encoding: "one_bit"}` | Each summon | 8 | $0.0025 |
 | 7 | End Turn re-anchor | sam-3.1 | POST /v1/responses | Same as 6 with tracker boxes padded 20% | Each End Turn plus retries | 12 | $0.0025 |
 | 8 | Recovery concept prompt | sam-3.1 | POST /v1/responses | `input_text` is the noun label, one concept per request | Not found by box or point | 0 to 2 | $0.0025 |
@@ -43,7 +44,8 @@ Four Meta models plus the Files API, all called from `backend/meta_client.py` in
 | 12 | Sprite restyle | muse-image-1.0 | POST /v1/responses | `input_text` prompt plus `input_image` crop (plus style anchor). Tool `image_generation` with `enable_web_search: false`, `enable_image_search: false`, `enable_shell: false`, `reasoning_strength: "low"`, `size: "1024x1024"`, `output_format: "png"`. `previous_response_id` chain within a night | Each new object | 8 | $0.01 |
 | 13 | Summon voice | muse-voice-transcribe-1.0 | wss realtime | Handshake with `mode: "ENDPOINTING"` | Summon | 1 session | $0.18 per hour |
 | 14 | Night voice | muse-voice-transcribe-1.0 | wss realtime | Handshake with `mode: "DIARIZATION"`, keywords with unit and player names | Voice claim to sunrise | 1 session | $0.18 per hour |
-| 15 | Glimmer recap | Muse Glimmer 30B (Apache 2.0) | Local OpenAI-compatible server | Plain chat | Sunrise | 0 to 1 | $0 local (Could) |
+| 15 | Glimmer recap | Muse Glimmer 30B (Apache 2.0) | Local Ollama server, `POST /api/chat` at `DESKTOP_GLIMMER_URL`, loopback `http` only | `stream: false`, `format` set to the recap schema, 8 s timeout, built as `gm/glimmer.py` (2026-11-04) | Next night start | 0 to 1 | $0 local |
+| 15b | Generated barrio map | muse-image-1.0 | POST /v1/responses | Prompt plus the empty-desk baseline (768 px long side) plus the style anchor, tool `image_generation`, `store: false`, built as `vision/barrio_map.py`. Output resized to 1024 px long side, cached per campaign. Off by default (`generated_map`), skipped in Demo Safe | Once per campaign | 0 to 1 | $0.01 |
 | 16 | Dev scaffolding | Muse Code | CLI | Standard mode, Contributor off | Development | n/a | n/a |
 
 Structured output shape: `text: {format: {type: "json_schema", name: "<schema>", schema: {...}, strict: true}}`. Strict mode needs `additionalProperties: false` on every object and every property listed in `required`.

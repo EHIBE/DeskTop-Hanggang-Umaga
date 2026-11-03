@@ -5,7 +5,7 @@ read_when: [implementing backend/rules/waves.py, balancing, writing wave tests]
 canonical_for: [wave table, difficulty scaling, player-count scaling]
 sources: [docs/DeskTop_PRD.md#wave-schedule-normal-2-players]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/game/enemies.md, docs/game/balance-and-tuning.md]
 ---
 
@@ -29,7 +29,7 @@ Waves are fixed per difficulty so the same setup always plays the same way. Each
 | 1 | Aswang x1 | North | Teach movement and attack |
 | 2 | Aswang x1, Duwende x1 (skipped if "Tabi tabi po" was said) | East, West | Teach protecting charms |
 | 3 | Tikbalang x1, Aswang x1 | South, North | Teach the physical push |
-| 4 | Kapre x1 | Edge farthest from the kubo | Teach smoke and reveal (smoke cut, now a slow heavy hitter) |
+| 4 | Kapre x1 | Edge farthest from the kubo | Teach smoke and reveal (smoke on its 2nd and 4th turn alive) |
 | 5 | Aswang x2 | Two edges | Pressure spike |
 | 6 | Manananggal (upper + lower) | Lower at an edge, upper beside it | Boss, needs a plan |
 | 7 | Tikbalang x1, Duwende x1, Aswang x1 | Three edges | Chaos turn |

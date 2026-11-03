@@ -5,7 +5,7 @@ read_when: [implementing CHECK_END, sunrise or defeat screens, recap]
 canonical_for: [win condition, lose condition, score formula, Bayani ng Gabi]
 sources: [docs/DeskTop_PRD.md#win-and-lose, docs/DeskTop_PRD.md#flow-f7-sunrise]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/game/state-machine.md, docs/design/screens.md]
 ---
 
@@ -27,7 +27,7 @@ The night is won if the kubo survives turn 8 resolution and lost the moment the 
 1. Sky shifts to the dawn palette (#F4A6A0, #FFD9A0) over 3 s. Sprites lose the blue tint.
 2. Enemies flee. Caption `win`: "Sumikat na ang araw! Ligtas ang baryo."
 3. Score screen: units alive, kubo HP, enemies defeated, Bayani ng Gabi.
-4. One recap line from Muse Spark (schema `recap`).
+4. One recap line from Muse Spark (schema `recap`). The "Kagabi..." recap shown next night is written by `gm/recap.py`, see `campaign-progression.md`.
 5. Replay button only if recording consent was given.
 6. `night.result = win`, `night.recap_tl`, `night.recap_en` saved.
 

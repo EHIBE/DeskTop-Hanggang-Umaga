@@ -5,7 +5,7 @@ read_when: [adding a paid call, implementing the cost meter, checking spend]
 canonical_for: [unit prices, cost model, budget, spend guardrails]
 sources: [docs/DeskTop_PRD.md#cost-model, docs/DeskTop_PRD.md#full-cost-table]
 status: active
-last_verified: 2026-10-29
+last_verified: 2026-11-04
 related: [docs/architecture/meta-api-integration.md, docs/decisions/ADR-0107-money-precision.md, docs/product/goals-and-metrics.md]
 ---
 
@@ -70,7 +70,17 @@ A 1280 px image adds about 1,300 to 1,500 tokens. System prompt about 1,200 toke
 | Voice | $0.054 | 0.5 h = $0.090 |
 | Total | about $0.49 | about $1.40 |
 
-With F12 cut, the command fallback line mostly disappears. Recompute from api_usage after Playtest 2.
+The command fallback line returns now that F12 is built (2026-11-04), but it only runs when the grammar fails and Demo Safe is off. Recompute from api_usage after Playtest 2.
+
+## Post-freeze additions (ADR-0113)
+
+| Item | Cost | When |
+|---|---|---|
+| Generated barrio map (Muse Image) | $0.01 per campaign, cached by campaign id, one attempt per run | Only when the `generated_map` setting is on, not in Demo Safe, and skipped after a content policy block |
+| Kagabi recap (Spark) | About $0.008 | Only when Glimmer is not configured or fails, not offline |
+| Glimmer recap and banter | $0, logged in `api_usage` with kind `glimmer` | Only when `DESKTOP_GLIMMER_URL` is set |
+| Spark fallback parser | About $0.003 per call | Grammar failed and Demo Safe off |
+| Returning object match | $0, local | Next night |
 
 ## Whole hackathon
 
