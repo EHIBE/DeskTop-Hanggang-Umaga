@@ -81,7 +81,7 @@ const entries = {
   'lost.back': { tl: 'Bumalik si [unit]!', en: '[unit] is back!' },
   'enemy.dodge': { tl: 'Nakaiwas!', en: 'Dodged!' },
   'tik.push': {
-    tl: 'Tinulak ng tikbalang si [unit]! Usugin ang [object] sa may anino.',
+    tl: 'Tinulak ng tikbalang si [unit]! Itulak ang [object] sa anino.',
     en: 'The tikbalang shoved [unit]! Slide the [object] onto the shadow.'
   },
   'duw.steal': {
@@ -108,7 +108,7 @@ const entries = {
   'unit.down': { tl: 'Bagsak si [unit].', en: '[unit] is down.' },
   win: { tl: 'Sumikat na ang araw! Ligtas ang baryo.', en: 'The sun is up. The barrio is safe.' },
   lose: {
-    tl: 'Nasira ang kubo... Subukan ulit bukas ng gabi.',
+    tl: 'Bumagsak ang kubo... Subukan ulit bukas ng gabi.',
     en: 'The kubo fell... Try again tomorrow night.'
   },
   'rec.consent': {
@@ -140,8 +140,8 @@ const entries = {
     en: 'No recording tonight, so no replay.'
   },
   'replay.no_ffmpeg': {
-    tl: 'Kailangan ng ffmpeg para sa replay. I-install muna.',
-    en: 'The replay needs ffmpeg. Install it first.'
+    tl: 'May kulang na tool para sa replay (ffmpeg). I-install muna.',
+    en: 'The replay needs a tool (ffmpeg). Install it first.'
   },
   'replay.show': { tl: 'Ipakita sa folder', en: 'Show in folder' },
   'replay.missing': { tl: 'Hindi makita ang file.', en: 'Could not find the file.' },
@@ -176,8 +176,8 @@ const entries = {
   },
   'calib.aim': { tl: 'Itutok ang camera sa mesa lang.', en: 'Point the camera at the table only.' },
   'cam.black': {
-    tl: 'Itim lang ang kuha ng camerang ito. Baka gamit ito ng ibang app, gaya ng NVIDIA Broadcast. Pumili ng ibang camera.',
-    en: 'This camera only shows black. Another app such as NVIDIA Broadcast may be holding it. Pick another camera.'
+    tl: 'Itim ang kuha ng camerang ito. Baka gamit ng ibang app. Pumili ng iba.',
+    en: 'This camera shows black. Another app may be using it. Pick another.'
   },
   'calib.no_picture': { tl: 'walang larawan', en: 'no picture' },
   'cam.busy': {
@@ -232,7 +232,10 @@ const entries = {
     tl: 'Hindi nabura ang kampanya. Subukan ulit.',
     en: 'Could not delete the campaign. Try again.'
   },
-  'start.demo_safe_sam': { tl: 'SAM re-anchor sa Demo Safe', en: 'SAM re-anchor in Demo Safe' },
+  'start.demo_safe_sam': {
+    tl: 'Ayusin ang puwesto gamit ang SAM sa Demo Safe',
+    en: 'Position fix with SAM in Demo Safe'
+  },
   'summon.resume_banner': {
     tl: 'May naka-save na gabi. Itutuloy ito sa turn [turn].',
     en: 'A saved night is waiting. It will continue at turn [turn].'
@@ -291,6 +294,16 @@ const entries = {
     en: 'Spark was not used. Tap or offline.'
   },
   'made.sam_step': { tl: 'Eksaktong balangkas', en: 'Exact outline' },
+  'made.skipped': { tl: 'Hindi ginamit', en: 'Not used' },
+  'conn.down': {
+    tl: 'Hindi magising ang laro. Isara ang DeskTop at buksan ulit.',
+    en: 'The game could not start. Close DeskTop and open it again.'
+  },
+  'err.generic': {
+    tl: 'May nagkaproblema. Subukan ulit, o buksan ang Demo Safe.',
+    en: 'Something went wrong. Try again, or turn on Demo Safe.'
+  },
+  'calib.rescan': { tl: 'Hanapin ulit', en: 'Rescan' },
   'made.image_step': { tl: 'Pixel sprite', en: 'Pixel sprite' },
   'made.drawing': { tl: 'Ginuguhit...', en: 'Drawing...' },
   'card.owner_none': { tl: 'Wala pa', en: 'None yet' },
@@ -328,7 +341,7 @@ const entries = {
   'power.P10': { tl: 'Sigaw', en: 'Allies within 10 cm get +1 ATK this turn.' },
   'power.P11': { tl: 'Habol', en: '+2 damage against a duwende in melee.' },
   'power.P12': { tl: 'Asin', en: '3 damage to a manananggal lower half.' },
-  'hud.turn': { tl: 'GABI [n] / 8', en: 'NIGHT [n] / 8' },
+  'hud.turn': { tl: 'TURN [n] / 8', en: 'TURN [n] / 8' },
   'phase.spawn': { tl: 'Dumarating sila', en: 'They are coming' },
   'phase.player': { tl: 'Galaw at Utos', en: 'Move and give orders' },
   'phase.check': { tl: 'Sinusuri', en: 'Checking' },
@@ -382,7 +395,7 @@ const entries = {
   'sunrise.title': { tl: 'SUMIKAT NA', en: 'SUNRISE' },
   'sunrise.next': { tl: 'Susunod na Gabi', en: 'Next Night' },
   'sunrise.quit': { tl: 'Umalis', en: 'Quit' },
-  'defeat.title': { tl: 'NASIRA ANG KUBO', en: 'THE KUBO FELL' },
+  'defeat.title': { tl: 'BUMAGSAK ANG KUBO', en: 'THE KUBO FELL' },
   'defeat.retry': { tl: 'Subukan Ulit', en: 'Try Again' },
   'narration.mood.kalmado': { tl: 'Kalmado', en: 'Calm' },
   'narration.mood.kaba': { tl: 'Kaba', en: 'Tense' },
@@ -431,7 +444,7 @@ const entries = {
   'title.sub': { tl: 'Hanggang Umaga', en: 'Until Sunrise' },
   'start.tip': { tl: 'Linisin muna ang mesa.', en: 'Clear the table first.' },
   'start.saves': { tl: 'Mga Baryo', en: 'Your Barrios' },
-  'start.placeholder': { tl: 'Hal. San Roque', en: 'e.g. San Roque' },
+  'start.placeholder': { tl: 'Hal. Baryo Liwanag', en: 'e.g. Liwanag Barrio' },
   'key.title': { tl: 'Ikabit ang AI', en: 'Connect the AI' },
   'key.short_privacy': { tl: 'Naka-encrypt sa laptop na ito.', en: 'Encrypted on this laptop.' },
   'key.offline_short': { tl: 'Maglaro offline', en: 'Play offline' },
@@ -456,8 +469,8 @@ const entries = {
     en: 'Move a real object. Green ring = in reach.'
   },
   'tut.order': {
-    tl: 'Sabihin: "Stapler, atake ang aswang!" O i-tap.',
-    en: 'Say "Stapler, atake ang aswang!" or tap.'
+    tl: 'Sabihin: "Stapler, atake sa aswang!" O i-tap.',
+    en: 'Say "Stapler, attack the aswang!" or tap.'
   },
   'tut.order_tap': {
     tl: 'I-tap ang unit, pili ng aksyon, tapos target.',

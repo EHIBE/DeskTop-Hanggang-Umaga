@@ -310,6 +310,8 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
     ]
   )
 
+  const samRan = state.has_api_key && (!state.demo_safe || state.demo_safe_sam)
+
   const overlay = useCallback(
     (ctx: CanvasRenderingContext2D, mapping: BoardMapping): void => {
       if (!night || mapping.view !== 'warped') return
@@ -490,7 +492,8 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
           mapping,
           footprints,
           mapping.now - flashAtRef.current,
-          prefersReducedMotion()
+          prefersReducedMotion(),
+          samRan
         )
         if (flashing) mapping.requestRedraw()
       }
@@ -509,7 +512,8 @@ function Night({ state, send, subscribe, narration }: NightProps): React.JSX.Ele
       enemyFrames,
       activeSelection,
       targetKind,
-      returns
+      returns,
+      samRan
     ]
   )
 

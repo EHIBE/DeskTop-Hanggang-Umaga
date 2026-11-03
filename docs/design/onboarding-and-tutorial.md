@@ -35,7 +35,7 @@ Teach the turn loop in the first three turns of a campaign without a separate tu
 
 ### Placement
 
-- A `.banner` strip above the captions row in `screens/Night.tsx`, same width as the captions row, height 56 px so the 48 px tap targets fit inside the border, one line, 24 px text. The 56 px slot stays reserved on turns 1 to 3 while any hint is unseen, so the board does not move when a hint appears or goes.
+- A `.banner` strip above the captions row in `screens/Night.tsx`, same width as the captions row, height 56 px so the 48 px tap targets fit inside the border, one line, 24 px text. The 56 px slot is decided from the seen set captured when the night screen mounted. It stays reserved on turns 1 to 3 if any hint was unseen at mount, even after Skip all, and goes away only when turn 4 starts, so the board does not move when a hint appears or goes.
 - The strip sits below the board so it never covers sprites, rings or arrows.
 - A `PixelIcon` `arrow` in lantern leads the line. A `.btn-quiet` with `PixelIcon` `cross` dismisses it. Tap target at least 48 px.
 
@@ -61,7 +61,7 @@ Reviewed by `desktop-cultural-reviewer` on 2026-11-03. Lines are short so each f
 |---|---|---|
 | `tut.telegraph` | Pulang arrow = ang tatamaan nila ngayong turn. | Red arrows show who they will hit this turn. |
 | `tut.move` | Ilipat ang tunay na gamit. Berdeng ring = abot. | Move a real object. Green ring = in reach. |
-| `tut.order` | Sabihin: "Stapler, atake ang aswang!" O i-tap. | Say "Stapler, atake ang aswang!" or tap. |
+| `tut.order` | Sabihin: "Stapler, atake sa aswang!" O i-tap. | Say "Stapler, attack the aswang!" or tap. |
 | `tut.order_tap` | I-tap ang unit, pili ng aksyon, tapos target. | Tap a unit, pick an action, then a target. |
 | `tut.end_turn` | Handa na? Sabihin ang "Tapos na" o pindutin ang TAPOS. | Ready? Say "Tapos na" or press End turn. |
 | `tut.push` | Itutulak ng tikbalang ang unit. Ilipat sa anino. | A tikbalang shoves a unit. Slide it to the shadow. |

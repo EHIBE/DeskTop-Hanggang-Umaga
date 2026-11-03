@@ -67,6 +67,7 @@ function GlossaryPanel({ onClose }: GlossaryPanelProps): React.JSX.Element {
         role="dialog"
         aria-modal="true"
         aria-labelledby={TITLE_ID}
+        tabIndex={-1}
         className="window flex max-h-[800px] w-[960px] flex-col gap-6 p-8"
         onKeyDown={onKeyDown}
       >

@@ -1,5 +1,5 @@
 import { currentLang } from '../lib/lang'
-import { pick, t, type CopyKey } from '../lib/copy'
+import { pick, say, t, type CopyKey } from '../lib/copy'
 import type { NarrationMessage, NarrationMood } from '../lib/types'
 
 type NarrationProps = Readonly<{
@@ -54,6 +54,9 @@ function Narration({ narration, className = '' }: NarrationProps): React.JSX.Ele
         <p className="caption-tl text-[24px] leading-[32px]">
           {currentLang() === 'en' ? narration.narration_en : narration.narration_tl}
         </p>
+        {narration.source === 'spark' && (
+          <span className="text-gabi-mist leading-[24px]">{say('model.spark')}</span>
+        )}
         {hasHint && (
           <p className="text-gabi-lantern leading-[24px]">
             {pick(hint)}: {narration.hint_tl}

@@ -37,6 +37,11 @@ function isTextTarget(target: EventTarget | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
 }
 
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  return target.closest('button, [role="dialog"]') !== null
+}
+
 function VoiceControls({ voice, send }: VoiceControlsProps): React.JSX.Element {
   const status: VoiceStatus = voice.status
   const mode: VoiceMode = voice.mode
@@ -60,14 +65,16 @@ function VoiceControls({ voice, send }: VoiceControlsProps): React.JSX.Element {
   useEffect(() => {
     if (!ptt) return
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.code !== 'Space' || isTextTarget(event.target)) return
+      if (event.code !== 'Space' || isTextTarget(event.target) || isInteractiveTarget(event.target))
+        return
       event.preventDefault()
       if (event.repeat) return
       setDown(true)
     }
     const onKeyUp = (event: KeyboardEvent): void => {
       if (event.code !== 'Space') return
-      if (!heldRef.current && isTextTarget(event.target)) return
+      if (!heldRef.current && (isTextTarget(event.target) || isInteractiveTarget(event.target)))
+        return
       event.preventDefault()
       setDown(false)
     }

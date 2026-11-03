@@ -106,7 +106,8 @@ export function drawReanchorFlash(
   mapping: BoardMapping,
   footprints: readonly Footprint[],
   elapsed: number,
-  reduced: boolean
+  reduced: boolean,
+  labeled: boolean
 ): boolean {
   if (elapsed < 0 || elapsed >= FLASH_MS || footprints.length === 0) return false
   const progress = elapsed / FLASH_MS
@@ -121,9 +122,11 @@ export function drawReanchorFlash(
     ctx.strokeRect(box.left - grow, box.top - grow, box.width + grow * 2, box.height + grow * 2)
   })
   ctx.globalAlpha = 1
-  const [x0, y0] = mapping.toCanvas(0, 0)
-  const [x1] = mapping.toCanvas(mapping.srcWidth, mapping.srcHeight)
-  drawLabel(ctx, say('model.sam'), (x0 + x1) / 2 - 60, y0 + 12, palette.moon, x0, y0, x1)
+  if (labeled) {
+    const [x0, y0] = mapping.toCanvas(0, 0)
+    const [x1] = mapping.toCanvas(mapping.srcWidth, mapping.srcHeight)
+    drawLabel(ctx, say('model.sam'), (x0 + x1) / 2 - 60, y0 + 12, palette.moon, x0, y0, x1)
+  }
   ctx.restore()
   return true
 }

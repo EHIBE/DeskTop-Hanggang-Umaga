@@ -55,7 +55,7 @@ All player-facing text, keyed. `app/src/renderer/src/lib/copy.ts` and `assets/li
 | lost.out | Ang [unit] ay nawala sa gubat! | [unit] got lost in the forest! |
 | lost.back | Bumalik si [unit]! | [unit] is back! |
 | enemy.dodge | Nakaiwas! | Dodged! |
-| tik.push | Tinulak ng tikbalang si [unit]! Usugin ang [object] sa may anino. | The tikbalang shoved [unit]! Slide the [object] onto the shadow. |
+| tik.push | Tinulak ng tikbalang si [unit]! Itulak ang [object] sa anino. | The tikbalang shoved [unit]! Slide the [object] onto the shadow. | M8, Proposed, cultural review 2026-11-03 |
 | duw.steal | Ninakaw ng duwende si [unit]! Tanggalin muna sa mesa. | The duwende stole [unit]! Take it off the table. |
 | duw.back | Nabawi si [unit]! Ibalik sa may marka. | [unit] is free! Put it back on the mark. |
 | duw.escape | Nakatakas ang duwende kasama si [unit]. | The duwende escaped with [unit]. |
@@ -64,7 +64,7 @@ All player-facing text, keyed. `app/src/renderer/src/lib/copy.ts` and `assets/li
 | kubo.hit | Tinamaan ang kubo! [HP] na lang. | The kubo was hit! [HP] left. |
 | unit.down | Bagsak si [unit]. | [unit] is down. |
 | win | Sumikat na ang araw! Ligtas ang baryo. | The sun is up. The barrio is safe. |
-| lose | Nasira ang kubo... Subukan ulit bukas ng gabi. | The kubo fell... Try again tomorrow night. |
+| lose | Bumagsak ang kubo... Subukan ulit bukas ng gabi. | The kubo fell... Try again tomorrow night. | M7 to M8, Proposed, cultural review 2026-11-03 |
 | rec.consent | Ire-record ang gabing ito para sa replay. Payag ba lahat? | Tonight will be recorded for the replay. Does everyone agree? |
 | rec.on | Nagre-record | Recording |
 | replay.making | Ginagawa ang replay... | Making the replay... |
@@ -162,7 +162,7 @@ English text for these is a proposal for playtester review.
 | power.P11 | Habol | +2 damage against a duwende in melee. | M4, Proposed, playtester review |
 | power.P12 | Asin | 3 damage to a manananggal lower half. | M4, Proposed, playtester review |
 | cost.label | Nagastos na credits | Credits spent | M5, Proposed, playtester review |
-| hud.turn | GABI [n] / 8 | NIGHT [n] / 8 | M7 to M8, Proposed, playtester review |
+| hud.turn | TURN [n] / 8 | TURN [n] / 8 | M7 to M8, Proposed, cultural review 2026-11-03 |
 | phase.spawn | Dumarating sila | They are coming | M7 to M8, Proposed, playtester review |
 | phase.player | Galaw at Utos | Move and give orders | M7 to M8, Proposed, playtester review |
 | phase.check | Sinusuri | Checking | M7 to M8, Proposed, playtester review |
@@ -210,7 +210,7 @@ English text for these is a proposal for playtester review.
 | sunrise.title | SUMIKAT NA | SUNRISE | M7 to M8, Proposed, playtester review |
 | sunrise.next | Susunod na Gabi | Next Night | M7 to M8, Proposed, playtester review |
 | sunrise.quit | Umalis | Quit | M7 to M8, Proposed, playtester review |
-| defeat.title | NASIRA ANG KUBO | THE KUBO FELL | M7 to M8, Proposed, playtester review |
+| defeat.title | BUMAGSAK ANG KUBO | THE KUBO FELL | M7 to M8, Proposed, cultural review 2026-11-03 |
 | defeat.retry | Subukan Ulit | Try Again | M7 to M8, Proposed, playtester review |
 | narration.mood.kalmado | Kalmado | Calm | M9, Proposed, playtester review |
 | narration.mood.kaba | Kaba | Tense | M9, Proposed, playtester review |
@@ -222,7 +222,7 @@ English text for these is a proposal for playtester review.
 | delete.confirm | Sigurado? Burahin na | Sure? Delete now | M10, Proposed, playtester review |
 | delete.done | Nabura na ang kampanya. | Campaign deleted. | M10, Proposed, playtester review |
 | delete.failed | Hindi nabura ang kampanya. Subukan ulit. | Could not delete the campaign. Try again. | M10, Proposed, playtester review |
-| start.demo_safe_sam | SAM re-anchor sa Demo Safe | SAM re-anchor in Demo Safe | M10, Proposed, playtester review |
+| start.demo_safe_sam | Ayusin ang puwesto gamit ang SAM sa Demo Safe | Position fix with SAM in Demo Safe | M10, Proposed, cultural review 2026-11-03 |
 | summon.resume_banner | May naka-save na gabi. Itutuloy ito sa turn [turn]. | A saved night is waiting. It will continue at turn [turn]. | M10, Proposed, playtester review |
 | summon.resume_button | Ituloy ang Gabi (turn [turn]) | Resume Night (turn [turn]) | M10, Proposed, playtester review |
 | night.pause | Pause | Pause | M10, Proposed, playtester review |
@@ -230,7 +230,7 @@ English text for these is a proposal for playtester review.
 | night.continue_anyway | Ituloy pa rin | Continue anyway | M10, Proposed, playtester review |
 | night.cam_hint | Baka mali ang posisyon kung hindi muna mag-calibrate. | Positions may be off if you continue without recalibrating. | M10, Proposed, playtester review |
 | claim.countdown | Sasara ang claim sa [seconds] segundo | Claims close in [seconds] seconds | M10, Proposed, playtester review |
-| replay.no_ffmpeg | Kailangan ng ffmpeg para sa replay. I-install muna. | The replay needs ffmpeg. Install it first. | Phase 15, Proposed, playtester review |
+| replay.no_ffmpeg | May kulang na tool para sa replay (ffmpeg). I-install muna. | The replay needs a tool (ffmpeg). Install it first. | Phase 15, Proposed, cultural review 2026-11-03 |
 | model.spark | Muse Spark 1.3 | Muse Spark 1.3 | Phase 15, Proposed, playtester review |
 | model.sam | SAM 3.1 | SAM 3.1 | Phase 15, Proposed, playtester review |
 | model.image | Muse Image 1.0 | Muse Image 1.0 | Phase 15, Proposed, playtester review |
@@ -242,6 +242,11 @@ English text for these is a proposal for playtester review.
 | made.fallback_step | Hindi ginamit ang Spark. Tap ang ginamit. | Spark was not used. Tap or offline. | Phase 15, Proposed, playtester review |
 | made.sam_step | Eksaktong balangkas | Exact outline | Phase 15, Proposed, playtester review |
 | made.image_step | Pixel sprite | Pixel sprite | Phase 15, Proposed, playtester review |
+| cam.black | Itim ang kuha ng camerang ito. Baka gamit ng ibang app. Pumili ng iba. | This camera shows black. Another app may be using it. Pick another. | M3, Proposed, cultural review 2026-11-03. Stays on Calibration while that camera is selected |
+| calib.rescan | Hanapin ulit | Rescan | Audit fixes 2026-11-03, Proposed |
+| made.skipped | Hindi ginamit | Not used | Audit fixes 2026-11-03, Proposed. Steps 2 and 3 of the made panel in Demo Safe or without a key |
+| conn.down | Hindi magising ang laro. Isara ang DeskTop at buksan ulit. | The game could not start. Close DeskTop and open it again. | Audit fixes 2026-11-03, Proposed. Shown on Connecting after 45 s |
+| err.generic | May nagkaproblema. Subukan ulit, o buksan ang Demo Safe. | Something went wrong. Try again, or turn on Demo Safe. | Audit fixes 2026-11-03, Proposed. Also shown for any unknown notice key |
 | made.drawing | Ginuguhit... | Drawing... | Phase 15, Proposed, playtester review |
 | replay.make | Gawin ang Replay | Make the Replay | Phase 14, Proposed, playtester review |
 | replay.done | Handa na ang replay! | The replay is ready! | Phase 14, Proposed, playtester review |
@@ -271,7 +276,7 @@ English text for these is a proposal for playtester review.
 | title.sub | Hanggang Umaga | Until Sunrise | UI redesign 2026-10-31, Proposed |
 | start.tip | Linisin muna ang mesa. | Clear the table first. | UI redesign 2026-10-31, Proposed, playtester review |
 | start.saves | Mga Baryo | Your Barrios | UI redesign 2026-10-31, Proposed, playtester review |
-| start.placeholder | Hal. San Roque | e.g. San Roque | UI redesign 2026-10-31, Proposed |
+| start.placeholder | Hal. Baryo Liwanag | e.g. Liwanag Barrio | UI redesign 2026-10-31, Proposed, cultural review 2026-11-03 |
 | key.title | Ikabit ang AI | Connect the AI | UI redesign 2026-10-31, Proposed, playtester review |
 | key.short_privacy | Naka-encrypt sa laptop na ito. | Encrypted on this laptop. | UI redesign 2026-10-31, Proposed, playtester review |
 | key.offline_short | Maglaro offline | Play offline | UI redesign 2026-10-31, Proposed |
@@ -289,7 +294,7 @@ English text for these is a proposal for playtester review.
 | speaker.unknown | Di kilalang nagsasalita | Unknown speaker | Speaker chip aria-label 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
 | tut.telegraph | Pulang arrow = ang tatamaan nila ngayong turn. | Red arrows show who they will hit this turn. | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
 | tut.move | Ilipat ang tunay na gamit. Berdeng ring = abot. | Move a real object. Green ring = in reach. | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
-| tut.order | Sabihin: "Stapler, atake ang aswang!" O i-tap. | Say "Stapler, atake ang aswang!" or tap. | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
+| tut.order | Sabihin: "Stapler, atake sa aswang!" O i-tap. | Say "Stapler, attack the aswang!" or tap. | First-night hints 2026-11-03, Proposed, cultural review 2026-11-03 |
 | tut.order_tap | I-tap ang unit, pili ng aksyon, tapos target. | Tap a unit, pick an action, then a target. | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
 | tut.end_turn | Handa na? Sabihin ang "Tapos na" o pindutin ang TAPOS. | Ready? Say "Tapos na" or press End turn. | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |
 | tut.push | Itutulak ng tikbalang ang unit. Ilipat sa anino. | A tikbalang shoves a unit. Slide it to the shadow. | First-night hints 2026-11-03, Proposed, cultural review done, pending 2 Filipino playtesters |

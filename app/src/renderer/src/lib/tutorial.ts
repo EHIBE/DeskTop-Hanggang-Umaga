@@ -69,7 +69,7 @@ export function nextHint({ phase, night, seen }: HintContext): HintKey | null {
   return HINT_KEYS.find((key) => !seen.has(key) && eligible(key, night)) ?? null
 }
 
-export function reservesHintSlot(night: NightSummary, seen: ReadonlySet<string>): boolean {
+export function reservesHintSlot(night: NightSummary, seenAtMount: ReadonlySet<string>): boolean {
   if (night.turn > LAST_PUSH_TURN) return false
-  return HINT_KEYS.some((key) => !seen.has(key))
+  return HINT_KEYS.some((key) => !seenAtMount.has(key))
 }

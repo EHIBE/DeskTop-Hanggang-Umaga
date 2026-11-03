@@ -365,7 +365,12 @@ function Summon({ state, send, subscribe }: SummonProps): React.JSX.Element {
         )}
       </div>
       {made !== null && madeUnit !== undefined && (
-        <MadePanel unit={madeUnit} source={made.source} visible={madeVisible} />
+        <MadePanel
+          unit={madeUnit}
+          source={made.source}
+          visible={madeVisible}
+          offline={state.demo_safe || !state.has_api_key}
+        />
       )}
       {shownCard && (
         <UnitCard

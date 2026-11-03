@@ -17,6 +17,7 @@ type VoiceClaimProps = Readonly<{
 const CLAIM_SECONDS = 60
 const SLOTS = 4
 const NAME_MAX = 24
+const SLOT_KEYS = ['speaker.p1', 'speaker.p2', 'speaker.p3', 'speaker.p4'] as const
 function slotOf(index: number): SpeakerSlot {
   return (index + 1) as SpeakerSlot
 }
@@ -188,9 +189,10 @@ function VoiceClaim({ state, send, subscribe }: VoiceClaimProps): React.JSX.Elem
                   type="button"
                   className="btn w-[160px] shrink-0 truncate"
                   disabled={!ready || selected === null}
+                  aria-label={say(SLOT_KEYS[index])}
                   onClick={() => assign(index)}
                 >
-                  {ready ? trimmed[index] : ''} {count > 0 ? count : ''}
+                  {ready ? trimmed[index] : `P${index + 1}`} {count > 0 ? count : ''}
                 </button>
               </div>
             )

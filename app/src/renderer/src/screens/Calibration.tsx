@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Board, { type BoardMapping } from '../canvas/Board'
 import LangToggle from '../components/LangToggle'
 import PixelIcon from '../components/PixelIcon'
@@ -29,6 +29,14 @@ function inRange(raw: string): boolean {
   return raw.trim() !== '' && Number.isFinite(value) && value >= MIN_CM && value <= MAX_CM
 }
 
+type CamProblemKey = 'cam.busy' | 'cam.black'
+
+type CamProblem = Readonly<{ key: CamProblemKey; index: number | null }>
+
+function isCamProblem(key: string): key is CamProblemKey {
+  return key === 'cam.busy' || key === 'cam.black'
+}
+
 type StepState = 'todo' | 'active' | 'done'
 
 function Step({
@@ -53,15 +61,24 @@ function Calibration({ state, send, subscribe }: CalibrationProps): React.JSX.El
   const [widthText, setWidthText] = useState(String(state.play_w_cm))
   const [heightText, setHeightText] = useState(String(state.play_h_cm))
   const [wasPreview, setWasPreview] = useState(preview)
+  const [camProblem, setCamProblem] = useState<CamProblem | null>(null)
 
   if (wasPreview !== preview) {
     setWasPreview(preview)
     if (!preview) setCorners([])
   }
 
+  const latestIndex = useRef<number | null>(null)
+  useEffect(() => {
+    latestIndex.current = state.camera?.index ?? null
+  })
+
   useEffect(() => {
     const off = subscribe((message) => {
       if (message.type === 'devices') setCameras(message.cameras)
+      else if (message.type === 'notice' && isCamProblem(message.copy_key)) {
+        setCamProblem({ key: message.copy_key, index: latestIndex.current })
+      }
     })
     send({ type: 'devices.list' })
     return off
@@ -144,6 +161,17 @@ function Calibration({ state, send, subscribe }: CalibrationProps): React.JSX.El
   const placeState: StepState = preview || tapped > 0 ? 'done' : 'active'
   const tapState: StepState = preview ? 'done' : 'active'
   const removeState: StepState = preview ? 'active' : 'todo'
+  const rescan = (): void => {
+    setCamProblem(null)
+    send({ type: 'devices.list' })
+  }
+  const rescanButton = (
+    <button type="button" className="btn self-start" onClick={rescan}>
+      {say('calib.rescan')}
+    </button>
+  )
+  const problem =
+    camProblem !== null && camProblem.index === (state.camera?.index ?? null) ? camProblem : null
   const sortedCameras = [...cameras].sort((a, b) => Number(b.has_picture) - Number(a.has_picture))
 
   return (
@@ -169,7 +197,10 @@ function Calibration({ state, send, subscribe }: CalibrationProps): React.JSX.El
             {say('calib.camera')}
           </span>
           {sortedCameras.length === 0 ? (
-            <p className="text-gabi-bukang">{say('calib.no_camera')}</p>
+            <div className="flex flex-col gap-3">
+              <p className="text-gabi-bukang">{say('calib.no_camera')}</p>
+              {rescanButton}
+            </div>
           ) : (
             <div className="flex flex-wrap gap-2">
               {sortedCameras.map((camera) => (
@@ -191,6 +222,13 @@ function Calibration({ state, send, subscribe }: CalibrationProps): React.JSX.El
                 </button>
               ))}
             </div>
+          )}
+          {sortedCameras.length > 0 && rescanButton}
+          {problem !== null && (
+            <p role="alert" className="flex items-start gap-2 text-gabi-bukang">
+              <PixelIcon name="cross" size={2} />
+              {say(problem.key)}
+            </p>
           )}
         </section>
         <section aria-labelledby="area-label" className="flex flex-col gap-3">

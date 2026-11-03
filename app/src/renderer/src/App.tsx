@@ -49,14 +49,25 @@ const NARRATION_PHASES: ReadonlySet<AppPhase> = new Set([
 type ActiveNotice = Readonly<{ id: number; key: CopyKey; params: CopyParams }>
 
 const NOTICE_MS = 6000
+const CONNECT_STALL_MS = 45000
 
 function Connecting(): React.JSX.Element {
+  const [stalled, setStalled] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setStalled(true), CONNECT_STALL_MS)
+    return () => clearTimeout(timer)
+  }, [])
+
   return (
     <main className="relative h-full w-full" role="status" aria-live="polite">
       <NightScene dim />
       <div className="absolute left-[160px] top-1/2 flex -translate-y-1/2 items-center gap-8">
         <div className="lantern" aria-hidden="true" />
-        <Bilingual copyKey="restore" className="text-[24px] leading-[32px]" />
+        <div className="flex flex-col gap-3">
+          <Bilingual copyKey="restore" className="text-[24px] leading-[32px]" />
+          {stalled && <Bilingual copyKey="conn.down" />}
+        </div>
       </div>
     </main>
   )
@@ -81,12 +92,10 @@ function App(): React.JSX.Element {
         setNarration(message)
       } else if (message.type === 'cost') {
         setCost(message)
-      } else if (
-        message.type === 'notice' &&
-        message.copy_key !== 'endturn.blocked' &&
-        isCopyKey(message.copy_key)
-      ) {
-        setNotice({ id: message.seq, key: message.copy_key, params: message.params })
+      } else if (message.type === 'notice' && message.copy_key !== 'endturn.blocked') {
+        const copyKey = message.copy_key
+        if (isCopyKey(copyKey)) setNotice({ id: message.seq, key: copyKey, params: message.params })
+        else setNotice({ id: message.seq, key: 'err.generic', params: {} })
       }
     })
   }, [subscribe])

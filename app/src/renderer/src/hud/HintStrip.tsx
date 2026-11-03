@@ -29,6 +29,7 @@ function HintStrip({
   const [seen, setSeen] = useState<ReadonlySet<HintKey>>(() =>
     campaignId === null ? new Set() : readSeen(campaignId)
   )
+  const [seenAtMount] = useState<ReadonlySet<HintKey>>(seen)
   const hint = campaignId === null ? null : nextHint({ phase, night, seen })
 
   const markRef = useRef<(keys: readonly HintKey[]) => void>(() => undefined)
@@ -48,7 +49,7 @@ function HintStrip({
   }, [hint])
 
   if (hint === null) {
-    if (campaignId === null || !reservesHintSlot(night, seen)) return null
+    if (campaignId === null || !reservesHintSlot(night, seenAtMount)) return null
     return <div aria-hidden="true" className="mx-4 mb-2 h-14 shrink-0" />
   }
 

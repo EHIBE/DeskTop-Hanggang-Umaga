@@ -6,6 +6,7 @@ type MadePanelProps = Readonly<{
   unit: UnitSummary
   source: SummonSource
   visible: boolean
+  offline: boolean
 }>
 
 type StepProps = Readonly<{
@@ -36,7 +37,7 @@ function Step({ index, nameKey, stepKey, dim = false, children }: StepProps): Re
   )
 }
 
-function MadePanel({ unit, source, visible }: MadePanelProps): React.JSX.Element {
+function MadePanel({ unit, source, visible, offline }: MadePanelProps): React.JSX.Element {
   const fallback = source === 'fallback'
   const drawn = unit.sprite_png !== null && unit.sprite_png !== ''
   const size = 48 * SPRITE_SCALE
@@ -55,9 +56,19 @@ function MadePanel({ unit, source, visible }: MadePanelProps): React.JSX.Element
           stepKey={fallback ? 'made.fallback_step' : 'made.spark_step'}
           dim={fallback}
         />
-        <Step index={2} nameKey="model.sam" stepKey="made.sam_step" />
-        <Step index={3} nameKey="model.image" stepKey="made.image_step">
-          {drawn ? (
+        <Step
+          index={2}
+          nameKey="model.sam"
+          stepKey={offline ? 'made.skipped' : 'made.sam_step'}
+          dim={offline}
+        />
+        <Step
+          index={3}
+          nameKey="model.image"
+          stepKey={offline ? 'made.skipped' : 'made.image_step'}
+          dim={offline}
+        >
+          {offline ? null : drawn ? (
             <div
               className="shrink-0 border-2 border-gabi-ink bg-gabi-dusk"
               style={{ width: size, height: size }}

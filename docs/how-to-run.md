@@ -131,7 +131,7 @@ Eight turns until sunrise. Each turn goes like this:
 
 1. **Enemies appear** at the edges with red arrows showing who they'll hit and for how much.
 2. **You plan and move.** Slide your real objects. The ring around each unit shows how far it can move: solid with a check means fine, dashed with an X means too far.
-3. **You give orders.** Say them out loud ("Stapler, atake ang aswang!") or tap a unit and pick an action. Each order shows up as a chip. Say "Hindi" or tap the X to cancel one.
+3. **You give orders.** Say them out loud ("Stapler, atake sa aswang!") or tap a unit and pick an action. Each order shows up as a chip. Say "Hindi" or tap the X to cancel one.
 4. **End the turn.** Say "Tapos na" or press End Turn. Keep your hands off the table for a moment while the camera takes its snapshot.
 5. **Watch it play out.** Hits, dodges and narration happen, then the next wave comes.
 
