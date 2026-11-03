@@ -13,6 +13,7 @@ export default defineConfig(
       '**/out',
       '**/staging',
       'scripts',
+      'tests/*.mjs',
       'electron.vite.config.*.mjs'
     ]
   },
