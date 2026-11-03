@@ -37,7 +37,7 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 | Full audit | Done 2026-11-03 by seven agents (security, privacy and cost, correctness, checks, demo readiness, docs, cultural). No critical or high code findings. Fixed: spawn error crash, symlinked recordings folder, generic notice for unexpected errors, replay cleared on quit, cancelled paid calls charged, Connecting stall message, Calibration rescan, honest model labels, glossary focus, push-to-talk in dialogs, hint slot shift, cultural copy fixes, LICENSE added. Open: Tagalog glossary text, live evals and playtests |
 | Post-freeze features | Built 2026-11-04 by EHIBE's call (ADR-0113). Kapre smoke with P08 back on Charm and Scout, Lost detection, barrio level, badges and scars, returning objects, Kagabi recap, Spark fallback parser, strict ownership, generated barrio map, optional Muse Glimmer recap (local Ollama, `DESKTOP_GLIMMER_URL`), Settings screen, Quit from pause, Back from Calibration. Schema v3 (additive). 16 states. Live checks Manual: EHIBE |
 | Phase 6 release zip | Done 2026-11-04. `npm --prefix app run dist:win`, portable Python copied from the base 3.13 install (`app/scripts/stage-backend.mjs`), fuses on, `release/DeskTop-1.0.0-win.zip` 327.1 MB. Packaged app connects, saves settings and closes cleanly. Not yet run on a machine without Python |
-| Tests | 1487 backend passing from the repo root or `backend`, E7 50 of 50 (rerun 2026-11-04). Coverage last measured 94% before the post-freeze work. ruff, mypy --strict, typecheck, lint, prettier clean. npm audit: 32 moderate, all in dev tooling (eslint, electron-builder chains) |
+| Tests | 2182 backend passing from the repo root or `backend` (end-to-end offline nights, server fuzz, rules invariants, copy and message contracts), 84 renderer tests (`node:test`), 96% coverage, `server.py` 100%, E7 50 of 50 (rerun 2026-11-04). Second audit 2026-11-04 fixed 21 findings, 0 known bugs open. ruff, mypy --strict, typecheck, lint, prettier clean. npm audit: 32 moderate, all in dev tooling (eslint, electron-builder chains) |
 | CI, git hooks | `.github/workflows/ci.yml` (Windows, Python 3.13, Node 22). First run after EHIBE pushes. No git hooks |
 
 ## Pending queue
@@ -86,6 +86,7 @@ Run from repo root.
 |---|---|
 | Test | `backend\.venv\Scripts\python -m pytest backend/tests -q` |
 | Single test | `backend\.venv\Scripts\python -m pytest backend/tests/test_resolve.py::test_name -q` |
+| Renderer tests | `npm --prefix app run test` |
 | Typecheck | `npm --prefix app run typecheck` |
 | Lint | `npm --prefix app run lint` |
 | Format | `npm --prefix app run format` |

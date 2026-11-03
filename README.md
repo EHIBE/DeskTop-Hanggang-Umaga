@@ -86,7 +86,7 @@ Real numbers only, from real runs. Full log: `docs/eval.md`.
 | E7 Determinism (same board, same result) | 50 of 50 seeded boards identical, 100% (2026-10-29, rerun 2026-11-03) |
 | Rules resolution speed | 1.1 ms median for 12 units and 8 enemies (target 50 ms) |
 | Tracker speed | 31.9 ms median per update for 12 KCF trackers on a 1200x800 frame |
-| Automated tests | 1,232 backend tests passing, plus typecheck, lint and format checks |
+| Automated tests | 2,182 backend tests (end-to-end offline nights, server fuzz, rules invariants) and 84 renderer tests passing, plus typecheck, lint and format checks |
 | E1 registration, E2 re-anchor, E3 Taglish orders, E4 GM validity, E5 sprites, E6 latency | Not run yet. They need live API runs and recorded nights |
 
 ## Cost per night

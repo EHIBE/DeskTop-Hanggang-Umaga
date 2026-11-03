@@ -19,7 +19,7 @@ The release is an unsigned zip of the unpacked Windows app. It carries its own p
 |---|---|
 | Artifact | `release/DeskTop-1.0.0-win.zip`, unsigned, from `app/dist/win-unpacked` |
 | Size | 327.1 MB zipped, 875 MB unpacked |
-| SHA-256 | `F4CBF5C5D79B2AAB82C4DFCEFF45F43BFC19EC5FD6EDF3582FE3D30C46EFFD77` (final post-freeze build at commit 442dc3e, 2026-11-04, 327.1 MB. A rebuild changes it) |
+| SHA-256 | `A6BE68E4E84B55849B592FBB66E7D5CBB273E665C58E747911DDB8F3ACFBD8CF` (final build at commit 5e0cff7, 2026-11-04, 323.8 MB. Tests folders in site-packages excluded. Camera list and live preview checked in the packaged app. A rebuild changes it) |
 | Build command | `npm --prefix app run dist:win` |
 | Staging only | `npm --prefix app run bundle:backend` |
 | Platform | Windows only |
