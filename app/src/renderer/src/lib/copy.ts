@@ -528,7 +528,7 @@ const entries = {
   },
   'gloss.name_usok': { tl: 'Usok ng Kapre', en: 'Kapre smoke' },
   'gloss.usok': {
-    tl: 'Usok ng malaking tabako ng kapre. Natatakpan nito ang nasa loob hanggang may magpaliwanag',
+    tl: 'Usok ng malaking tabako ng kapre. Natatakpan nito ang nasa loob hanggang may magbigay ng liwanag',
     en: "The smoke of the kapre's big cigar. It hides whatever stands inside until a light clears it"
   },
   'gloss.name_liwanag': { tl: 'Liwanag', en: 'Liwanag' },
@@ -540,7 +540,7 @@ const entries = {
   'settings.title': { tl: 'Mga Setting', en: 'Settings' },
   'settings.camera': { tl: 'Camera', en: 'Camera' },
   'settings.camera_locked': {
-    tl: 'Hindi mapapalitan habang may gabi.',
+    tl: 'Hindi mapapalitan habang may laban.',
     en: 'Cannot change during a night.'
   },
   'settings.mic': { tl: 'Mikropono', en: 'Microphone' },
@@ -564,7 +564,7 @@ const entries = {
     tl: 'Kapag iba ang nag-utos sa piyesa ng kasama, magtatanong muna.',
     en: "When someone orders another player's piece, ask first."
   },
-  'settings.map': { tl: 'Gawang mapa ng baryo', en: 'Generated barrio map' },
+  'settings.map': { tl: 'Mapa ng baryo na gawa ng AI', en: 'Generated barrio map' },
   'settings.map_hint': {
     tl: 'Gumagamit ng API key. Mga $0.01 isang beses kada kampanya.',
     en: 'Uses the API key. About $0.01 once per campaign.'
@@ -598,14 +598,17 @@ const entries = {
   'progress.level': { tl: 'Antas ng baryo: [n]', en: 'Barrio level: [n]' },
   'badge.title': { tl: 'Pumili ng badge', en: 'Pick a badge' },
   'badge.hp': { tl: 'Dagdag HP', en: 'Extra HP' },
-  'badge.cooldown': { tl: 'Maikling CD', en: 'Short cooldown' },
+  'badge.cooldown': { tl: 'Mas maikling cooldown', en: 'Short cooldown' },
   'badge.for': { tl: 'Badge para kay [unit]', en: 'Badge for [unit]' },
   'scar.label': { tl: 'Peklat', en: 'Scar' },
   'card.real': { tl: 'Tunay na gamit', en: 'Real object' },
   'confirm.title': { tl: 'Kumpirmahin ang utos', en: 'Confirm the order' },
   'confirm.yes': { tl: 'Ituloy', en: 'Go ahead' },
   'confirm.no': { tl: 'Huwag', en: "Don't" },
-  'confirm.seconds': { tl: 'Mawawala sa [seconds] segundo', en: 'Expires in [seconds] seconds' },
+  'confirm.seconds': {
+    tl: 'Mawawalan ng bisa sa loob ng [seconds] segundo',
+    en: 'Expires in [seconds] seconds'
+  },
   'pause.quit_confirm': {
     tl: 'Bumalik sa Start? Naka-save ang gabi mo.',
     en: 'Quit to Start? Your night is saved.'
