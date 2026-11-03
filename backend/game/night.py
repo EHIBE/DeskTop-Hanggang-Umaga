@@ -197,11 +197,21 @@ from vision.summon import (
 )
 from voice.claim import ClaimUnit, parse_claim
 from voice.grammar import (
+    ATTACK_WORDS,
+    CANCEL_WORDS,
+    END_WORDS,
+    ENEMY_ALIASES,
+    ENEMY_TYPES,
+    GENERIC_ENEMY_WORDS,
+    HEAL_WORDS,
+    POWER_WORDS,
     Command,
     CommandKind,
     GrammarContext,
     GrammarEnemy,
     GrammarUnit,
+    find_unit_mentions,
+    normalize,
     parse_command,
 )
 from voice.ownership import check_ownership
@@ -241,6 +251,25 @@ KUBO_SAM_ID: Final = 1
 BUSY_KEY: Final = "endturn.checking"
 OFFLINE_KEY: Final = "net.down"
 SPARK_FEATURE: Final = "Muse Spark"
+CAMERA_STALE_S: Final = 3.0
+FALLBACK_COOLDOWN_S: Final = 2.0
+FALLBACK_MAX_PER_NIGHT: Final = 40
+CAMPAIGN_SWEEP_PAGE: Final = 50
+PENDING_OFFERS_FLAG: Final = "pending_offers"
+RECAP_TASK: Final = "recap"
+MAP_TASK: Final = "map"
+COMMAND_VOCABULARY: Final = frozenset(
+    (
+        *ATTACK_WORDS,
+        *POWER_WORDS,
+        *HEAL_WORDS,
+        *END_WORDS,
+        *CANCEL_WORDS,
+        *ENEMY_TYPES,
+        *ENEMY_ALIASES,
+        *GENERIC_ENEMY_WORDS,
+    )
+)
 
 
 class AppPhase(StrEnum):
@@ -422,6 +451,22 @@ def safe_distance(first: tuple[float, ...], second: tuple[float, ...]) -> float:
 TrackerFactory = Callable[[float, tuple[int, int]], TrackerSet]
 
 
+def looks_like_command(text: str, context: GrammarContext) -> bool:
+    tokens = normalize(text).split()
+    if not tokens:
+        return False
+    enemy_types = {e.type.casefold() for e in context.enemies}
+    for token in tokens:
+        bare = token.removeprefix("i")
+        if (
+            token in COMMAND_VOCABULARY
+            or bare in COMMAND_VOCABULARY
+            or token in enemy_types
+        ):
+            return True
+    return bool(find_unit_mentions(tokens, set(), context.units))
+
+
 def default_tracker(px_per_cm: float, warped_size: tuple[int, int]) -> TrackerSet:
     return TrackerSet(px_per_cm=px_per_cm, warped_size=warped_size)
 
@@ -530,15 +575,19 @@ class GameController:
         self._command_fallback = command_fallback
         self._loop: asyncio.AbstractEventLoop | None = None
         self._bg_tasks: set[asyncio.Task[None]] = set()
+        self._bg_meta: dict[asyncio.Task[None], tuple[str | None, str]] = {}
+        self._is_closed = False
+        self._fallback_calls = 0
+        self._fallback_last = -FALLBACK_COOLDOWN_S
         self._fallback_tasks: set[asyncio.Task[None]] = set()
         self._prefs: dict[str, SettingValue] = store.all_preferences()
         self._progress: dict[str, UnitProgress] = {}
         self._returning: set[str] = set()
-        self._offers: dict[str, tuple[Badge, ...]] = {}
+        self._pending_offers: dict[str, tuple[Badge, ...]] = {}
         self._is_finalized = False
         self._recap: Recap | None = None
         self._confirm: PendingConfirm | None = None
-        self._is_map_working = False
+        self._maps_working: set[str] = set()
         self._replay_runner = replay_runner
         self._ffmpeg = ffmpeg
         self._recorder_factory = recorder_factory
@@ -608,6 +657,24 @@ class GameController:
         self._is_calibrated = False
         self._is_stored_calibration = False
         self._demo_safe = DemoSafeMode.load(store)
+        self._sweep_maps()
+
+    def _sweep_maps(self) -> None:
+        service = self._map_service
+        if service is None:
+            return
+        try:
+            known: set[str] = set()
+            offset = 0
+            while True:
+                page = self._store.list_campaigns(CAMPAIGN_SWEEP_PAGE, offset)
+                known.update(c.id for c in page)
+                if len(page) < CAMPAIGN_SWEEP_PAGE:
+                    break
+                offset += CAMPAIGN_SWEEP_PAGE
+            service.sweep(known)
+        except (StoreError, OSError):
+            logger.warning("map sweep skipped")
 
     def snapshot(self) -> Snapshot:
         with self._lock:
@@ -764,7 +831,7 @@ class GameController:
             nights_survived=campaign.nights_survived,
             badge_offers=tuple(
                 OfferView(game_id, tuple(b.value for b in choices))
-                for game_id, choices in self._offers.items()
+                for game_id, choices in self._current_offers().items()
             ),
         )
 
@@ -778,7 +845,9 @@ class GameController:
             and campaign is not None
             and service.cached_map(campaign.id) is not None
         )
-        return MapView(is_enabled, is_ready, self._is_map_working)
+        campaign = self._campaign
+        is_working = campaign is not None and campaign.id in self._maps_working
+        return MapView(is_enabled, is_ready, is_working)
 
     def _confirm_view(self) -> ConfirmView | None:
         pending = self._confirm
@@ -892,6 +961,8 @@ class GameController:
         self._run_session(session.begin)
         self._session = session
         self._consents = {}
+        self._fallback_calls = 0
+        self._fallback_last = -FALLBACK_COOLDOWN_S
         self._claim_started = self._clock()
         self._notify("night.start", {})
         self._start_voice()
@@ -922,6 +993,8 @@ class GameController:
         result = self._run_session(lambda: session.restore(saved, poses, sizes, owners))
         self._session = session
         self._resume_turn = None
+        self._fallback_calls = 0
+        self._fallback_last = -FALLBACK_COOLDOWN_S
         self._clear_recap()
         self._seed_boxes_from_board(session)
         self._notify("restore", {})
@@ -981,10 +1054,24 @@ class GameController:
         session = self._session_or_error()
         self._run_session(lambda: session.cancel_chip(chip_id))
 
+    def _is_camera_dead(self) -> bool:
+        camera = self._camera
+        if camera is None:
+            return False
+        if camera.has_failed:
+            return True
+        age = camera.frame_age_s()
+        return age is not None and age > CAMERA_STALE_S
+
     async def end_turn(self) -> None:
         session = self._session_or_error()
         self._run_session(session.start_end_turn)
         self._confirm = None
+        if self._is_camera_dead():
+            session.cancel_end_turn()
+            self._run_session(session.pause)
+            self._stop_voice()
+            raise GameError("cam.busy")
         try:
             frame = await asyncio.to_thread(self.wait_for_still_frame)
             if frame is None:
@@ -1213,8 +1300,11 @@ class GameController:
         self._reset_replay()
         self._session = None
         self._confirm = None
-        self._offers = {}
+        self._pending_offers = {}
         self._recap = None
+        left = self._campaign
+        if left is not None:
+            self._cancel_background(left.id, (MAP_TASK,))
         with self._lock:
             self._campaign = None
             self._night = None
@@ -1237,8 +1327,12 @@ class GameController:
             raise GameError("delete.failed") from error
         if not is_deleted:
             raise GameError("cmd.unknown")
+        self._cancel_background(campaign_id)
         if self._map_service is not None:
-            self._map_service.delete_map(campaign_id)
+            try:
+                self._map_service.delete_map(campaign_id)
+            except OSError:
+                logger.warning("map file could not be deleted")
         self._notify("delete.done", {})
 
     def devices(self) -> Devices:
@@ -1250,6 +1344,7 @@ class GameController:
     def start_new_campaign(
         self, name: str, difficulty: Difficulty | None = None
     ) -> None:
+        self._require_phase(AppPhase.START)
         chosen = (
             difficulty
             if difficulty is not None
@@ -1259,6 +1354,7 @@ class GameController:
         self._enter_campaign(campaign)
 
     def continue_campaign(self, campaign_id: str) -> None:
+        self._require_phase(AppPhase.START)
         campaign = self._store.get_campaign(campaign_id)
         self._enter_campaign(campaign)
         self._load_recap(campaign.id)
@@ -1274,7 +1370,7 @@ class GameController:
         self._session = None
         self._recap = None
         self._confirm = None
-        self._offers = {}
+        self._pending_offers = {}
         with self._lock:
             self._campaign = campaign
             self._calibration = None
@@ -1429,7 +1525,7 @@ class GameController:
         self._units = self._store.night_units(self._night.id)
         self._load_progress()
         self._returning = set()
-        self._offers = {}
+        self._pending_offers = self._stored_offers(self._night)
         self._is_finalized = False
         self._confirm = None
         saved = (
@@ -1455,7 +1551,7 @@ class GameController:
         board = None if session is None else session.board
         if board is None:
             return set()
-        absent = {u.id for u in board.units if u.is_absent}
+        absent = {u.id for u in board.units if u.stolen_by is not None or u.is_lost}
         return {
             u.sam_object_id
             for u in self._units
@@ -2086,7 +2182,15 @@ class GameController:
         self, session: NightSession, caption: Caption, context: GrammarContext
     ) -> bool:
         fallback = self._command_fallback
-        if fallback is None:
+        if fallback is None or not looks_like_command(caption.text, context):
+            return False
+        if self._confirm is not None or self._fallback_tasks:
+            return False
+        now = self._clock()
+        if (
+            self._fallback_calls >= FALLBACK_MAX_PER_NIGHT
+            or now - self._fallback_last < FALLBACK_COOLDOWN_S
+        ):
             return False
         self.enforce_budget()
         if not self._demo_safe.allows_spark:
@@ -2095,6 +2199,8 @@ class GameController:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             return False
+        self._fallback_calls += 1
+        self._fallback_last = now
         task = loop.create_task(self._run_fallback(session, caption, context, fallback))
         self._fallback_tasks.add(task)
         task.add_done_callback(self._fallback_tasks.discard)
@@ -2108,6 +2214,8 @@ class GameController:
         fallback: CommandFallback,
     ) -> None:
         speaker = self._speaker_name(caption.speaker)
+        board = session.board
+        started_turn = None if board is None else board.turn
         try:
             command = await asyncio.wait_for(
                 fallback(caption.text, context, False), COMMAND_FALLBACK_TIMEOUT_S
@@ -2116,6 +2224,9 @@ class GameController:
             logger.warning("command fallback unavailable")
             command = None
         if self._session is not session or session.state is not TurnState.PLAYER_PHASE:
+            return
+        current = session.board
+        if current is None or current.turn != started_turn:
             return
         if command is not None and command.kind is CommandKind.END_TURN:
             command = None
@@ -2184,21 +2295,60 @@ class GameController:
     def bind_loop(self, loop: asyncio.AbstractEventLoop) -> None:
         self._loop = loop
 
-    def _spawn(self, coroutine: Coroutine[Any, Any, None]) -> bool:
+    def _track_task(
+        self,
+        loop: asyncio.AbstractEventLoop,
+        coroutine: Coroutine[Any, Any, None],
+        campaign_id: str | None,
+        kind: str,
+    ) -> None:
+        if self._is_closed:
+            coroutine.close()
+            return
+        task = loop.create_task(coroutine)
+        self._bg_tasks.add(task)
+        self._bg_meta[task] = (campaign_id, kind)
+        task.add_done_callback(self._forget_task)
+
+    def _forget_task(self, task: asyncio.Task[None]) -> None:
+        self._bg_tasks.discard(task)
+        self._bg_meta.pop(task, None)
+
+    def _cancel_background(
+        self, campaign_id: str | None, kinds: Sequence[str] | None = None
+    ) -> None:
+        for task in list(self._bg_tasks):
+            owner, kind = self._bg_meta.get(task, (None, ""))
+            if campaign_id is not None and owner != campaign_id:
+                continue
+            if kinds is not None and kind not in kinds:
+                continue
+            task.cancel()
+
+    def _spawn(
+        self,
+        coroutine: Coroutine[Any, Any, None],
+        campaign_id: str | None = None,
+        kind: str = "",
+    ) -> bool:
         try:
             running = asyncio.get_running_loop()
         except RuntimeError:
             running = None
         if running is not None:
-            task = running.create_task(coroutine)
-            self._bg_tasks.add(task)
-            task.add_done_callback(self._bg_tasks.discard)
+            self._track_task(running, coroutine, campaign_id, kind)
             return True
         target = self._loop
-        if target is None or target.is_closed():
+        if target is None or target.is_closed() or self._is_closed:
             coroutine.close()
             return False
-        asyncio.run_coroutine_threadsafe(coroutine, target)
+        try:
+            target.call_soon_threadsafe(
+                self._track_task, target, coroutine, campaign_id, kind
+            )
+        except RuntimeError:
+            coroutine.close()
+            return False
         return True
 
     async def wait_for_background(self) -> None:
@@ -2268,9 +2418,10 @@ class GameController:
 
     def _clear_recap(self) -> None:
         campaign = self._campaign
-        if self._recap is None or campaign is None:
+        if campaign is None:
             return
         self._recap = None
+        self._cancel_background(campaign.id, (RECAP_TASK,))
         try:
             self._store.clear_recap(campaign.id)
         except StoreError:
@@ -2288,11 +2439,57 @@ class GameController:
             return
         self._recap = recap
 
+    def _current_offers(self) -> dict[str, tuple[Badge, ...]]:
+        game_ids = {u.unit_id: game_id_for(u.sam_object_id) for u in self._units}
+        return {
+            game_ids[unit_id]: choices
+            for unit_id, choices in self._pending_offers.items()
+            if unit_id in game_ids
+        }
+
+    def _stored_offers(self, night: NightRecord) -> dict[str, tuple[Badge, ...]]:
+        raw = night.flags.get(PENDING_OFFERS_FLAG)
+        if not isinstance(raw, dict):
+            return {}
+        offers: dict[str, tuple[Badge, ...]] = {}
+        for unit_id, values in raw.items():
+            if not isinstance(values, list):
+                continue
+            choices = tuple(Badge(v) for v in values if v in {b.value for b in Badge})
+            if choices:
+                offers[str(unit_id)] = choices
+        return offers
+
+    def _persist_offers(self) -> None:
+        campaign = self._campaign
+        if campaign is None:
+            return
+        try:
+            target = self._store.start_or_resume_night(campaign.id)
+            flags = dict(target.flags)
+            if self._pending_offers:
+                flags[PENDING_OFFERS_FLAG] = {
+                    unit_id: [b.value for b in choices]
+                    for unit_id, choices in self._pending_offers.items()
+                }
+            else:
+                flags.pop(PENDING_OFFERS_FLAG, None)
+            self._store.set_night_flags(target.id, flags)
+        except StoreError:
+            logger.warning("badge offers could not be saved")
+            return
+        current = self._night
+        if current is not None and current.id == target.id:
+            self._night = replace(current, flags=flags)
+
     def pick_badge(self, game_id: str, badge: Badge) -> None:
-        session = self._session_or_error()
-        if session.state is not TurnState.SUNRISE:
+        session = self._session
+        if session is not None:
+            if session.state is not TurnState.SUNRISE:
+                raise GameError("cmd.unknown")
+        elif self._phase() is not AppPhase.SUMMON:
             raise GameError("cmd.unknown")
-        choices = self._offers.get(game_id)
+        choices = self._current_offers().get(game_id)
         record = next(
             (u for u in self._units if game_id_for(u.sam_object_id) == game_id), None
         )
@@ -2315,7 +2512,8 @@ class GameController:
             record.unit_id, (*progress.badges, badge_id), progress.scars
         )
         self._progress[record.unit_id] = stored
-        del self._offers[game_id]
+        self._pending_offers.pop(record.unit_id, None)
+        self._persist_offers()
         self.emit_moment(
             "badge_earned",
             record.unit_id,
@@ -2387,11 +2585,11 @@ class GameController:
             for u in board.units
             if not u.is_down and u.id in by_game
         }
-        game_by_unit = {r.unit_id: g for g, r in by_game.items()}
-        self._offers = {
-            game_by_unit[offer.unit_id]: offer.choices
+        self._pending_offers = {
+            offer.unit_id: offer.choices
             for offer in offer_badges(units, alive, survived)
         }
+        self._persist_offers()
 
     def _start_recap(
         self,
@@ -2440,7 +2638,7 @@ class GameController:
         )
         self.enforce_budget()
         coroutine = self._build_recap(builder, summary, names, campaign.id)
-        if not self._spawn(coroutine):
+        if not self._spawn(coroutine, campaign.id, RECAP_TASK):
             self._save_recap(
                 campaign.id, restore_recap_names(builder.build_local(summary), names)
             )
@@ -2474,17 +2672,22 @@ class GameController:
             or campaign is None
             or baseline is None
             or not self._prefs["generated_map"]
-            or self._is_map_working
+            or campaign.id in self._maps_working
             or service.cached_map(campaign.id) is not None
         ):
             return
-        self._is_map_working = True
-        if not self._spawn(self._make_map(service, campaign.id, baseline.copy())):
-            self._is_map_working = False
+        self._maps_working.add(campaign.id)
+        if not self._spawn(
+            self._make_map(service, campaign.id, baseline.copy()),
+            campaign.id,
+            MAP_TASK,
+        ):
+            self._maps_working.discard(campaign.id)
 
     async def _make_map(
         self, service: BarrioMapService, campaign_id: str, baseline: Image
     ) -> None:
+        path: Path | None = None
         try:
             self.enforce_budget()
             anchor: bytes | None = None
@@ -2501,11 +2704,17 @@ class GameController:
                 anchor,
                 demo_safe=not self._demo_safe.allows_image,
             )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("barrio map task failed")
         finally:
-            self._is_map_working = False
-        if path is not None:
-            self.publish_map()
-        self._push_state()
+            self._maps_working.discard(campaign_id)
+            campaign = self._campaign
+            if campaign is not None and campaign.id == campaign_id:
+                if path is not None:
+                    self.publish_map()
+                self._push_state()
 
     def map_png(self) -> str | None:
         service = self._map_service
@@ -3158,10 +3367,10 @@ class GameController:
         self._live.clear()
 
     def close(self) -> None:
+        self._is_closed = True
         for task in list(self._sprite_tasks):
             task.cancel()
-        for task in list(self._bg_tasks):
-            task.cancel()
+        self._cancel_background(None)
         self._stop_narration()
         with self._lock:
             self._close_camera()

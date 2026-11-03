@@ -189,10 +189,6 @@ def test_a_replugged_camera_lets_the_night_continue(tmp_path: Path) -> None:
     rig.close()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="BUG: End Turn accepts the last stale frame after the camera feed died",
-)
 def test_end_turn_refuses_when_the_camera_feed_is_dead(tmp_path: Path) -> None:
     rig = build_rig(tmp_path / "data", api_key=False, demo_safe=True)
 

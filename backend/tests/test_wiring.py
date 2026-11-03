@@ -537,14 +537,14 @@ def test_spark_fallback_turns_odd_speech_into_a_chip(tmp_path: Path) -> None:
     async def play() -> None:
         begin_two_players(controller)
         await asyncio.sleep(0)
-        voices.made[0].say("xyzzy plugh", "spk_0")
+        voices.made[0].say("Stapler plugh", "spk_0")
         await controller.wait_for_voice_end_turns()
         night = controller.snapshot().night
         assert night is not None
         assert [(c.unit_id, c.action, c.source) for c in night.chips] == [
             ("u_2", "attack", "voice")
         ]
-        assert calls == ["xyzzy plugh"]
+        assert calls == ["Stapler plugh"]
         controller.close()
         await controller.wait_for_voice()
 
@@ -559,10 +559,10 @@ def test_spark_fallback_none_gives_the_unknown_notice(tmp_path: Path) -> None:
         begin_two_players(controller)
         await asyncio.sleep(0)
         controller.drain_notices()
-        voices.made[0].say("xyzzy plugh", "spk_0")
+        voices.made[0].say("Stapler plugh", "spk_0")
         await controller.wait_for_voice_end_turns()
         assert ("cmd.unknown", {}) in controller.drain_notices()
-        assert calls == ["xyzzy plugh"]
+        assert calls == ["Stapler plugh"]
         controller.close()
         await controller.wait_for_voice()
 
@@ -578,7 +578,7 @@ def test_spark_fallback_never_ends_the_turn(tmp_path: Path) -> None:
     async def play() -> None:
         begin_two_players(controller)
         await asyncio.sleep(0)
-        voices.made[0].say("xyzzy plugh", "spk_0")
+        voices.made[0].say("Stapler plugh", "spk_0")
         await controller.wait_for_voice_end_turns()
         assert controller.snapshot().night.turn == 1  # type: ignore[union-attr]
         controller.close()
@@ -600,7 +600,7 @@ def test_spark_fallback_times_out(
         begin_two_players(controller)
         await asyncio.sleep(0)
         controller.drain_notices()
-        voices.made[0].say("xyzzy plugh", "spk_0")
+        voices.made[0].say("Stapler plugh", "spk_0")
         await controller.wait_for_voice_end_turns()
         assert ("cmd.unknown", {}) in controller.drain_notices()
         assert controller.snapshot().night.chips == ()  # type: ignore[union-attr]
@@ -623,7 +623,7 @@ def test_demo_safe_and_known_orders_skip_the_spark_fallback(tmp_path: Path) -> N
         controller.set_demo_safe(True)
         controller.drain_notices()
         controller._start_voice()
-        controller._on_voice_final(Caption("t2", "xyzzy plugh", True, "spk_0"))
+        controller._on_voice_final(Caption("t2", "Stapler plugh", True, "spk_0"))
         await controller.wait_for_voice_end_turns()
         assert calls == []
         assert ("cmd.unknown", {}) in controller.drain_notices()

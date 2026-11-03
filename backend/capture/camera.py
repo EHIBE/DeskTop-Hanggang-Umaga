@@ -154,6 +154,12 @@ class Camera:
     def has_failed(self) -> bool:
         return self._failed.is_set()
 
+    def frame_age_s(self) -> float | None:
+        latest = self.latest()
+        if latest is None:
+            return None
+        return self._clock() - latest.captured_at
+
     def open(self) -> tuple[int, int]:
         source = self._factory(self._index)
         if not source.isOpened():

@@ -2,6 +2,8 @@ import base64
 import logging
 import os
 import re
+import threading
+from collections.abc import Collection
 from pathlib import Path
 from typing import Final
 
@@ -30,6 +32,8 @@ MAP_LONG_SIDE_PX: Final = 1024
 MAP_REFERENCE_LONG_SIDE_PX: Final = 768
 MAP_FILE_SUFFIX: Final = ".png"
 MAP_BLOCKED_SUFFIX: Final = ".blocked"
+MAP_TEMP_SUFFIX: Final = ".tmp"
+MAP_SUFFIXES: Final = (MAP_FILE_SUFFIX, MAP_BLOCKED_SUFFIX, MAP_TEMP_SUFFIX)
 CAMPAIGN_ID_PATTERN: Final = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 MAP_PROMPT: Final = (
     "Redraw this top-down photo of an empty desk as a top-down 16-bit pixel art "
@@ -83,6 +87,8 @@ class BarrioMapService:
         self._client = client
         self._maps_dir = maps_dir
         self._attempted: set[str] = set()
+        self._generation: dict[str, int] = {}
+        self._lock = threading.Lock()
 
     def map_path(self, campaign_id: str) -> Path:
         if CAMPAIGN_ID_PATTERN.fullmatch(campaign_id) is None:
@@ -101,9 +107,32 @@ class BarrioMapService:
             path = self.map_path(campaign_id)
         except ValueError:
             return
-        path.unlink(missing_ok=True)
-        self._blocked_marker(campaign_id).unlink(missing_ok=True)
-        self._attempted.discard(campaign_id)
+        with self._lock:
+            self._generation[campaign_id] = self._generation.get(campaign_id, 0) + 1
+            self._attempted.discard(campaign_id)
+            path.unlink(missing_ok=True)
+            path.with_suffix(MAP_TEMP_SUFFIX).unlink(missing_ok=True)
+            self._blocked_marker(campaign_id).unlink(missing_ok=True)
+
+    def sweep(self, known_campaign_ids: Collection[str]) -> int:
+        removed = 0
+        try:
+            entries = list(self._maps_dir.iterdir())
+        except OSError:
+            return 0
+        for entry in entries:
+            if entry.suffix not in MAP_SUFFIXES or not entry.is_file():
+                continue
+            if CAMPAIGN_ID_PATTERN.fullmatch(entry.stem) is None:
+                continue
+            if entry.stem in known_campaign_ids:
+                continue
+            try:
+                entry.unlink()
+            except OSError:
+                continue
+            removed += 1
+        return removed
 
     def _blocked_marker(self, campaign_id: str) -> Path:
         return self._maps_dir / f"{campaign_id}{MAP_BLOCKED_SUFFIX}"
@@ -120,6 +149,7 @@ class BarrioMapService:
             path = self.map_path(campaign_id)
         except ValueError:
             return None
+        generation = self._generation.get(campaign_id, 0)
         if path.is_file():
             return path
         if demo_safe or campaign_id in self._attempted:
@@ -151,7 +181,7 @@ class BarrioMapService:
         except SpriteError:
             logger.warning("generated barrio map could not be processed")
             return None
-        return self._write(path, png)
+        return self._write(path, png, campaign_id, generation)
 
     async def _call(
         self, reference_png: bytes, style_anchor_png: bytes | None
@@ -199,14 +229,19 @@ class BarrioMapService:
         except OSError:
             logger.warning("could not record the blocked barrio map")
 
-    def _write(self, path: Path, png: bytes) -> Path | None:
-        temp = path.with_suffix(".tmp")
-        try:
-            self._maps_dir.mkdir(parents=True, exist_ok=True)
-            temp.write_bytes(png)
-            os.replace(temp, path)
-        except OSError:
-            logger.warning("could not save the barrio map")
-            temp.unlink(missing_ok=True)
-            return None
+    def _write(
+        self, path: Path, png: bytes, campaign_id: str, generation: int
+    ) -> Path | None:
+        temp = path.with_suffix(MAP_TEMP_SUFFIX)
+        with self._lock:
+            if self._generation.get(campaign_id, 0) != generation:
+                return None
+            try:
+                self._maps_dir.mkdir(parents=True, exist_ok=True)
+                temp.write_bytes(png)
+                os.replace(temp, path)
+            except OSError:
+                logger.warning("could not save the barrio map")
+                temp.unlink(missing_ok=True)
+                return None
         return path

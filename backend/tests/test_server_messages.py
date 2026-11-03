@@ -551,10 +551,6 @@ def campaign_names(wire: Wire) -> list[str]:
     return sorted(str(cast(dict[str, object], c)["name"]) for c in campaigns)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="BUG: campaign.start new during a night is refused but still inserts a campaign row",
-)
 def test_refused_campaign_start_during_a_night_leaves_no_row(
     live: tuple[Harness, Wire],
 ) -> None:
@@ -565,10 +561,6 @@ def test_refused_campaign_start_during_a_night_leaves_no_row(
     assert campaign_names(wire) == ["Barkada"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="BUG: campaign.start new is accepted in SUMMON though the protocol says Start only",
-)
 def test_campaign_start_is_refused_outside_start(live: tuple[Harness, Wire]) -> None:
     _, wire = live
     to_summon(wire)

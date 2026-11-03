@@ -3,8 +3,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-import pytest
-
 from game.night import AppPhase, GameError
 from gm.narrator import LineBank
 from gm.recap import Recap, RecapSource
@@ -332,10 +330,6 @@ def test_a_lost_object_returns_when_the_anchor_is_back_after_a_crash(
     crashed.close()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="BUG: reanchor_all skips off-desk units so they are never found again",
-)
 def test_a_lost_object_put_back_on_the_desk_is_found(tmp_path: Path) -> None:
     rig = build_rig(tmp_path / "data", api_key=False, demo_safe=True)
 
