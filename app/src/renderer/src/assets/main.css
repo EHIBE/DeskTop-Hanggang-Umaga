@@ -319,6 +319,7 @@ canvas {
     align-items: flex-start;
     gap: 8px;
     border-bottom-color: var(--color-gabi-dusk);
+    flex-shrink: 0;
     cursor: default;
   }
 
