@@ -60,7 +60,7 @@ $env:DESKTOP_DEV = "1"
 - `DESKTOP_DEV=1` loads `backend\.env` so `MODEL_API_KEY` is picked up. Without it the backend runs keyless.
 - Test health in a second window: `Invoke-RestMethod -Uri http://127.0.0.1:8765/health -Headers @{ 'X-Desktop-Token' = $env:DESKTOP_TOKEN }`. Expect `ok : True`.
 - Without the header every route returns 401. `/ws` also needs an `Origin` listed in `DESKTOP_ALLOWED_ORIGINS` and the subprotocols `desktop` and the token. A browser tab cannot connect by hand.
-- The old command `uvicorn server:app` in `docs/engineering/setup-windows.md` does not match the code. `server.py` defines `create_app` and `create_app_from_env` only. Status: that doc needs the fix above.
+- `server.py` defines `create_app` and `create_app_from_env` only. There is no `server:app`.
 
 ### Table
 

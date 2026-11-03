@@ -95,7 +95,7 @@ Run from repo root.
 | Format | `npm --prefix app run format` |
 | Audit | `npm --prefix app audit` |
 | Run app | `npm --prefix app run dev` |
-| Run backend | `cd backend` then `.venv\Scripts\python -m uvicorn server:app --host 127.0.0.1 --port 8765` |
+| Run backend | `cd backend`, set `DESKTOP_TOKEN` (64 hex) and `DESKTOP_DEV=1`, then `.venv\Scripts\python -m uvicorn server:create_app_from_env --factory --host 127.0.0.1 --port 8765`. Full steps: `docs/engineering/troubleshooting.md` |
 | Python lint | `cd backend` then `.venv\Scripts\python -m ruff check .` |
 | Python types | `cd backend` then `.venv\Scripts\python -m mypy --strict --exclude .venv .` |
 | Python audit | NONE configured |

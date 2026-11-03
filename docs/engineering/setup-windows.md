@@ -59,12 +59,16 @@ backend\.venv\Scripts\python -m pip freeze > backend\requirements.txt
 
 ## Run the backend
 
+The backend needs a token of at least 32 characters and uses the app factory. From the repo root in PowerShell:
+
 ```powershell
 cd backend
-.venv\Scripts\python -m uvicorn server:app --host 127.0.0.1 --port 8765
+$env:DESKTOP_TOKEN = -join ((1..64) | ForEach-Object { '{0:x}' -f (Get-Random -Maximum 16) })
+$env:DESKTOP_DEV = "1"
+.venv\Scripts\python -m uvicorn server:create_app_from_env --factory --host 127.0.0.1 --port 8765
 ```
 
-Open `http://127.0.0.1:8765/health` and expect `{"ok": true}`.
+Check health in a second window: `Invoke-RestMethod -Uri http://127.0.0.1:8765/health -Headers @{ 'X-Desktop-Token' = $env:DESKTOP_TOKEN }`. Expect `ok : True`. Details: `docs/engineering/troubleshooting.md#run-the-backend-by-hand`.
 
 ## Physical setup
 
