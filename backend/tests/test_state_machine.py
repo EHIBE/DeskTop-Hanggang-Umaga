@@ -1,6 +1,7 @@
 import pytest
 
 from game.state_machine import (
+    NIGHT_STATES,
     TRANSITIONS,
     IllegalTransitionError,
     Transition,
@@ -40,7 +41,12 @@ def test_scripted_night_visits_every_transition_in_order() -> None:
     machine.transition(TurnEvent.REPLAY_REQUESTED)
     assert machine.state is TurnState.REPLAY
     visited = {(t.source, t.event) for t in log}
-    missing = set(TRANSITIONS) - visited - {(TurnState.CHECK_END, TurnEvent.FELL)}
+    exits = {
+        (TurnState.CHECK_END, TurnEvent.FELL),
+        (TurnState.CALIBRATE, TurnEvent.BACK_TO_START),
+        (TurnState.PAUSED, TurnEvent.QUIT_TO_START),
+    }
+    missing = set(TRANSITIONS) - visited - exits
     assert missing == set()
     assert log[0] == Transition(
         TurnState.CALIBRATE, TurnEvent.CALIBRATED, TurnState.SUMMON
@@ -79,5 +85,23 @@ def test_force_sets_state_without_logging() -> None:
     assert log == []
 
 
-def test_fifteen_states() -> None:
-    assert len(TurnState) == 15
+def test_sixteen_states_with_start() -> None:
+    assert len(TurnState) == 16
+    assert TurnState.START not in NIGHT_STATES
+
+
+def test_calibration_goes_back_to_start() -> None:
+    machine = TurnStateMachine(initial=TurnState.CALIBRATE)
+    assert machine.transition(TurnEvent.BACK_TO_START) is TurnState.START
+
+
+def test_pause_quits_to_start() -> None:
+    machine = TurnStateMachine(initial=TurnState.PAUSED)
+    assert machine.transition(TurnEvent.QUIT_TO_START) is TurnState.START
+
+
+@pytest.mark.parametrize("state", [TurnState.SUMMON, TurnState.PLAYER_PHASE])
+def test_back_and_quit_are_refused_elsewhere(state: TurnState) -> None:
+    machine = TurnStateMachine(initial=state)
+    assert not machine.can(TurnEvent.BACK_TO_START)
+    assert not machine.can(TurnEvent.QUIT_TO_START)

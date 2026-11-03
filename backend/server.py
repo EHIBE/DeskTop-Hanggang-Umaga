@@ -19,18 +19,22 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
 from capture.calibration import CalibrationError
-from capture.camera import CameraError
+from capture.camera import CameraError, list_microphones
 from capture.recorder import Recorder, find_ffmpeg
 from config import STREAM_FPS, AppSettings, load_settings
-from db.store import Campaign, NotFoundError, Store, StoreError
+from db.store import Campaign, NotFoundError, SettingValue, Store, StoreError
 from game.night import (
     STATE_CHANGED,
+    CommandFallback,
+    ConfirmView,
     FinalScore,
     FramePump,
     GameController,
     GameError,
+    MapView,
     NightView,
     PipelineFactory,
+    ProgressionView,
     RecorderFactory,
     ReplayRunner,
     SegmenterFactory,
@@ -39,16 +43,23 @@ from game.night import (
     UnitView,
     VoiceFactory,
 )
+from game.preferences import mic_index
+from gm.glimmer import glimmer_from_env
 from gm.narrator import LineBank, NarrationService, SparkNarrator
+from gm.recap import Recap, RecapBuilder, SparkRecapWriter
 from gm.schemas import ContentFilter
 from meta_client import CostMeter, MetaClient, create_openai_client
 from replay.render import ReelRequest, ReelResult, make_reel
+from rules.progression import Badge
 from rules.resolve import Action
 from rules.units import Difficulty
 from state import Broadcast, EncodedFrame, LiveState
+from vision.barrio_map import BarrioMapService
 from vision.sam import SamSegmenter, SamVideoTracker, Segmenter, TrackerOnlySegmenter
 from vision.sprites import MuseImageGenerator, PlaceholderGenerator, SpriteService
 from vision.summon import FallbackDetector, SparkDetector, SummonPipeline
+from voice.fallback import parse_with_spark
+from voice.grammar import Command, GrammarContext
 from voice.session import (
     Caption,
     SoundDeviceMicrophone,
@@ -84,7 +95,7 @@ class CampaignListMessage(ClientModel):
 
 class NewCampaign(ClientModel):
     name: Annotated[str, Field(min_length=1, max_length=40)]
-    difficulty: Difficulty
+    difficulty: Difficulty | None = None
 
 
 class CampaignStartExisting(ClientModel):
@@ -251,6 +262,61 @@ class DemoSafeSamMessage(ClientModel):
     on: bool
 
 
+SettingKey = Literal[
+    "camera_device",
+    "mic_device",
+    "caption_language",
+    "difficulty",
+    "replay_enabled",
+    "tts_enabled",
+    "show_real_objects",
+    "strict_ownership",
+    "generated_map",
+]
+
+
+class SettingsGetMessage(ClientModel):
+    type: Literal["settings.get"]
+
+
+class SettingsSetMessage(ClientModel):
+    type: Literal["settings.set"]
+    key: SettingKey
+    value: bool | int | Annotated[str, Field(min_length=1, max_length=200)]
+
+
+class BadgePickMessage(ClientModel):
+    type: Literal["badge.pick"]
+    unit_id: UnitGameId
+    badge: Badge
+
+
+class ConfirmAcceptMessage(ClientModel):
+    type: Literal["confirm.accept"]
+    confirm_id: Annotated[str, Field(min_length=36, max_length=36)]
+
+
+class ConfirmCancelMessage(ClientModel):
+    type: Literal["confirm.cancel"]
+    confirm_id: Annotated[str, Field(min_length=36, max_length=36)]
+
+
+class MapGetMessage(ClientModel):
+    type: Literal["map.get"]
+
+
+class CropsGetMessage(ClientModel):
+    type: Literal["crops.get"]
+
+
+class PauseQuitMessage(ClientModel):
+    type: Literal["pause.quit"]
+
+
+class CalibrateBackMessage(ClientModel):
+    type: Literal["calibrate.back"]
+
+
 ClientMessage = (
     CampaignListMessage
     | CampaignStartExisting
@@ -283,6 +349,15 @@ ClientMessage = (
     | ReplayRequestMessage
     | VoiceModeMessage
     | VoiceRetryMessage
+    | SettingsGetMessage
+    | SettingsSetMessage
+    | BadgePickMessage
+    | ConfirmAcceptMessage
+    | ConfirmCancelMessage
+    | MapGetMessage
+    | CropsGetMessage
+    | PauseQuitMessage
+    | CalibrateBackMessage
 )
 CLIENT_MESSAGE: Final = TypeAdapter[ClientMessage](ClientMessage)
 
@@ -312,11 +387,21 @@ def build_services(settings: AppSettings) -> Services:
     sdk = None if settings.api_key is None else create_openai_client(settings.api_key)
     meta = MetaClient(sdk, CostMeter(store))
     broadcast = Broadcast()
+    line_bank = LineBank()
     controller: GameController | None = None
 
     def log_invalid(reason: str) -> None:
         if controller is not None:
             controller.log_invalid(reason)
+
+    def selected_mic() -> int | None:
+        value = None if controller is None else controller.settings()["mic_device"]
+        names = (
+            {m.name: m.index for m in list_microphones()}
+            if isinstance(value, str) and value != "default" and not value.isdigit()
+            else {}
+        )
+        return mic_index(value, names)
 
     controller = GameController(
         store,
@@ -327,12 +412,16 @@ def build_services(settings: AppSettings) -> Services:
         sprite_service_factory=build_sprite_factory(store, meta),
         segmenter_factory=build_segmenter_factory(meta),
         broadcast=broadcast,
-        narration=build_narration(meta, content, log_invalid),
-        voice_factory=build_voice_factory(settings.api_key, meta.meter),
+        narration=build_narration(meta, content, log_invalid, line_bank),
+        voice_factory=build_voice_factory(settings.api_key, meta.meter, selected_mic),
         clean_name=content.clean_player_name,
         recorder_factory=build_recorder_factory(ffmpeg),
         replay_runner=build_replay_runner(meta),
         ffmpeg=ffmpeg,
+        line_bank=line_bank,
+        recap_builder=build_recap_builder(meta, content, log_invalid, line_bank),
+        map_service=BarrioMapService(meta, settings.data_dir / "maps"),
+        command_fallback=build_command_fallback(meta),
     )
     pump = FramePump(controller, live)
 
@@ -366,10 +455,34 @@ def build_pipeline_factory(
     return factory
 
 
+def build_recap_builder(
+    meta: MetaClient,
+    content: ContentFilter,
+    log_invalid: Callable[[str], None],
+    line_bank: LineBank,
+) -> RecapBuilder:
+    spark = (
+        SparkRecapWriter(meta, content, log_invalid) if meta.has_credentials else None
+    )
+    glimmer = glimmer_from_env(content, log_usage=meta.meter.record)
+    return RecapBuilder(line_bank, content, spark, glimmer)
+
+
+def build_command_fallback(meta: MetaClient) -> CommandFallback:
+    async def fallback(
+        text: str, context: GrammarContext, is_demo_safe: bool
+    ) -> Command | None:
+        return await parse_with_spark(meta, text, context, is_demo_safe=is_demo_safe)
+
+    return fallback
+
+
 def build_narration(
-    meta: MetaClient, content: ContentFilter, log_invalid: Callable[[str], None]
+    meta: MetaClient,
+    content: ContentFilter,
+    log_invalid: Callable[[str], None],
+    line_bank: LineBank,
 ) -> NarrationService:
-    line_bank = LineBank()
     if not meta.has_credentials:
         return NarrationService(line_bank)
     return NarrationService(
@@ -393,7 +506,9 @@ def build_recorder_factory(ffmpeg: str | None) -> RecorderFactory:
     return factory
 
 
-def build_voice_factory(api_key: str | None, meter: CostMeter) -> VoiceFactory | None:
+def build_voice_factory(
+    api_key: str | None, meter: CostMeter, mic_device: Callable[[], int | None]
+) -> VoiceFactory | None:
     if api_key is None:
         return None
     key = api_key
@@ -408,7 +523,7 @@ def build_voice_factory(api_key: str | None, meter: CostMeter) -> VoiceFactory |
         return VoiceSession(
             key,
             keywords,
-            lambda: SoundDeviceMicrophone(None),
+            lambda: SoundDeviceMicrophone(mic_device()),
             WebsocketsConnector(),
             on_caption,
             on_final,
@@ -500,6 +615,9 @@ def unit_json(unit: UnitView) -> JsonObject:
         "y_cm": unit.y_cm,
         "rerolls_left": unit.rerolls_left,
         "sprite_png": unit.sprite_png,
+        "returning": unit.is_returning,
+        "badges": list(unit.badges),
+        "scars": unit.scars,
     }
 
 
@@ -523,6 +641,10 @@ def night_json(night: NightView) -> JsonObject:
                 "range_cm": u.range_cm,
                 "owner": u.owner,
                 "status": list(u.status),
+                "badges": list(u.badges),
+                "scars": u.scars,
+                "cooldown_cut": u.cooldown_cut,
+                "smoked": u.is_smoked,
             }
             for u in night.units
         ],
@@ -561,6 +683,59 @@ def night_json(night: NightView) -> JsonObject:
             for e in night.effects
         ],
         "effect_seconds_left": night.effect_seconds_left,
+        "smoke": [
+            {
+                "source_id": c.source_id,
+                "x_cm": c.x_cm,
+                "y_cm": c.y_cm,
+                "radius_cm": c.radius_cm,
+            }
+            for c in night.smoke
+        ],
+    }
+
+
+def progression_json(view: ProgressionView) -> JsonObject:
+    return {
+        "barrio_level": view.barrio_level,
+        "nights_survived": view.nights_survived,
+        "badge_offers": [
+            {"unit_id": o.unit_id, "choices": list(o.choices)}
+            for o in view.badge_offers
+        ],
+    }
+
+
+def confirm_json(view: ConfirmView) -> JsonObject:
+    return {
+        "confirm_id": view.confirm_id,
+        "unit_id": view.unit_id,
+        "unit_name": view.unit_name,
+        "owner": view.owner,
+        "speaker": view.speaker,
+        "action": view.action,
+        "target_id": view.target_id,
+        "text_tl": view.text_tl,
+        "text_en": view.text_en,
+        "seconds_left": view.seconds_left,
+    }
+
+
+def map_json(view: MapView) -> JsonObject:
+    return {
+        "enabled": view.is_enabled,
+        "ready": view.is_ready,
+        "working": view.is_working,
+    }
+
+
+def settings_json(
+    values: dict[str, SettingValue], is_tts_available: bool
+) -> JsonObject:
+    return {
+        "type": "settings",
+        "values": dict(values),
+        "tts_available": is_tts_available,
     }
 
 
@@ -610,7 +785,21 @@ def state_json(snapshot: Snapshot) -> JsonObject:
         },
         "night": None if snapshot.night is None else night_json(snapshot.night),
         "score": None if snapshot.score is None else score_json(snapshot.score),
+        "settings": dict(snapshot.settings),
+        "tts_available": snapshot.tts_available,
+        "progression": None
+        if snapshot.progression is None
+        else progression_json(snapshot.progression),
+        "recap": None if snapshot.recap is None else recap_json(snapshot.recap),
+        "pending_confirm": None
+        if snapshot.pending_confirm is None
+        else confirm_json(snapshot.pending_confirm),
+        "map": map_json(snapshot.map),
     }
+
+
+def recap_json(recap: Recap) -> JsonObject:
+    return dict(recap.to_dict())
 
 
 def card_json(unit: UnitView) -> JsonObject:
@@ -780,9 +969,47 @@ class Connection:
                 controller.start_new_campaign, message.new.name, message.new.difficulty
             )
             return None
+        if isinstance(message, SettingsGetMessage):
+            return settings_json(
+                controller.settings(), controller.snapshot().tts_available
+            )
+        if isinstance(message, SettingsSetMessage):
+            if message.key == "camera_device":
+                await asyncio.to_thread(
+                    controller.set_setting, message.key, message.value
+                )
+            else:
+                controller.set_setting(message.key, message.value)
+            return settings_json(
+                controller.settings(), controller.snapshot().tts_available
+            )
+        if isinstance(message, BadgePickMessage):
+            controller.pick_badge(message.unit_id, message.badge)
+            return None
+        if isinstance(message, ConfirmAcceptMessage):
+            controller.confirm_order(message.confirm_id, True)
+            return None
+        if isinstance(message, ConfirmCancelMessage):
+            controller.confirm_order(message.confirm_id, False)
+            return None
+        if isinstance(message, MapGetMessage):
+            png = await asyncio.to_thread(controller.map_png)
+            if png is None:
+                raise GameError("map.none")
+            return {"type": "map", "png": png}
+        if isinstance(message, CropsGetMessage):
+            crops = await asyncio.to_thread(controller.crops)
+            return {"type": "crops", "crops": crops}
+        if isinstance(message, PauseQuitMessage):
+            controller.quit_paused()
+            return None
+        if isinstance(message, CalibrateBackMessage):
+            controller.back_to_start()
+            return None
         if isinstance(message, CampaignStartExisting):
             await asyncio.to_thread(controller.continue_campaign, message.campaign_id)
-            return None
+            recap = controller.snapshot().recap
+            return None if recap is None else {"type": "recap", **recap_json(recap)}
         if isinstance(message, CameraSelectMessage):
             await asyncio.to_thread(controller.select_camera, message.index)
             return None
@@ -880,6 +1107,7 @@ async def recover_forever(controller: GameController) -> None:
         try:
             controller.enforce_claim_timeout()
             controller.enforce_effects()
+            controller.enforce_confirm_timeout()
         except GameError:
             logger.warning("timed night step skipped")
         except Exception:
@@ -902,6 +1130,7 @@ def create_app(
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         services = services_factory(settings)
+        services.controller.bind_loop(asyncio.get_running_loop())
         services.pump.start()
         holder["services"] = services
         recovery = asyncio.create_task(recover_forever(services.controller))

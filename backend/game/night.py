@@ -9,12 +9,12 @@ import re
 import threading
 import time
 import uuid
-from collections.abc import Awaitable, Callable, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Coroutine, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from decimal import Decimal
 from enum import StrEnum
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
 import cv2
 import numpy as np
@@ -44,8 +44,10 @@ from capture.recorder import Recorder, RecorderError
 from capture.tracker import TrackedPose, TrackerSet
 from config import (
     CAMERA_PICTURE_WAIT_S,
+    COMMAND_FALLBACK_TIMEOUT_S,
     HANDS_OFF_WAIT_S,
     NIGHT_COST_ALERT_USD,
+    ORDER_CONFIRM_TIMEOUT_S,
     PHYSICAL_EFFECT_TIMEOUT_S,
     PUSH_COMPLIANCE_CM,
     REANCHOR_BOX_PADDING,
@@ -58,21 +60,44 @@ from config import (
     VOICE_CLAIM_TIMEOUT_S,
 )
 from db.store import (
+    SETTING_DEFAULTS,
     Campaign,
     CardFields,
     EnemySave,
     NightRecord,
     SavedNight,
+    SettingValue,
     SignatureFields,
     Store,
     StoreError,
     UnitPlacement,
+    UnitProgress,
     UnitRecord,
     UnitSave,
 )
 from game.demo_safe import DemoSafeMode
-from game.state_machine import Transition, TurnEvent, TurnState, TurnStateMachine
+from game.preferences import (
+    CAMERA_INDEX_MAX,
+    TTS_AVAILABLE,
+    difficulty_from_setting,
+)
+from game.progress import (
+    SCAR_LIMIT,
+    badge_label,
+    badge_values,
+    effective_stats,
+    next_badge_id,
+    progress_unit,
+)
+from game.state_machine import (
+    IllegalTransitionError,
+    Transition,
+    TurnEvent,
+    TurnState,
+    TurnStateMachine,
+)
 from gm.narrator import (
+    LineBank,
     Narration,
     NarrationEnemy,
     NarrationPhase,
@@ -80,11 +105,28 @@ from gm.narrator import (
     NarrationService,
     NarrationUnit,
 )
+from gm.recap import (
+    NightSummary,
+    Recap,
+    RecapBuilder,
+    RecapError,
+    RecapOutcome,
+    RecapUnit,
+    restore_recap_names,
+)
 from meta_client import CostMeter, MetaError
 from replay.highlights import ReplayError, TurnLogRow
 from replay.render import ReelRequest, ReelResult
 from rules.enemies import EnemyType, Part, enemy_stats
 from rules.geometry import Hull, Point, is_move_legal
+from rules.lost import FOUND_COPY_KEY, LOST_COPY_KEY, update_lost
+from rules.progression import (
+    Badge,
+    ProgressionError,
+    apply_badge,
+    barrio_level,
+    offer_badges,
+)
 from rules.resolve import (
     TURNS_PER_NIGHT,
     Action,
@@ -120,6 +162,9 @@ from rules.units import (
     clamp_card,
 )
 from state import Broadcast, EncodedFrame, FrameView, LiveState, Pose
+from vision.barrio_map import BarrioMapService
+from vision.returning import StoredSignature as ReturningSignature
+from vision.returning import match_returning
 from vision.sam import (
     Anchor,
     ObjectMask,
@@ -134,7 +179,7 @@ from vision.sam import (
     pad_box,
     reanchor,
 )
-from vision.signature import SignatureError, bhattacharyya, histogram
+from vision.signature import Signature, SignatureError, bhattacharyya, histogram
 from vision.sprites import (
     FALLBACK_SUBJECT,
     SpriteError,
@@ -159,6 +204,7 @@ from voice.grammar import (
     GrammarUnit,
     parse_command,
 )
+from voice.ownership import check_ownership
 from voice.session import Caption, VoiceMode, VoiceSession, VoiceStatus
 
 logger = logging.getLogger("desktop.game")
@@ -185,7 +231,7 @@ Image = npt.NDArray[np.uint8]
 
 FIRST_FRAME_TIMEOUT_S: Final = 3.0
 FIRST_FRAME_POLL_S: Final = 0.05
-CAMERA_SETTING: Final = "camera_index"
+CAMERA_PREFERENCE: Final = "camera_device"
 REROLLS_FLAG: Final = "rerolls"
 SETUP_TURN: Final = 0
 SUMMON_PHASE: Final = "SUMMON"
@@ -229,6 +275,61 @@ class NightUnitView:
     range_cm: float
     owner: str | None
     status: tuple[str, ...] = ()
+    badges: tuple[str, ...] = ()
+    scars: int = 0
+    cooldown_cut: int = 0
+    is_smoked: bool = False
+
+
+@dataclass(frozen=True)
+class SmokeView:
+    source_id: str
+    x_cm: float
+    y_cm: float
+    radius_cm: float
+
+
+@dataclass(frozen=True)
+class OfferView:
+    unit_id: str
+    choices: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ProgressionView:
+    barrio_level: int
+    nights_survived: int
+    badge_offers: tuple[OfferView, ...] = ()
+
+
+@dataclass(frozen=True)
+class ConfirmView:
+    confirm_id: str
+    unit_id: str
+    unit_name: str
+    owner: str
+    speaker: str | None
+    action: str
+    target_id: str | None
+    text_tl: str
+    text_en: str
+    seconds_left: int
+
+
+@dataclass(frozen=True)
+class MapView:
+    is_enabled: bool = False
+    is_ready: bool = False
+    is_working: bool = False
+
+
+@dataclass(frozen=True)
+class PendingConfirm:
+    confirm_id: str
+    command: Command
+    speaker: str | None
+    owner: str
+    started: float
 
 
 @dataclass(frozen=True)
@@ -269,6 +370,7 @@ class NightView:
     kubo_hp_max: int
     effects: tuple[PhysicalEffect, ...] = ()
     effect_seconds_left: int = 0
+    smoke: tuple[SmokeView, ...] = ()
 
 
 class GameError(Exception):
@@ -289,9 +391,13 @@ class UnitView:
     y_cm: float
     rerolls_left: int
     sprite_png: str | None = None
+    badges: tuple[str, ...] = ()
+    scars: int = 0
+    is_returning: bool = False
 
 
 PipelineFactory = Callable[[bool], SummonPipeline]
+CommandFallback = Callable[[str, GrammarContext, bool], Awaitable[Command | None]]
 SpriteServiceFactory = Callable[[bool], SpriteService]
 SegmenterFactory = Callable[[bool], Segmenter]
 NO_MATCH_DISTANCE: Final = float("inf")
@@ -355,6 +461,12 @@ class Snapshot:
     voice: VoiceView = VoiceView(VoiceStatus.OFF.value, VoiceMode.OPEN.value, False)
     night: NightView | None = None
     score: FinalScore | None = None
+    settings: Mapping[str, SettingValue] = field(default_factory=dict)
+    tts_available: bool = TTS_AVAILABLE
+    progression: ProgressionView | None = None
+    recap: Recap | None = None
+    pending_confirm: ConfirmView | None = None
+    map: MapView = MapView()
 
 
 @dataclass(frozen=True)
@@ -407,7 +519,26 @@ class GameController:
         recorder_factory: RecorderFactory | None = None,
         replay_runner: ReplayRunner | None = None,
         ffmpeg: str | None = None,
+        line_bank: LineBank | None = None,
+        recap_builder: RecapBuilder | None = None,
+        map_service: BarrioMapService | None = None,
+        command_fallback: CommandFallback | None = None,
     ) -> None:
+        self._line_bank = line_bank
+        self._recap_builder = recap_builder
+        self._map_service = map_service
+        self._command_fallback = command_fallback
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._bg_tasks: set[asyncio.Task[None]] = set()
+        self._fallback_tasks: set[asyncio.Task[None]] = set()
+        self._prefs: dict[str, SettingValue] = store.all_preferences()
+        self._progress: dict[str, UnitProgress] = {}
+        self._returning: set[str] = set()
+        self._offers: dict[str, tuple[Badge, ...]] = {}
+        self._is_finalized = False
+        self._recap: Recap | None = None
+        self._confirm: PendingConfirm | None = None
+        self._is_map_working = False
         self._replay_runner = replay_runner
         self._ffmpeg = ffmpeg
         self._recorder_factory = recorder_factory
@@ -501,13 +632,20 @@ class GameController:
                 replay_status=self._replay_status,
                 replay_file=self._replay_file,
                 can_replay=self._last_sidecar is not None
-                and self._replay_runner is not None,
+                and self._replay_runner is not None
+                and bool(self._prefs["replay_enabled"]),
                 consents=tuple(self._consents.items()),
                 voice=VoiceView(
                     self._voice_status.value, self._voice_mode.value, self._is_ptt_down
                 ),
                 night=self._night_view(),
                 score=None if self._session is None else self._session.final_score,
+                settings=self.settings(),
+                tts_available=TTS_AVAILABLE,
+                progression=self._progression_view(),
+                recap=self._recap,
+                pending_confirm=self._confirm_view(),
+                map=self._map_view(),
             )
 
     def _phase(self) -> AppPhase:
@@ -534,6 +672,7 @@ class GameController:
                 current = poses.get(unit.id, unit.position)
                 move_cm = MOVE_CM[unit.move]
                 legal = unit.is_kubo or is_move_legal(unit.start, current, move_cm)
+                progress = self._progress_for_game_id(unit.id)
                 units.append(
                     NightUnitView(
                         game_id=unit.id,
@@ -547,6 +686,10 @@ class GameController:
                         range_cm=RANGE_CM[unit.range],
                         owner=unit.owner,
                         status=unit_status_tags(unit),
+                        badges=badge_values(progress.badges),
+                        scars=len(progress.scars),
+                        cooldown_cut=unit.cooldown_cut,
+                        is_smoked=any(c.covers_hull(unit.hull) for c in board.smoke),
                     )
                 )
                 if unit.is_kubo:
@@ -598,6 +741,114 @@ class GameController:
             )
             if session.effects
             else 0,
+            smoke=()
+            if board is None
+            else tuple(
+                SmokeView(c.source_id, c.center[0], c.center[1], c.radius_cm)
+                for c in board.smoke
+            ),
+        )
+
+    def _progress_for_game_id(self, game_id: str) -> UnitProgress:
+        for unit in self._units:
+            if game_id_for(unit.sam_object_id) == game_id:
+                return self._progress.get(unit.unit_id, UnitProgress((), ()))
+        return UnitProgress((), ())
+
+    def _progression_view(self) -> ProgressionView | None:
+        campaign = self._campaign
+        if campaign is None:
+            return None
+        return ProgressionView(
+            barrio_level=campaign.barrio_level,
+            nights_survived=campaign.nights_survived,
+            badge_offers=tuple(
+                OfferView(game_id, tuple(b.value for b in choices))
+                for game_id, choices in self._offers.items()
+            ),
+        )
+
+    def _map_view(self) -> MapView:
+        is_enabled = bool(self._prefs["generated_map"])
+        service = self._map_service
+        campaign = self._campaign
+        is_ready = (
+            is_enabled
+            and service is not None
+            and campaign is not None
+            and service.cached_map(campaign.id) is not None
+        )
+        return MapView(is_enabled, is_ready, self._is_map_working)
+
+    def _confirm_view(self) -> ConfirmView | None:
+        pending = self._confirm
+        session = self._session
+        if pending is None or session is None:
+            return None
+        if session.state is not TurnState.PLAYER_PHASE:
+            return None
+        command = pending.command
+        unit_id = command.unit_id or ""
+        name = self._name_of_game_id(unit_id)
+        text = self._fill_moment(
+            "ownership_confirm",
+            pending.confirm_id,
+            {"player": pending.owner, "unit": name},
+        )
+        if text is None:
+            text = (
+                f"Kay {pending.owner} ang {name}. Ituloy?",
+                f"{name} belongs to {pending.owner}. Go ahead?",
+            )
+        left = ORDER_CONFIRM_TIMEOUT_S - (self._clock() - pending.started)
+        return ConfirmView(
+            confirm_id=pending.confirm_id,
+            unit_id=unit_id,
+            unit_name=name,
+            owner=pending.owner,
+            speaker=pending.speaker,
+            action=command.kind.value,
+            target_id=command.target_id,
+            text_tl=text[0],
+            text_en=text[1],
+            seconds_left=max(0, math.ceil(left)),
+        )
+
+    def _name_of_game_id(self, game_id: str) -> str:
+        for unit in self._units:
+            if game_id_for(unit.sam_object_id) == game_id:
+                return unit.card.name
+        return game_id
+
+    def _fill_moment(
+        self, moment: str, seed: str, values: Mapping[str, str]
+    ) -> tuple[str, str] | None:
+        bank = self._line_bank
+        if bank is None or moment not in bank.moments:
+            return None
+        tl, en, _ = bank.fill(moment, seed, values)
+        return tl, en
+
+    def emit_moment(
+        self,
+        moment: str,
+        seed: str,
+        values: Mapping[str, str],
+        unit_id: str | None = None,
+    ) -> None:
+        bank = self._line_bank
+        if bank is None or self._broadcast is None or moment not in bank.moments:
+            return
+        tl, en, mood = bank.fill(moment, seed, values)
+        self._broadcast.publish(
+            {
+                "type": "moment",
+                "moment": moment,
+                "text_tl": tl,
+                "text_en": en,
+                "mood": mood.value,
+                "unit_id": unit_id,
+            }
         )
 
     def _notify(self, copy_key: str, params: dict[str, str]) -> None:
@@ -632,6 +883,7 @@ class GameController:
             (self._area.width_cm, self._area.height_cm),
             self._notify,
             self._clock,
+            self._progress,
         )
         self._stop_narration()
         if saved is not None:
@@ -670,6 +922,7 @@ class GameController:
         result = self._run_session(lambda: session.restore(saved, poses, sizes, owners))
         self._session = session
         self._resume_turn = None
+        self._clear_recap()
         self._seed_boxes_from_board(session)
         self._notify("restore", {})
         self._publish_events(result)
@@ -692,8 +945,9 @@ class GameController:
         session = self._session_or_error()
         poses = {pose.id: (pose.x_cm, pose.y_cm) for pose in self._pose_list()}
         sizes = self._unit_sizes()
-        is_agreed = self.is_recording_agreed
+        is_agreed = self.is_recording_agreed and bool(self._prefs["replay_enabled"])
         result = self._run_session(lambda: session.finish_claims(poses, sizes))
+        self._clear_recap()
         night = self._night
         if night is not None:
             try:
@@ -730,6 +984,7 @@ class GameController:
     async def end_turn(self) -> None:
         session = self._session_or_error()
         self._run_session(session.start_end_turn)
+        self._confirm = None
         try:
             frame = await asyncio.to_thread(self.wait_for_still_frame)
             if frame is None:
@@ -777,10 +1032,12 @@ class GameController:
         telegraph: tuple[Event, ...],
     ) -> None:
         if session.state is TurnState.SUNRISE:
+            self._finalize_night(session, RecapOutcome.SUNRISE)
             self._narrate(NarrationPhase.SUNRISE, events)
             self._stop_voice()
             self._stop_recording()
         elif session.state is TurnState.DEFEAT:
+            self._finalize_night(session, RecapOutcome.DEFEAT)
             self._narrate(NarrationPhase.DEFEAT, events)
             self._stop_voice()
             self._stop_recording()
@@ -855,6 +1112,35 @@ class GameController:
                     "events": [event_json(e) for e in result.telegraph],
                 }
             )
+        self._emit_event_moments(turn, (*result.events, *result.telegraph))
+
+    def _emit_event_moments(self, turn: int, events: Sequence[Event]) -> None:
+        session = self._session
+        board = None if session is None else session.board
+        seed = f"{turn}"
+        is_smoke_sent = False
+        for event in events:
+            if event.type is EventType.SMOKE and not is_smoke_sent:
+                is_smoke_sent = True
+                self.emit_moment("kapre_smoke_telegraph", seed, {})
+            elif event.type is EventType.LOST and event.src is not None:
+                name = self._name_of_game_id(event.src)
+                self.emit_moment("unit_lost", seed, {"unit": name}, event.src)
+            elif event.type in (EventType.FOUND, EventType.RETURN):
+                target = event.src if event.type is EventType.FOUND else event.dst
+                if target is not None:
+                    name = self._name_of_game_id(target)
+                    self.emit_moment("unit_returned", seed, {"unit": name}, target)
+        if is_smoke_sent and board is not None:
+            for unit in board.units:
+                if (
+                    not unit.is_down
+                    and not unit.is_kubo
+                    and any(c.covers_hull(unit.hull) for c in board.smoke)
+                ):
+                    name = self._name_of_game_id(unit.id)
+                    self.emit_moment("kapre_smoke_hit", seed, {"unit": name}, unit.id)
+                    break
 
     def _is_camera_moved(self, warped: Image) -> bool:
         baseline = self._baseline
@@ -869,6 +1155,7 @@ class GameController:
     def pause_night(self) -> None:
         session = self._session_or_error()
         self._run_session(session.pause)
+        self._confirm = None
         self._stop_voice()
 
     def resume_night(self, is_forced: bool) -> None:
@@ -902,9 +1189,32 @@ class GameController:
         session = self._session_or_error()
         if session.state not in (TurnState.SUNRISE, TurnState.DEFEAT):
             raise GameError("cmd.unknown")
+        self._leave_campaign()
+
+    def quit_paused(self) -> None:
+        session = self._session_or_error()
+        if session.state is not TurnState.PAUSED:
+            raise GameError("cmd.unknown")
+        self._run_session(session.quit)
+        self._leave_campaign()
+
+    def back_to_start(self) -> None:
+        if self._session is not None or self._campaign is None:
+            raise GameError("cmd.unknown")
+        machine = TurnStateMachine(TurnState(self._phase().value))
+        try:
+            machine.transition(TurnEvent.BACK_TO_START)
+        except IllegalTransitionError as error:
+            raise GameError("cmd.unknown") from error
+        self._leave_campaign()
+
+    def _leave_campaign(self) -> None:
         self._stop_narration()
         self._reset_replay()
         self._session = None
+        self._confirm = None
+        self._offers = {}
+        self._recap = None
         with self._lock:
             self._campaign = None
             self._night = None
@@ -912,6 +1222,8 @@ class GameController:
             self._boxes = {}
             self._is_calibrated = False
             self._calibration = None
+            self._is_stored_calibration = False
+            self._pending = None
 
     def list_campaigns(self) -> list[Campaign]:
         return self._store.list_campaigns()
@@ -925,6 +1237,8 @@ class GameController:
             raise GameError("delete.failed") from error
         if not is_deleted:
             raise GameError("cmd.unknown")
+        if self._map_service is not None:
+            self._map_service.delete_map(campaign_id)
         self._notify("delete.done", {})
 
     def devices(self) -> Devices:
@@ -933,12 +1247,21 @@ class GameController:
             microphones=tuple(self._list_microphones()),
         )
 
-    def start_new_campaign(self, name: str, difficulty: Difficulty) -> None:
-        campaign = self._store.create_campaign(name.strip(), difficulty)
+    def start_new_campaign(
+        self, name: str, difficulty: Difficulty | None = None
+    ) -> None:
+        chosen = (
+            difficulty
+            if difficulty is not None
+            else difficulty_from_setting(self._prefs["difficulty"])
+        )
+        campaign = self._store.create_campaign(name.strip(), chosen)
         self._enter_campaign(campaign)
 
     def continue_campaign(self, campaign_id: str) -> None:
-        self._enter_campaign(self._store.get_campaign(campaign_id))
+        campaign = self._store.get_campaign(campaign_id)
+        self._enter_campaign(campaign)
+        self._load_recap(campaign.id)
 
     def _enter_campaign(self, campaign: Campaign) -> None:
         session = self._session
@@ -949,6 +1272,9 @@ class GameController:
             raise GameError("cmd.unknown")
         self._stop_narration()
         self._session = None
+        self._recap = None
+        self._confirm = None
+        self._offers = {}
         with self._lock:
             self._campaign = campaign
             self._calibration = None
@@ -994,7 +1320,7 @@ class GameController:
                 raise GameError("cam.black")
             self._camera = camera
             self._camera_info = CameraInfo(index=index, width=width, height=height)
-            self._store.set_setting(CAMERA_SETTING, str(index))
+            self._remember_preference(CAMERA_PREFERENCE, index)
             if self._is_stored_calibration and not self._is_calibrated:
                 self._check_stored_calibration()
 
@@ -1101,6 +1427,11 @@ class GameController:
         )
         self._is_night_alerted = False
         self._units = self._store.night_units(self._night.id)
+        self._load_progress()
+        self._returning = set()
+        self._offers = {}
+        self._is_finalized = False
+        self._confirm = None
         saved = (
             None
             if self._session is not None
@@ -1117,6 +1448,7 @@ class GameController:
         self._is_tracker_dirty = True
         self._poses = {}
         self._uncertain = set()
+        self._schedule_map()
 
     def _absent_sam_ids(self) -> set[int]:
         session = self._session
@@ -1172,6 +1504,7 @@ class GameController:
 
     def _unit_view(self, unit: UnitRecord) -> UnitView:
         used = self._rerolled().count(unit.unit_id)
+        progress = self._progress.get(unit.unit_id, UnitProgress((), ()))
         return UnitView(
             game_id=game_id_for(unit.sam_object_id),
             unit_id=unit.unit_id,
@@ -1182,6 +1515,9 @@ class GameController:
             y_cm=unit.y_cm,
             rerolls_left=max(0, REROLLS_PER_UNIT - used),
             sprite_png=self._sprite_b64(unit),
+            badges=badge_values(progress.badges),
+            scars=len(progress.scars),
+            is_returning=unit.unit_id in self._returning,
         )
 
     def log_invalid(self, reason: str) -> None:
@@ -1335,7 +1671,8 @@ class GameController:
         night = self._night
         campaign = self._campaign
         if (
-            factory is None
+            not self._prefs["replay_enabled"]
+            or factory is None
             or night is None
             or campaign is None
             or self._recorder is not None
@@ -1432,6 +1769,8 @@ class GameController:
         runner = self._replay_runner
         if session.state not in (TurnState.SUNRISE, TurnState.DEFEAT) or night is None:
             raise GameError("cmd.unknown")
+        if not self._prefs["replay_enabled"]:
+            raise GameError("replay.off")
         if sidecar is None or runner is None:
             raise GameError("replay.none")
         if not self._store.recording_consent(night.id):
@@ -1557,13 +1896,17 @@ class GameController:
         voice = self._voice
         self._voice = None
         self._is_ptt_down = False
+        self._confirm = None
+        for task in list(self._fallback_tasks):
+            task.cancel()
         if voice is not None:
             voice.stop()
         self._voice_status = VoiceStatus.OFF
 
     async def wait_for_voice_end_turns(self) -> None:
-        if self._voice_turns:
-            await asyncio.gather(*self._voice_turns, return_exceptions=True)
+        pending = (*self._voice_turns, *self._fallback_tasks)
+        if pending:
+            await asyncio.gather(*pending, return_exceptions=True)
 
     async def wait_for_voice(self) -> None:
         if self._voice_tasks:
@@ -1645,6 +1988,13 @@ class GameController:
                 ):
                     self._push_state()
                     return
+                if (
+                    command is None
+                    and context is not None
+                    and self._start_fallback(session, caption, context)
+                ):
+                    self._push_state()
+                    return
                 self._apply_voice_command(
                     session, command, self._speaker_name(caption.speaker)
                 )
@@ -1705,6 +2055,25 @@ class GameController:
         if command.unit_id is None:
             self._notify("cmd.unknown", {})
             return
+        decision = check_ownership(
+            strict=bool(self._prefs["strict_ownership"]),
+            speaker=speaker if speaker in session.players else None,
+            owner=session.owner_of(command.unit_id),
+            command=command,
+        )
+        if not decision.is_accepted and decision.owner is not None:
+            self._confirm = PendingConfirm(
+                str(uuid.uuid4()), command, speaker, decision.owner, self._clock()
+            )
+            return
+        self._add_voice_intent(session, command, speaker)
+
+    @staticmethod
+    def _add_voice_intent(
+        session: NightSession, command: Command, speaker: str | None
+    ) -> None:
+        if command.unit_id is None:
+            return
         session.add_intent(
             command.unit_id,
             Action(command.kind.value),
@@ -1712,6 +2081,75 @@ class GameController:
             VOICE_SOURCE,
             speaker,
         )
+
+    def _start_fallback(
+        self, session: NightSession, caption: Caption, context: GrammarContext
+    ) -> bool:
+        fallback = self._command_fallback
+        if fallback is None:
+            return False
+        self.enforce_budget()
+        if not self._demo_safe.allows_spark:
+            return False
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return False
+        task = loop.create_task(self._run_fallback(session, caption, context, fallback))
+        self._fallback_tasks.add(task)
+        task.add_done_callback(self._fallback_tasks.discard)
+        return True
+
+    async def _run_fallback(
+        self,
+        session: NightSession,
+        caption: Caption,
+        context: GrammarContext,
+        fallback: CommandFallback,
+    ) -> None:
+        speaker = self._speaker_name(caption.speaker)
+        try:
+            command = await asyncio.wait_for(
+                fallback(caption.text, context, False), COMMAND_FALLBACK_TIMEOUT_S
+            )
+        except (TimeoutError, MetaError, OSError, ValueError):
+            logger.warning("command fallback unavailable")
+            command = None
+        if self._session is not session or session.state is not TurnState.PLAYER_PHASE:
+            return
+        if command is not None and command.kind is CommandKind.END_TURN:
+            command = None
+        try:
+            self._apply_voice_command(session, command, speaker)
+        except SessionError as error:
+            self._notify(error.copy_key, error.params)
+        self._push_state()
+
+    def confirm_order(self, confirm_id: str, is_accepted: bool) -> None:
+        session = self._session_or_error()
+        pending = self._confirm
+        if (
+            pending is None
+            or pending.confirm_id != confirm_id
+            or session.state is not TurnState.PLAYER_PHASE
+        ):
+            raise GameError("cmd.unknown")
+        self._confirm = None
+        if not is_accepted:
+            return
+        self._run_session(
+            lambda: self._add_voice_intent(session, pending.command, pending.speaker)
+        )
+
+    def enforce_confirm_timeout(self) -> bool:
+        pending = self._confirm
+        if pending is None:
+            return False
+        if self._clock() - pending.started < ORDER_CONFIRM_TIMEOUT_S:
+            return False
+        self._confirm = None
+        self._push_state()
+        return True
 
     async def _voice_end_turn(self) -> None:
         try:
@@ -1742,6 +2180,351 @@ class GameController:
                 if e.is_alive
             ),
         )
+
+    def bind_loop(self, loop: asyncio.AbstractEventLoop) -> None:
+        self._loop = loop
+
+    def _spawn(self, coroutine: Coroutine[Any, Any, None]) -> bool:
+        try:
+            running = asyncio.get_running_loop()
+        except RuntimeError:
+            running = None
+        if running is not None:
+            task = running.create_task(coroutine)
+            self._bg_tasks.add(task)
+            task.add_done_callback(self._bg_tasks.discard)
+            return True
+        target = self._loop
+        if target is None or target.is_closed():
+            coroutine.close()
+            return False
+        asyncio.run_coroutine_threadsafe(coroutine, target)
+        return True
+
+    async def wait_for_background(self) -> None:
+        while self._bg_tasks:
+            await asyncio.gather(*self._bg_tasks, return_exceptions=True)
+
+    def settings(self) -> dict[str, SettingValue]:
+        values = dict(self._prefs)
+        values["tts_enabled"] = bool(values["tts_enabled"]) and TTS_AVAILABLE
+        return values
+
+    def default_difficulty(self) -> Difficulty:
+        return difficulty_from_setting(self._prefs["difficulty"])
+
+    def _remember_preference(self, key: str, value: SettingValue) -> None:
+        try:
+            self._store.set_preference(key, value)
+        except StoreError as error:
+            raise GameError("settings.invalid") from error
+        self._prefs[key] = value
+
+    def set_setting(self, key: str, value: SettingValue) -> None:
+        if key not in SETTING_DEFAULTS:
+            raise GameError("settings.invalid")
+        if key == CAMERA_PREFERENCE:
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, int)
+                or not 0 <= value <= CAMERA_INDEX_MAX
+            ):
+                raise GameError("settings.invalid")
+            session = self._session
+            if session is not None and session.state in VOICE_STATES:
+                raise GameError("cmd.unknown")
+            info = self._camera_info
+            if self._campaign is not None and (info is None or info.index != value):
+                self.select_camera(value)
+                return
+        self._remember_preference(key, value)
+        self._apply_preference(key)
+
+    def _apply_preference(self, key: str) -> None:
+        session = self._session
+        is_night = session is not None and session.state in VOICE_STATES
+        if key == "mic_device" and is_night and self._voice is not None:
+            self._stop_voice()
+            self._start_voice()
+        elif key == "replay_enabled" and not self._prefs["replay_enabled"]:
+            self._stop_recording()
+        elif key == "generated_map" and self._prefs["generated_map"]:
+            self._schedule_map()
+
+    def crops(self) -> dict[str, str]:
+        night = self._night
+        if night is None:
+            return {}
+        return {
+            unit_id: base64.b64encode(png).decode("ascii")
+            for unit_id, png in self._store.unit_crops(night.id).items()
+        }
+
+    def _load_progress(self) -> None:
+        self._progress = {
+            unit.unit_id: self._store.get_unit_progress(unit.unit_id)
+            for unit in self._units
+        }
+
+    def _clear_recap(self) -> None:
+        campaign = self._campaign
+        if self._recap is None or campaign is None:
+            return
+        self._recap = None
+        try:
+            self._store.clear_recap(campaign.id)
+        except StoreError:
+            logger.warning("recap could not be cleared")
+
+    def _load_recap(self, campaign_id: str) -> None:
+        saved = self._store.get_recap(campaign_id)
+        if saved is None:
+            return
+        try:
+            recap = Recap.from_json(saved.text)
+        except RecapError:
+            logger.warning("saved recap unreadable, dropping it")
+            self._store.clear_recap(campaign_id)
+            return
+        self._recap = recap
+
+    def pick_badge(self, game_id: str, badge: Badge) -> None:
+        session = self._session_or_error()
+        if session.state is not TurnState.SUNRISE:
+            raise GameError("cmd.unknown")
+        choices = self._offers.get(game_id)
+        record = next(
+            (u for u in self._units if game_id_for(u.sam_object_id) == game_id), None
+        )
+        if choices is None or badge not in choices or record is None:
+            raise GameError("cmd.unknown")
+        progress = self._progress.get(record.unit_id, UnitProgress((), ()))
+        unit = progress_unit(
+            record.unit_id,
+            record.card.hp_max,
+            record.card.power_id,
+            record.card.unit_class is UnitClass.KUBO,
+            progress,
+        )
+        try:
+            apply_badge(unit, badge)
+        except ProgressionError as error:
+            raise GameError("cmd.unknown") from error
+        badge_id = next_badge_id(progress.badges, badge)
+        stored = self._store.set_unit_progress(
+            record.unit_id, (*progress.badges, badge_id), progress.scars
+        )
+        self._progress[record.unit_id] = stored
+        del self._offers[game_id]
+        self.emit_moment(
+            "badge_earned",
+            record.unit_id,
+            {"unit": record.card.name, "badge": badge_label(badge.value)},
+            game_id,
+        )
+
+    def _finalize_night(self, session: NightSession, outcome: RecapOutcome) -> None:
+        board = session.board
+        night = self._night
+        campaign = self._campaign
+        if self._is_finalized or board is None or night is None or campaign is None:
+            return
+        self._is_finalized = True
+        by_game = {game_id_for(u.sam_object_id): u for u in self._units}
+        downed = {
+            u.id for u in board.units if u.is_down and not u.is_kubo and u.id in by_game
+        }
+        scarred: set[str] = set()
+        for game_id in sorted(downed):
+            record = by_game[game_id]
+            progress = self._progress.get(record.unit_id, UnitProgress((), ()))
+            if len(progress.scars) >= SCAR_LIMIT:
+                continue
+            try:
+                self._progress[record.unit_id] = self._store.set_unit_progress(
+                    record.unit_id,
+                    progress.badges,
+                    (*progress.scars, f"s{night.number}"),
+                )
+            except StoreError:
+                logger.warning("scar could not be saved")
+                continue
+            scarred.add(game_id)
+            self.emit_moment(
+                "scar_gained", record.unit_id, {"unit": record.card.name}, game_id
+            )
+        if outcome is RecapOutcome.SUNRISE:
+            self._award_sunrise(board, by_game, campaign.id)
+        self._start_recap(session, board, outcome, scarred)
+
+    def _award_sunrise(
+        self, board: BoardState, by_game: Mapping[str, UnitRecord], campaign_id: str
+    ) -> None:
+        campaign = self._campaign
+        if campaign is None:
+            return
+        survived = campaign.nights_survived + 1
+        try:
+            self._store.set_progression(campaign_id, barrio_level(survived), survived)
+            self._campaign = self._store.get_campaign(campaign_id)
+        except StoreError:
+            logger.warning("progression could not be saved")
+            return
+        units = []
+        for record in by_game.values():
+            progress = self._progress.get(record.unit_id, UnitProgress((), ()))
+            units.append(
+                progress_unit(
+                    record.unit_id,
+                    record.card.hp_max,
+                    record.card.power_id,
+                    record.card.unit_class is UnitClass.KUBO,
+                    progress,
+                )
+            )
+        alive = {
+            by_game[u.id].unit_id
+            for u in board.units
+            if not u.is_down and u.id in by_game
+        }
+        game_by_unit = {r.unit_id: g for g, r in by_game.items()}
+        self._offers = {
+            game_by_unit[offer.unit_id]: offer.choices
+            for offer in offer_badges(units, alive, survived)
+        }
+
+    def _start_recap(
+        self,
+        session: NightSession,
+        board: BoardState,
+        outcome: RecapOutcome,
+        scarred: set[str],
+    ) -> None:
+        builder = self._recap_builder
+        night = self._night
+        campaign = self._campaign
+        if builder is None or night is None or campaign is None:
+            return
+        aliases = {
+            name: f"{PLAYER_ALIAS_PREFIX}{i + 1}"
+            for i, name in enumerate(session.players)
+        }
+        names = {alias: name for name, alias in aliases.items()}
+        units = tuple(
+            RecapUnit(
+                name=record.card.name,
+                unit_class=record.card.unit_class.value,
+                owner=None if state.owner is None else aliases.get(state.owner),
+                badges=tuple(
+                    badge_label(b)
+                    for b in badge_values(
+                        self._progress.get(record.unit_id, UnitProgress((), ())).badges
+                    )
+                ),
+                scarred=state.id in scarred,
+                downed=state.is_down,
+            )
+            for state in board.units
+            if not state.is_kubo
+            for record in self._units
+            if game_id_for(record.sam_object_id) == state.id
+        )
+        summary = NightSummary(
+            night=night.number,
+            outcome=outcome,
+            turns_survived=min(board.turn, TURNS_PER_NIGHT),
+            enemies_beaten=board.enemies_defeated,
+            units_downed=sum(1 for u in units if u.downed),
+            units=units,
+            players=tuple(aliases.values()),
+        )
+        self.enforce_budget()
+        coroutine = self._build_recap(builder, summary, names, campaign.id)
+        if not self._spawn(coroutine):
+            self._save_recap(
+                campaign.id, restore_recap_names(builder.build_local(summary), names)
+            )
+
+    async def _build_recap(
+        self,
+        builder: RecapBuilder,
+        summary: NightSummary,
+        names: Mapping[str, str],
+        campaign_id: str,
+    ) -> None:
+        recap = await builder.build(
+            summary,
+            is_offline=not self._demo_safe.allows_spark,
+            use_glimmer=not self._demo_safe.is_on,
+        )
+        self._save_recap(campaign_id, restore_recap_names(recap, names))
+
+    def _save_recap(self, campaign_id: str, recap: Recap) -> None:
+        try:
+            self._store.save_recap(campaign_id, recap.to_json(), recap.source.value)
+        except (StoreError, ValueError):
+            logger.warning("recap could not be saved")
+
+    def _schedule_map(self) -> None:
+        service = self._map_service
+        campaign = self._campaign
+        baseline = self._baseline
+        if (
+            service is None
+            or campaign is None
+            or baseline is None
+            or not self._prefs["generated_map"]
+            or self._is_map_working
+            or service.cached_map(campaign.id) is not None
+        ):
+            return
+        self._is_map_working = True
+        if not self._spawn(self._make_map(service, campaign.id, baseline.copy())):
+            self._is_map_working = False
+
+    async def _make_map(
+        self, service: BarrioMapService, campaign_id: str, baseline: Image
+    ) -> None:
+        try:
+            self.enforce_budget()
+            anchor: bytes | None = None
+            try:
+                anchor_id = self._store.style_anchor(campaign_id)
+                anchor = (
+                    None if anchor_id is None else self._store.sprite_png(anchor_id)
+                )
+            except (StoreError, OSError):
+                anchor = None
+            path = await service.ensure_map(
+                campaign_id,
+                baseline,
+                anchor,
+                demo_safe=not self._demo_safe.allows_image,
+            )
+        finally:
+            self._is_map_working = False
+        if path is not None:
+            self.publish_map()
+        self._push_state()
+
+    def map_png(self) -> str | None:
+        service = self._map_service
+        campaign = self._campaign
+        if service is None or campaign is None or not self._prefs["generated_map"]:
+            return None
+        path = service.cached_map(campaign.id)
+        if path is None:
+            return None
+        try:
+            return base64.b64encode(path.read_bytes()).decode("ascii")
+        except OSError:
+            return None
+
+    def publish_map(self) -> None:
+        png = self.map_png()
+        if png is None or self._broadcast is None:
+            return
+        self._broadcast.publish({"type": "map", "png": png})
 
     def drain_notices(self) -> list[tuple[str, dict[str, str]]]:
         notices = self._notices
@@ -1870,7 +2653,8 @@ class GameController:
             unit = self._persist(outcome, started)
             self._relock_after_summon(snapshot, outcome)
             self._remember_crop(unit, snapshot, outcome)
-            self._schedule_sprite(unit)
+            if unit.unit_id not in self._returning or unit.sprite_id is None:
+                self._schedule_sprite(unit)
             self._publish_summon_result(unit, detection, outcome)
             return self._unit_view(unit)
 
@@ -1893,6 +2677,7 @@ class GameController:
                 "mask_hull": [[round(x), round(y)] for x, y in hull[:MAX_HULL_POINTS]],
                 "width": self._area.warped_size[0],
                 "height": self._area.warped_size[1],
+                "returning": unit.unit_id in self._returning,
             }
         )
 
@@ -1913,20 +2698,32 @@ class GameController:
             card_text_en=outcome.text.card_text_en,
         )
         signature = outcome.signature.signature
-        unit = self._store.add_unit(
-            night,
-            card,
-            SignatureFields(
-                label=signature.label,
-                histogram=signature.histogram,
-                area_cm2=signature.area_cm2,
-                aspect=signature.aspect,
-                ref_crop_png=outcome.signature.ref_crop_png,
-            ),
-            UnitPlacement(
-                sam_object_id=outcome.sam_id, x_cm=outcome.x_cm, y_cm=outcome.y_cm
-            ),
+        placement = UnitPlacement(
+            sam_object_id=outcome.sam_id, x_cm=outcome.x_cm, y_cm=outcome.y_cm
         )
+        returning_id = self._find_returning(outcome.sam_id, signature)
+        if returning_id is not None:
+            unit = self._store.attach_unit(night, returning_id, placement)
+            self._returning.add(unit.unit_id)
+            self._progress[unit.unit_id] = self._store.get_unit_progress(unit.unit_id)
+            card = unit.card
+            self.emit_moment(
+                "object_recognized", unit.unit_id, {"unit": card.name}, unit.unit_id
+            )
+        else:
+            unit = self._store.add_unit(
+                night,
+                card,
+                SignatureFields(
+                    label=signature.label,
+                    histogram=signature.histogram,
+                    area_cm2=signature.area_cm2,
+                    aspect=signature.aspect,
+                    ref_crop_png=outcome.signature.ref_crop_png,
+                ),
+                placement,
+            )
+            self._progress[unit.unit_id] = UnitProgress((), ())
         width, height = self._area.warped_size
         for sam_id, mask in outcome.known_masks.items():
             self._boxes[sam_id] = clamp_box(mask.bounds, width, height)
@@ -1943,10 +2740,33 @@ class GameController:
                 "unit": game_id_for(outcome.sam_id),
                 "class": card.unit_class.value,
                 "source": outcome.source,
+                "returning": unit.unit_id in self._returning,
             },
             elapsed_ms,
         )
         return unit
+
+    def _find_returning(self, sam_id: int, candidate: Signature) -> str | None:
+        campaign = self._campaign
+        if campaign is None:
+            return None
+        in_night = {u.unit_id for u in self._units}
+        is_kubo_slot = sam_id == KUBO_SAM_ID
+        stored = [
+            ReturningSignature(
+                s.unit_id,
+                Signature(
+                    s.signature.label,
+                    s.signature.histogram,
+                    s.signature.area_cm2,
+                    s.signature.aspect,
+                ),
+            )
+            for s in self._store.campaign_units(campaign.id)
+            if s.unit_id not in in_night
+            and (s.card.unit_class is UnitClass.KUBO) == is_kubo_slot
+        ]
+        return match_returning(stored, candidate)
 
     def _find_unit(self, unit_id: str) -> UnitRecord:
         for unit in self._units:
@@ -1983,7 +2803,7 @@ class GameController:
         if night is None or self._campaign is None:
             raise GameError("start.ready")
         unit = self._find_unit(unit_id)
-        if self._unit_view(unit).rerolls_left <= 0:
+        if unit_id in self._returning or self._unit_view(unit).rerolls_left <= 0:
             raise GameError("cmd.unknown")
         flags = dict(night.flags)
         flags[REROLLS_FLAG] = [*self._rerolled(), unit.unit_id]
@@ -2340,6 +3160,8 @@ class GameController:
     def close(self) -> None:
         for task in list(self._sprite_tasks):
             task.cancel()
+        for task in list(self._bg_tasks):
+            task.cancel()
         self._stop_narration()
         with self._lock:
             self._close_camera()
@@ -2449,7 +3271,13 @@ ACTIVE_NIGHT_STATES: Final = frozenset(
     state
     for state in TurnState
     if state
-    not in (TurnState.SUMMON, TurnState.PAUSED, TurnState.SUNRISE, TurnState.DEFEAT)
+    not in (
+        TurnState.START,
+        TurnState.SUMMON,
+        TurnState.PAUSED,
+        TurnState.SUNRISE,
+        TurnState.DEFEAT,
+    )
 )
 VOICE_STATES: Final = ACTIVE_NIGHT_STATES | {TurnState.PAUSED}
 MIN_HULL_POINTS: Final = 3
@@ -2520,7 +3348,9 @@ class NightSession:
         play_size_cm: tuple[float, float],
         notify: Notify,
         clock: Clock,
+        progress: Mapping[str, UnitProgress] | None = None,
     ) -> None:
+        self._progress = progress if progress is not None else {}
         self._store = store
         self._night = night
         self._records = {record.unit_id: record for record in units}
@@ -2651,7 +3481,7 @@ class NightSession:
         self._require(TurnState.VOICE_CLAIM)
         self._machine.transition(TurnEvent.CLAIMS_DONE)
         units = [
-            self._unit_state(record, positions, sizes)
+            self._unit_state(record, positions, sizes, is_fresh=True)
             for record in self._records.values()
         ]
         units.sort(
@@ -2740,15 +3570,24 @@ class NightSession:
         positions: Mapping[str, Point],
         sizes: Mapping[str, tuple[float, float]],
         cooldown: int = 0,
+        is_fresh: bool = False,
     ) -> UnitState:
         game_id = self._game_ids[record.unit_id]
         half_w, half_h = sizes.get(game_id, (2.0, 2.0))
         card = record.card
+        stats = effective_stats(
+            record.unit_id,
+            card.hp_max,
+            card.power_id,
+            card.unit_class is UnitClass.KUBO,
+            self._progress.get(record.unit_id),
+        )
         return UnitState(
             id=game_id,
             unit_class=card.unit_class,
-            hp=record.hp_current,
-            hp_max=card.hp_max,
+            hp=stats.hp_max if is_fresh else min(record.hp_current, stats.hp_max),
+            hp_max=stats.hp_max,
+            cooldown_cut=stats.cooldown_cut,
             atk=card.atk,
             move=card.move_class,
             range=card.range_class,
@@ -2829,6 +3668,11 @@ class NightSession:
         self._machine.transition(TurnEvent.RESUME)
         self._flush_log()
 
+    def quit(self) -> None:
+        self._require(TurnState.PAUSED)
+        self._machine.transition(TurnEvent.QUIT_TO_START)
+        self._flush_log()
+
     def cancel_end_turn(self) -> None:
         self._require(TurnState.END_TURN_SNAPSHOT)
         self._machine.force(TurnState.PLAYER_PHASE)
@@ -2846,6 +3690,7 @@ class NightSession:
         if board is None:
             raise SessionError("cmd.unknown")
         board = with_positions(board, positions, hulls)
+        board, lost_events = update_lost(board)
         self._board = board
         self._machine.transition(TurnEvent.SNAPSHOT_DONE)
         if moved_kubo(board):
@@ -2855,11 +3700,15 @@ class NightSession:
             self._illegal = illegal
             self._machine.transition(TurnEvent.MOVES_ILLEGAL)
             self._notify("endturn.blocked", {})
+            self._announce(lost_events)
             self._flush_log()
-            return TurnResult(events=(), telegraph=(), is_blocked=True)
+            return TurnResult(events=lost_events, telegraph=(), is_blocked=True)
         self._illegal = ()
         self._machine.transition(TurnEvent.MOVES_LEGAL)
-        resolved, events = resolve_turn(board, [chip.intent for chip in self._chips])
+        resolved, resolved_events = resolve_turn(
+            board, [chip.intent for chip in self._chips]
+        )
+        events = (*lost_events, *resolved_events)
         self._board = resolved
         self._machine.transition(TurnEvent.PLAYER_RESOLVED)
         self._machine.transition(TurnEvent.ENEMY_RESOLVED)
@@ -3028,6 +3877,11 @@ class NightSession:
                 self._notify("unit.down", {"unit": self._name_of(event.dst)})
             elif event.type is EventType.SPLIT:
                 self._notify("mana.split", {})
+            elif event.type in (EventType.LOST, EventType.FOUND) and event.src:
+                lost_key = (
+                    LOST_COPY_KEY if event.type is EventType.LOST else FOUND_COPY_KEY
+                )
+                self._notify(lost_key, {"unit": self._name_of(event.src)})
             elif event.dst is not None and event.dst in self._unit_ids:
                 key = EFFECT_NOTICES.get(event.type)
                 if key is not None:

@@ -5,6 +5,7 @@ from typing import Final
 
 
 class TurnState(StrEnum):
+    START = "START"
     CALIBRATE = "CALIBRATE"
     SUMMON = "SUMMON"
     VOICE_CLAIM = "VOICE_CLAIM"
@@ -40,6 +41,8 @@ class TurnEvent(StrEnum):
     REPLAY_REQUESTED = "replay_requested"
     PAUSE = "pause"
     RESUME = "resume"
+    BACK_TO_START = "back_to_start"
+    QUIT_TO_START = "quit_to_start"
 
 
 TRANSITIONS: Final[Mapping[tuple[TurnState, TurnEvent], TurnState]] = {
@@ -60,6 +63,8 @@ TRANSITIONS: Final[Mapping[tuple[TurnState, TurnEvent], TurnState]] = {
     (TurnState.SUNRISE, TurnEvent.REPLAY_REQUESTED): TurnState.REPLAY,
     (TurnState.PLAYER_PHASE, TurnEvent.PAUSE): TurnState.PAUSED,
     (TurnState.PAUSED, TurnEvent.RESUME): TurnState.PLAYER_PHASE,
+    (TurnState.CALIBRATE, TurnEvent.BACK_TO_START): TurnState.START,
+    (TurnState.PAUSED, TurnEvent.QUIT_TO_START): TurnState.START,
 }
 
 NIGHT_STATES: Final = frozenset(

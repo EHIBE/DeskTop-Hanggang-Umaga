@@ -39,6 +39,10 @@ export type EventType =
   | 'reform'
   | 'kubo_hit'
   | 'defeat_enemy'
+  | 'smoke'
+  | 'smoke_cleared'
+  | 'lost'
+  | 'found'
   | 'win'
   | 'lose'
 
@@ -76,6 +80,19 @@ export type NightUnit = Readonly<{
   range_cm: number
   owner: string | null
   status: readonly string[]
+  badges: readonly BadgeKind[]
+  scars: number
+  cooldown_cut: number
+  smoked: boolean
+}>
+
+export type BadgeKind = 'hp' | 'cooldown'
+
+export type SmokeCloud = Readonly<{
+  source_id: string
+  x_cm: number
+  y_cm: number
+  radius_cm: number
 }>
 
 export type EffectKind = 'push' | 'steal'
@@ -111,6 +128,7 @@ export type NightSummary = Readonly<{
   kubo_hp_max: number
   effects: readonly NightEffect[]
   effect_seconds_left: number
+  smoke: readonly SmokeCloud[]
 }>
 
 export type ScoreSummary = Readonly<{
@@ -185,6 +203,9 @@ export type UnitSummary = Readonly<{
   y_cm: number
   rerolls_left: number
   sprite_png: string | null
+  returning: boolean
+  badges: readonly BadgeKind[]
+  scars: number
 }>
 
 export type Pose = Readonly<{ id: string; x_cm: number; y_cm: number; uncertain: boolean }>
@@ -206,6 +227,57 @@ export type ReplayState = Readonly<{
   file: string | null
   available: boolean
 }>
+
+export type CaptionLanguage = 'tl' | 'en'
+
+export type SettingsDifficulty = 'easy' | 'normal' | 'hard'
+
+export type SettingsValues = Readonly<{
+  camera_device: number
+  mic_device: string
+  caption_language: CaptionLanguage
+  difficulty: SettingsDifficulty
+  replay_enabled: boolean
+  tts_enabled: boolean
+  show_real_objects: boolean
+  strict_ownership: boolean
+  generated_map: boolean
+}>
+
+export type SettingKey = keyof SettingsValues
+
+export type BadgeOffer = Readonly<{ unit_id: string; choices: readonly BadgeKind[] }>
+
+export type Progression = Readonly<{
+  barrio_level: number
+  nights_survived: number
+  badge_offers: readonly BadgeOffer[]
+}>
+
+export type RecapSource = 'spark' | 'line_bank' | 'glimmer'
+
+export type RecapPayload = Readonly<{
+  night: number
+  text_tl: string
+  text_en: string
+  mood: NarrationMood
+  source: RecapSource
+}>
+
+export type PendingConfirm = Readonly<{
+  confirm_id: string
+  unit_id: string
+  unit_name: string
+  owner: string
+  speaker: string | null
+  action: IntentAction
+  target_id: string | null
+  text_tl: string
+  text_en: string
+  seconds_left: number
+}>
+
+export type MapState = Readonly<{ enabled: boolean; ready: boolean; working: boolean }>
 
 export type StateMessage = Readonly<{
   type: 'state'
@@ -230,6 +302,12 @@ export type StateMessage = Readonly<{
   recording: boolean
   consents: Readonly<Record<string, boolean>>
   replay: ReplayState
+  settings: SettingsValues
+  tts_available: boolean
+  progression: Progression | null
+  recap: RecapPayload | null
+  pending_confirm: PendingConfirm | null
+  map: MapState
 }>
 
 export type DevicesMessage = Readonly<{
@@ -324,9 +402,51 @@ export type SummonResultMessage = Readonly<{
   mask_hull: readonly Point[]
   width: number
   height: number
+  returning: boolean
 }>
 
+export type SettingsMessage = Readonly<{
+  type: 'settings'
+  seq: number
+  values: SettingsValues
+  tts_available: boolean
+}>
+
+export type MapMessage = Readonly<{ type: 'map'; seq: number; png: string }>
+
+export type CropsMessage = Readonly<{
+  type: 'crops'
+  seq: number
+  crops: Readonly<Record<string, string>>
+}>
+
+export type MomentName =
+  | 'kapre_smoke_telegraph'
+  | 'kapre_smoke_hit'
+  | 'unit_lost'
+  | 'unit_returned'
+  | 'badge_earned'
+  | 'scar_gained'
+  | 'object_recognized'
+
+export type MomentMessage = Readonly<{
+  type: 'moment'
+  seq: number
+  moment: MomentName
+  text_tl: string
+  text_en: string
+  mood: NarrationMood
+  unit_id: string | null
+}>
+
+export type RecapMessage = Readonly<RecapPayload & { type: 'recap'; seq: number }>
+
 export type ServerMessage =
+  | SettingsMessage
+  | MapMessage
+  | CropsMessage
+  | MomentMessage
+  | RecapMessage
   | SummonResultMessage
   | StateMessage
   | DevicesMessage
@@ -342,7 +462,10 @@ export type ServerMessage =
 
 export type CampaignStartMessage =
   | Readonly<{ type: 'campaign.start'; campaign_id: string }>
-  | Readonly<{ type: 'campaign.start'; new: Readonly<{ name: string; difficulty: Difficulty }> }>
+  | Readonly<{
+      type: 'campaign.start'
+      new: Readonly<{ name: string; difficulty?: Difficulty }>
+    }>
 
 export type ClientMessage =
   | Readonly<{ type: 'campaign.list' }>
@@ -385,6 +508,15 @@ export type ClientMessage =
   | Readonly<{ type: 'voice.mode'; mode: VoiceMode }>
   | Readonly<{ type: 'voice.retry' }>
   | Readonly<{ type: 'replay.request' }>
+  | Readonly<{ type: 'settings.get' }>
+  | Readonly<{ type: 'settings.set'; key: SettingKey; value: boolean | number | string }>
+  | Readonly<{ type: 'badge.pick'; unit_id: string; badge: BadgeKind }>
+  | Readonly<{ type: 'confirm.accept'; confirm_id: string }>
+  | Readonly<{ type: 'confirm.cancel'; confirm_id: string }>
+  | Readonly<{ type: 'map.get' }>
+  | Readonly<{ type: 'crops.get' }>
+  | Readonly<{ type: 'pause.quit' }>
+  | Readonly<{ type: 'calibrate.back' }>
 
 export type DesktopConfig = Readonly<{ port: number; token: string }>
 

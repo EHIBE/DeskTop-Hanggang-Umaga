@@ -46,13 +46,13 @@ RECAP_TEXT_MAX: Final = 1000
 MIC_DEVICE_MAX: Final = 200
 SettingValue = bool | int | str
 SETTING_CHOICES: Final[dict[str, tuple[str, ...]]] = {
-    "caption_language": ("fil", "en"),
+    "caption_language": ("tl", "en"),
     "difficulty": ("easy", "normal", "hard"),
 }
 SETTING_DEFAULTS: Final[dict[str, SettingValue]] = {
     "camera_device": 0,
     "mic_device": "default",
-    "caption_language": "fil",
+    "caption_language": "tl",
     "difficulty": "normal",
     "replay_enabled": True,
     "tts_enabled": False,
@@ -706,6 +706,53 @@ class Store:
             y_cm=placement.y_cm,
             sprite_id=None,
         )
+
+    def attach_unit(
+        self, night: NightRecord, unit_id: str, placement: UnitPlacement
+    ) -> UnitRecord:
+        with self.transaction() as conn:
+            row = conn.execute(
+                "SELECT hp_max FROM unit WHERE id = ? AND campaign_id = ?",
+                (unit_id, night.campaign_id),
+            ).fetchone()
+            if row is None:
+                raise NotFoundError("unit not found")
+            conn.execute(
+                "INSERT INTO night_unit (night_id, unit_id, sam_object_id, hp_current, "
+                "x_cm, y_cm) VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    night.id,
+                    unit_id,
+                    placement.sam_object_id,
+                    int(row["hp_max"]),
+                    placement.x_cm,
+                    placement.y_cm,
+                ),
+            )
+        for record in self.night_units(night.id):
+            if record.unit_id == unit_id:
+                return record
+        raise NotFoundError("unit not found")
+
+    def unit_crops(self, night_id: str) -> dict[str, bytes]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT nu.unit_id, os.ref_crop_path FROM night_unit nu "
+                "JOIN unit u ON u.id = nu.unit_id "
+                "JOIN object_signature os ON os.id = u.object_signature_id "
+                "WHERE nu.night_id = ?",
+                (night_id,),
+            ).fetchall()
+        crops: dict[str, bytes] = {}
+        for row in rows:
+            path = (self._data_root / str(row["ref_crop_path"])).resolve()
+            if not path.is_relative_to(self._data_root):
+                continue
+            try:
+                crops[str(row["unit_id"])] = path.read_bytes()
+            except OSError:
+                continue
+        return crops
 
     def update_unit_card(self, night_id: str, unit_id: str, card: CardFields) -> None:
         with self.transaction() as conn:

@@ -892,3 +892,32 @@ def test_delete_campaign_removes_map_file(store: Store) -> None:
     store.set_map_image(campaign.id, target)
     assert store.delete_campaign(campaign.id)
     assert not target.exists()
+
+
+def test_attach_unit_reuses_a_stored_unit_in_a_later_night(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    night = store.start_or_resume_night(campaign.id)
+    unit = store.add_unit(night, card_fields(), SIGNATURE, UnitPlacement(1, 3.0, 4.0))
+    store.set_unit_progress(unit.unit_id, ["hp"], [])
+    store.autosave(night.id, 8, [], [], "win", [], {})
+    later = store.start_or_resume_night(campaign.id)
+    assert later.id != night.id
+    assert store.night_units(later.id) == []
+    attached = store.attach_unit(later, unit.unit_id, UnitPlacement(2, 9.0, 8.0))
+    assert attached.unit_id == unit.unit_id
+    assert attached.sam_object_id == 2
+    assert (attached.x_cm, attached.y_cm) == (9.0, 8.0)
+    assert attached.card == card_fields()
+    assert attached.hp_current == attached.card.hp_max
+    assert store.get_unit_progress(unit.unit_id).badges == ("hp",)
+    other = store.create_campaign("Other", Difficulty.NORMAL)
+    other_night = store.start_or_resume_night(other.id)
+    with pytest.raises(NotFoundError):
+        store.attach_unit(other_night, unit.unit_id, UnitPlacement(1, 0.0, 0.0))
+
+
+def test_unit_crops_read_the_reference_png_of_each_unit(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    night = store.start_or_resume_night(campaign.id)
+    unit = store.add_unit(night, card_fields(), SIGNATURE, UnitPlacement(1, 3.0, 4.0))
+    assert store.unit_crops(night.id) == {unit.unit_id: b"png"}
