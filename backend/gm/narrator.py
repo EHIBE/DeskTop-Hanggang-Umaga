@@ -58,6 +58,18 @@ REQUIRED_MOMENTS: Final = (
     "win",
     "lose",
     "quiet",
+    "kapre_smoke_telegraph",
+    "kapre_smoke_hit",
+    "unit_lost",
+    "unit_returned",
+    "ownership_confirm",
+    "badge_earned",
+    "scar_gained",
+    "object_recognized",
+    "recap_win",
+    "recap_lose",
+    "recap_badge",
+    "recap_scar",
 )
 
 
@@ -224,6 +236,17 @@ class LineBank:
 
     def lines(self, moment: str) -> tuple[tuple[str, str, Mood], ...]:
         return tuple((line.tl, line.en, line.mood) for line in self._moments[moment])
+
+    def fill(
+        self, moment: str, seed: str, values: Mapping[str, str]
+    ) -> tuple[str, str, Mood]:
+        options = self._moments[moment]
+        line = options[zlib.crc32(f"{seed}:{moment}".encode()) % len(options)]
+        tl, en = line.tl, line.en
+        for key, value in values.items():
+            tl = tl.replace(f"[{key}]", value)
+            en = en.replace(f"[{key}]", value)
+        return tl, en, line.mood
 
     def pick(self, request: NarrationRequest) -> Narration:
         moment = pick_moment(request, self._moments)

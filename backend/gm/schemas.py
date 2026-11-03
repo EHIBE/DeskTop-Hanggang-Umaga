@@ -131,6 +131,11 @@ class GmTurn(_StrictModel):
     hint_tl: str = Field(max_length=HINT_MAX)
 
 
+class RecapDraft(_StrictModel):
+    recap_tl: str = Field(min_length=1, max_length=NARRATION_MAX)
+    recap_en: str = Field(min_length=1, max_length=NARRATION_MAX)
+
+
 def _object_schema(properties: dict[str, object]) -> dict[str, object]:
     return {
         "type": "object",
@@ -221,6 +226,22 @@ def parse_gm_turn(raw_json: str, allowed_ids: Collection[str]) -> GmTurn:
     if len(kept) == len(turn.callouts):
         return turn
     return turn.model_copy(update={"callouts": kept})
+
+
+def recap_json_schema() -> dict[str, object]:
+    return _object_schema(
+        {
+            "recap_tl": {"type": "string", "maxLength": NARRATION_MAX},
+            "recap_en": {"type": "string", "maxLength": NARRATION_MAX},
+        }
+    )
+
+
+def parse_recap(raw_json: str) -> RecapDraft:
+    try:
+        return RecapDraft.model_validate_json(raw_json)
+    except ValidationError as error:
+        raise SchemaError(str(error)) from error
 
 
 def clamp_box(box: DetectedBox, width: int, height: int) -> tuple[int, int, int, int]:

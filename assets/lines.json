@@ -59,6 +59,46 @@
       {"tl": "Tahimik ang gabi. Hinga muna, tapos handa ulit.", "en": "The night is quiet. Breathe, then get ready again.", "mood": "kalmado"},
       {"tl": "Umiihip ang hangin sa bukid. Abangan ang susunod.", "en": "The wind stirs over the fields. Watch for what comes next.", "mood": "kalmado"},
       {"tl": "Walang gumagalaw sa dilim. Sa ngayon.", "en": "Nothing moves in the dark. For now.", "mood": "kalmado"}
+    ],
+    "kapre_smoke_telegraph": [
+      {"tl": "Amoy tabako... may usok na lalabas sa kapre. Tabi-tabi po, lumayo kung kaya!", "en": "Smells like tobacco... smoke is about to roll out of the kapre. Excuse us, spirits! Step away if you can!", "mood": "kaba"},
+      {"tl": "Humihithit ang kapre sa puno. Paparating ang makapal na usok.", "en": "The kapre is puffing in the tree. Thick smoke is coming.", "mood": "kaba"}
+    ],
+    "kapre_smoke_hit": [
+      {"tl": "Nabalot ng usok ng kapre ang [unit]. Hindi makakatira palabas sa ngayon.", "en": "The kapre's smoke swallowed [unit]. It cannot attack out for now.", "mood": "takot"},
+      {"tl": "Ubo-ubo! Ang [unit] ay nasa loob ng usok.", "en": "Cough, cough! [unit] is inside the smoke.", "mood": "takot"}
+    ],
+    "unit_lost": [
+      {"tl": "Ang [unit] ay nawala sa gubat!", "en": "[unit] wandered off into the woods!", "mood": "takot"}
+    ],
+    "unit_returned": [
+      {"tl": "Nakabalik na si [unit] mula sa gubat. Salamat sa mga nagbantay!", "en": "[unit] is back from the woods. Thanks to those who kept watch!", "mood": "kalmado"}
+    ],
+    "ownership_confirm": [
+      {"tl": "Kay [player] ang [unit]. Ituloy?", "en": "[unit] belongs to [player]. Go ahead?", "mood": "kalmado"}
+    ],
+    "badge_earned": [
+      {"tl": "Panalo! Si [unit] ay may bagong badge: [badge].", "en": "Well done! [unit] earned a new badge: [badge].", "mood": "tagumpay"}
+    ],
+    "scar_gained": [
+      {"tl": "May bakas ng laban si [unit]. Pero lalaban pa rin!", "en": "[unit] carries a mark of the fight. Still fighting!", "mood": "kaba"}
+    ],
+    "object_recognized": [
+      {"tl": "Kilala ka na namin, [unit]! Welcome back sa baryo.", "en": "We know you, [unit]! Welcome back to the barrio.", "mood": "kalmado"}
+    ],
+    "recap_win": [
+      {"tl": "Kagabi, nakaligtas kayo hanggang umaga. [beaten] nilalang ang napaalis ninyo sa loob ng [turns] dilim.", "en": "Last night you made it to sunrise. You drove off [beaten] creatures over [turns] turns of dark.", "mood": "umaga"},
+      {"tl": "Kagabi, ligtas ang baryo dahil sa inyo. [beaten] ang natalo, [downed] ang bumagsak.", "en": "Last night the barrio was safe because of you. [beaten] beaten, [downed] went down.", "mood": "umaga"}
+    ],
+    "recap_lose": [
+      {"tl": "Kagabi, bumagsak ang kubo pagkatapos ng [turns] dilim. Bawi tayo ngayong gabi.", "en": "Last night the kubo fell after [turns] turns of dark. Let's win it back tonight.", "mood": "kaba"},
+      {"tl": "Kagabi, nahirapan ang baryo. [beaten] ang natalo ninyo bago mag-umaga, pero hindi pa tapos ang laban.", "en": "Last night the barrio struggled. You beat [beaten] before dawn, but the fight is not over.", "mood": "kaba"}
+    ],
+    "recap_badge": [
+      {"tl": "May badge si [unit]: [badge].", "en": "[unit] earned the [badge] badge.", "mood": "tagumpay"}
+    ],
+    "recap_scar": [
+      {"tl": "May bakas ng laban si [unit], pero handa pa rin.", "en": "[unit] carries a mark of the fight but is still ready.", "mood": "kaba"}
     ]
   }
 }
