@@ -5,7 +5,8 @@ CREATE TABLE campaign (
   barrio_level INTEGER NOT NULL DEFAULT 0 CHECK (barrio_level BETWEEN 0 AND 5),
   nights_survived INTEGER NOT NULL DEFAULT 0 CHECK (nights_survived >= 0),
   style_anchor_sprite_id TEXT,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  map_image_path TEXT
 );
 CREATE TABLE calibration (
   id TEXT PRIMARY KEY,
@@ -59,7 +60,8 @@ CREATE TABLE unit (
   card_text_en TEXT,
   sprite_id TEXT REFERENCES sprite(id) ON DELETE SET NULL,
   badges_json TEXT NOT NULL DEFAULT '[]',
-  scars INTEGER NOT NULL DEFAULT 0 CHECK (scars >= 0)
+  scars INTEGER NOT NULL DEFAULT 0 CHECK (scars >= 0),
+  scars_json TEXT
 );
 CREATE TABLE night (
   id TEXT PRIMARY KEY,
@@ -135,6 +137,12 @@ CREATE TABLE api_usage (
   ok INTEGER NOT NULL CHECK (ok IN (0,1))
 );
 CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE campaign_recap (
+  campaign_id TEXT PRIMARY KEY REFERENCES campaign(id) ON DELETE CASCADE,
+  text TEXT NOT NULL CHECK (length(text) BETWEEN 1 AND 1000),
+  source TEXT NOT NULL CHECK (source IN ('spark','line_bank','glimmer')),
+  created_at TEXT NOT NULL
+);
 CREATE INDEX idx_turn_log_night ON turn_log(night_id, turn);
 CREATE INDEX idx_calibration_campaign ON calibration(campaign_id);
 CREATE INDEX idx_player_campaign ON player(campaign_id);

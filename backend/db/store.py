@@ -1,5 +1,6 @@
 import json
 import math
+import re
 import shutil
 import sqlite3
 import threading
@@ -14,8 +15,20 @@ from typing import Final
 
 from rules.units import Difficulty, MoveClass, PowerId, RangeClass, UnitClass
 
-SCHEMA_VERSION: Final = 2
-MIGRATIONS: Final[dict[int, str]] = {1: "ALTER TABLE night ADD COLUMN board_json TEXT;"}
+SCHEMA_VERSION: Final = 3
+MIGRATIONS: Final[dict[int, str]] = {
+    1: "ALTER TABLE night ADD COLUMN board_json TEXT;",
+    2: (
+        "ALTER TABLE unit ADD COLUMN scars_json TEXT;\n"
+        "ALTER TABLE campaign ADD COLUMN map_image_path TEXT;\n"
+        "CREATE TABLE campaign_recap (\n"
+        "  campaign_id TEXT PRIMARY KEY REFERENCES campaign(id) ON DELETE CASCADE,\n"
+        "  text TEXT NOT NULL CHECK (length(text) BETWEEN 1 AND 1000),\n"
+        "  source TEXT NOT NULL CHECK (source IN ('spark','line_bank','glimmer')),\n"
+        "  created_at TEXT NOT NULL\n"
+        ");"
+    ),
+}
 SCHEMA_PATH: Final = Path(__file__).with_name("schema.sql")
 COST_SCALE: Final = 100_000_000
 CAMPAIGN_PAGE_MAX: Final = 50
@@ -25,6 +38,28 @@ HOMOGRAPHY_SIZE: Final = 9
 REF_CROP_DIR_NAME: Final = "crops"
 SPRITES_DIR_NAME: Final = "sprites"
 SETUP_TURN: Final = 0
+BARRIO_LEVEL_MAX: Final = 5
+PROGRESS_ID_PATTERN: Final = re.compile(r"[a-z0-9_]{1,32}")
+PROGRESS_LIST_MAX: Final = 8
+RECAP_SOURCES: Final = ("spark", "line_bank", "glimmer")
+RECAP_TEXT_MAX: Final = 1000
+MIC_DEVICE_MAX: Final = 200
+SettingValue = bool | int | str
+SETTING_CHOICES: Final[dict[str, tuple[str, ...]]] = {
+    "caption_language": ("fil", "en"),
+    "difficulty": ("easy", "normal", "hard"),
+}
+SETTING_DEFAULTS: Final[dict[str, SettingValue]] = {
+    "camera_device": 0,
+    "mic_device": "default",
+    "caption_language": "fil",
+    "difficulty": "normal",
+    "replay_enabled": True,
+    "tts_enabled": False,
+    "show_real_objects": True,
+    "strict_ownership": False,
+    "generated_map": False,
+}
 
 Clock = Callable[[], datetime]
 IdFactory = Callable[[], str]
@@ -53,6 +88,26 @@ class Campaign:
     difficulty: Difficulty
     barrio_level: int
     nights_survived: int
+    created_at: str
+
+
+@dataclass(frozen=True)
+class Progression:
+    barrio_level: int
+    nights_survived: int
+
+
+@dataclass(frozen=True)
+class UnitProgress:
+    badges: tuple[str, ...]
+    scars: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SavedRecap:
+    campaign_id: str
+    text: str
+    source: str
     created_at: str
 
 
@@ -132,6 +187,25 @@ class UnitRecord:
     x_cm: float
     y_cm: float
     sprite_id: str | None
+
+
+@dataclass(frozen=True)
+class StoredSignature:
+    label: str
+    histogram: tuple[float, ...]
+    area_cm2: float
+    aspect: float
+    ref_crop_path: Path
+
+
+@dataclass(frozen=True)
+class StoredUnit:
+    unit_id: str
+    signature_id: str
+    card: CardFields
+    sprite_id: str | None
+    progress: UnitProgress
+    signature: StoredSignature
 
 
 @dataclass(frozen=True)
@@ -1001,6 +1075,180 @@ class Store:
                 (key, value),
             )
 
+    def get_preference(self, key: str) -> SettingValue:
+        default = _known_setting(key)
+        stored = self.get_setting(key)
+        if stored is None:
+            return default
+        try:
+            return _validated_setting(key, json.loads(stored))
+        except (ValueError, StoreError):
+            return default
+
+    def set_preference(self, key: str, value: SettingValue) -> None:
+        _known_setting(key)
+        checked = _validated_setting(key, value)
+        self.set_setting(key, json.dumps(checked))
+
+    def all_preferences(self) -> dict[str, SettingValue]:
+        return {key: self.get_preference(key) for key in SETTING_DEFAULTS}
+
+    def get_progression(self, campaign_id: str) -> Progression:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT barrio_level, nights_survived FROM campaign WHERE id = ?",
+                (campaign_id,),
+            ).fetchone()
+        if row is None:
+            raise NotFoundError("campaign not found")
+        return Progression(int(row["barrio_level"]), int(row["nights_survived"]))
+
+    def set_progression(
+        self, campaign_id: str, barrio_level: int, nights_survived: int
+    ) -> None:
+        if not 0 <= barrio_level <= BARRIO_LEVEL_MAX or nights_survived < 0:
+            raise StoreError("progression out of range")
+        with self.transaction() as conn:
+            cursor = conn.execute(
+                "UPDATE campaign SET barrio_level = ?, nights_survived = ? WHERE id = ?",
+                (barrio_level, nights_survived, campaign_id),
+            )
+        if cursor.rowcount == 0:
+            raise NotFoundError("campaign not found")
+
+    def get_unit_progress(self, unit_id: str) -> UnitProgress:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT badges_json, scars_json FROM unit WHERE id = ?", (unit_id,)
+            ).fetchone()
+        if row is None:
+            raise NotFoundError("unit not found")
+        return _progress_from_row(row)
+
+    def set_unit_progress(
+        self, unit_id: str, badges: Sequence[str], scars: Sequence[str]
+    ) -> UnitProgress:
+        progress = UnitProgress(_progress_ids(badges), _progress_ids(scars))
+        with self.transaction() as conn:
+            cursor = conn.execute(
+                "UPDATE unit SET badges_json = ?, scars_json = ?, scars = ? WHERE id = ?",
+                (
+                    json.dumps(list(progress.badges)),
+                    json.dumps(list(progress.scars)),
+                    len(progress.scars),
+                    unit_id,
+                ),
+            )
+        if cursor.rowcount == 0:
+            raise NotFoundError("unit not found")
+        return progress
+
+    def save_recap(self, campaign_id: str, text: str, source: str) -> SavedRecap:
+        if source not in RECAP_SOURCES:
+            raise StoreError("unknown recap source")
+        if not 1 <= len(text) <= RECAP_TEXT_MAX:
+            raise StoreError("recap text length out of range")
+        recap = SavedRecap(campaign_id, text, source, self._now_iso())
+        with self.transaction() as conn:
+            known = conn.execute(
+                "SELECT 1 FROM campaign WHERE id = ?", (campaign_id,)
+            ).fetchone()
+            if known is None:
+                raise NotFoundError("campaign not found")
+            conn.execute(
+                "INSERT INTO campaign_recap (campaign_id, text, source, created_at) "
+                "VALUES (?, ?, ?, ?) ON CONFLICT(campaign_id) DO UPDATE SET "
+                "text = excluded.text, source = excluded.source, "
+                "created_at = excluded.created_at",
+                (campaign_id, text, source, recap.created_at),
+            )
+        return recap
+
+    def get_recap(self, campaign_id: str) -> SavedRecap | None:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT campaign_id, text, source, created_at FROM campaign_recap "
+                "WHERE campaign_id = ?",
+                (campaign_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return SavedRecap(
+            str(row["campaign_id"]),
+            str(row["text"]),
+            str(row["source"]),
+            str(row["created_at"]),
+        )
+
+    def clear_recap(self, campaign_id: str) -> bool:
+        with self.transaction() as conn:
+            cursor = conn.execute(
+                "DELETE FROM campaign_recap WHERE campaign_id = ?", (campaign_id,)
+            )
+        return cursor.rowcount > 0
+
+    def campaign_units(self, campaign_id: str) -> list[StoredUnit]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT u.id, u.object_signature_id, u.name, u.class, u.hp_max, u.atk, "
+                "u.move_class, u.range_class, u.power_id, u.power_name_tl, u.card_text_tl, "
+                "u.card_text_en, u.sprite_id, u.badges_json, u.scars_json, os.label, "
+                "os.hist_json, os.area_cm2, os.aspect, os.ref_crop_path "
+                "FROM unit u JOIN object_signature os ON os.id = u.object_signature_id "
+                "WHERE u.campaign_id = ? ORDER BY u.rowid",
+                (campaign_id,),
+            ).fetchall()
+        return [self._stored_unit(row) for row in rows]
+
+    def _stored_unit(self, row: sqlite3.Row) -> StoredUnit:
+        crop = (self._data_root / str(row["ref_crop_path"])).resolve()
+        if not crop.is_relative_to(self._data_root):
+            raise UnsafePathError("stored crop path escapes the data root")
+        sprite = row["sprite_id"]
+        return StoredUnit(
+            unit_id=str(row["id"]),
+            signature_id=str(row["object_signature_id"]),
+            card=_card_from_row(row),
+            sprite_id=None if sprite is None else str(sprite),
+            progress=_progress_from_row(row),
+            signature=StoredSignature(
+                label=str(row["label"]),
+                histogram=tuple(float(v) for v in json.loads(str(row["hist_json"]))),
+                area_cm2=float(row["area_cm2"]),
+                aspect=float(row["aspect"]),
+                ref_crop_path=crop,
+            ),
+        )
+
+    def set_map_image(self, campaign_id: str, path: Path | None) -> None:
+        stored: str | None = None
+        if path is not None:
+            resolved = path.resolve()
+            if not resolved.is_relative_to(self.campaign_dir(campaign_id)):
+                raise UnsafePathError("map image must live in the campaign folder")
+            stored = resolved.relative_to(self._data_root).as_posix()
+        with self.transaction() as conn:
+            cursor = conn.execute(
+                "UPDATE campaign SET map_image_path = ? WHERE id = ?",
+                (stored, campaign_id),
+            )
+        if cursor.rowcount == 0:
+            raise NotFoundError("campaign not found")
+
+    def get_map_image(self, campaign_id: str) -> Path | None:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT map_image_path FROM campaign WHERE id = ?", (campaign_id,)
+            ).fetchone()
+        if row is None:
+            raise NotFoundError("campaign not found")
+        if row[0] is None:
+            return None
+        resolved = (self._data_root / str(row[0])).resolve()
+        if not resolved.is_relative_to(self.campaign_dir(campaign_id)):
+            raise UnsafePathError("stored map path escapes the campaign folder")
+        return resolved
+
 
 def _card_values(card: CardFields) -> tuple[object, ...]:
     return (
@@ -1017,6 +1265,50 @@ def _card_values(card: CardFields) -> tuple[object, ...]:
     )
 
 
+def _known_setting(key: str) -> SettingValue:
+    if key not in SETTING_DEFAULTS:
+        raise StoreError("unknown setting")
+    return SETTING_DEFAULTS[key]
+
+
+def _validated_setting(key: str, value: object) -> SettingValue:
+    default = SETTING_DEFAULTS[key]
+    if isinstance(default, bool):
+        if isinstance(value, bool):
+            return value
+    elif key == "camera_device":
+        if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+            return value
+    elif key in SETTING_CHOICES:
+        if isinstance(value, str) and value in SETTING_CHOICES[key]:
+            return value
+    elif isinstance(value, str) and 1 <= len(value) <= MIC_DEVICE_MAX:
+        return value
+    raise StoreError("invalid value for setting")
+
+
+def _progress_ids(ids: Sequence[str]) -> tuple[str, ...]:
+    unique = tuple(dict.fromkeys(ids))
+    if len(unique) > PROGRESS_LIST_MAX or not all(
+        PROGRESS_ID_PATTERN.fullmatch(item) for item in unique
+    ):
+        raise StoreError("invalid progression ids")
+    return unique
+
+
+def _json_ids(raw: object) -> tuple[str, ...]:
+    if raw is None:
+        return ()
+    parsed = json.loads(str(raw))
+    if not isinstance(parsed, list):
+        return ()
+    return tuple(str(item) for item in parsed)
+
+
+def _progress_from_row(row: sqlite3.Row) -> UnitProgress:
+    return UnitProgress(_json_ids(row["badges_json"]), _json_ids(row["scars_json"]))
+
+
 def _night_from_row(row: sqlite3.Row) -> NightRecord:
     flags = json.loads(str(row["flags_json"]))
     return NightRecord(
@@ -1028,8 +1320,8 @@ def _night_from_row(row: sqlite3.Row) -> NightRecord:
     )
 
 
-def _unit_from_row(row: sqlite3.Row) -> UnitRecord:
-    card = CardFields(
+def _card_from_row(row: sqlite3.Row) -> CardFields:
+    return CardFields(
         name=str(row["name"]),
         unit_class=UnitClass(row["class"]),
         hp_max=int(row["hp_max"]),
@@ -1041,12 +1333,15 @@ def _unit_from_row(row: sqlite3.Row) -> UnitRecord:
         card_text_tl=str(row["card_text_tl"] or ""),
         card_text_en=str(row["card_text_en"] or ""),
     )
+
+
+def _unit_from_row(row: sqlite3.Row) -> UnitRecord:
     sprite = row["sprite_id"]
     return UnitRecord(
         unit_id=str(row["id"]),
         signature_id=str(row["object_signature_id"]),
         sam_object_id=int(row["sam_object_id"]),
-        card=card,
+        card=_card_from_row(row),
         hp_current=int(row["hp_current"]),
         x_cm=float(row["x_cm"]),
         y_cm=float(row["y_cm"]),

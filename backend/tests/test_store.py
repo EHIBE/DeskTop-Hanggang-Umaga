@@ -9,15 +9,19 @@ import pytest
 
 from db.store import (
     SCHEMA_VERSION,
+    SETTING_DEFAULTS,
     ApiUsageRecord,
     CardFields,
     EnemySave,
     NotFoundError,
+    Progression,
     SchemaVersionError,
+    SettingValue,
     SignatureFields,
     Store,
     StoreError,
     UnitPlacement,
+    UnitProgress,
     UnitSave,
     UnsafePathError,
 )
@@ -81,6 +85,7 @@ COUNT_QUERIES: dict[str, str] = {
     "enemy": "SELECT COUNT(*) FROM enemy",
     "turn_log": "SELECT COUNT(*) FROM turn_log",
     "api_usage": "SELECT COUNT(*) FROM api_usage",
+    "campaign_recap": "SELECT COUNT(*) FROM campaign_recap",
 }
 
 
@@ -203,8 +208,15 @@ def test_foreign_keys_reject_orphans(store: Store) -> None:
 def test_delete_campaign_cascades_every_row(store: Store) -> None:
     campaign = store.create_campaign("C", Difficulty.NORMAL)
     _seed_night_graph(store, campaign.id)
+    store.save_recap(campaign.id, "Kagabi...", "spark")
+    store.set_progression(campaign.id, 2, 2)
+    store.set_unit_progress("unit1", ["hp_up"], ["scar_1"])
+    store.set_map_image(campaign.id, store.campaign_dir(campaign.id) / "map.png")
     assert store.delete_campaign(campaign.id)
+    assert store.get_recap(campaign.id) is None
+    assert store.campaign_units(campaign.id) == []
     for table in (
+        "campaign_recap",
         "campaign",
         "object_signature",
         "unit",
@@ -614,10 +626,13 @@ def test_version_one_database_migrates(tmp_path: Path) -> None:
     first = Store(path)
     with first.transaction() as conn:
         conn.execute("ALTER TABLE night DROP COLUMN board_json")
+        conn.execute("DROP TABLE campaign_recap")
+        conn.execute("ALTER TABLE unit DROP COLUMN scars_json")
+        conn.execute("ALTER TABLE campaign DROP COLUMN map_image_path")
     first._conn.execute("PRAGMA user_version = 1")
     first.close()
     second = Store(path)
-    assert second.schema_version() == SCHEMA_VERSION == 2
+    assert second.schema_version() == SCHEMA_VERSION == 3
     campaign = second.create_campaign("C", Difficulty.NORMAL)
     night = second.start_or_resume_night(campaign.id)
     second.autosave(night.id, 1, [], [], None, [], {"enemies_defeated": 0})
@@ -645,3 +660,235 @@ def test_turn_log_rows_and_replay_path(store: Store) -> None:
     assert row[0] == f"campaigns/{campaign.id}/recordings/reel.mp4"
     with pytest.raises(ValueError):
         store.set_replay_path(night.id, Path("C:/elsewhere/reel.mp4"))
+
+
+def test_version_two_database_upgrades_with_rows_intact(tmp_path: Path) -> None:
+    path = tmp_path / "data" / "v2.sqlite"
+    first = Store(path, clock=StepClock())
+    campaign = first.create_campaign("C", Difficulty.NORMAL)
+    night = first.start_or_resume_night(campaign.id)
+    unit = first.add_unit(night, card_fields(), SIGNATURE, UnitPlacement(1, 3.0, 4.0))
+    first.set_setting("camera", "2")
+    first.set_progression(campaign.id, 1, 1)
+    with first.transaction() as conn:
+        conn.execute("DROP TABLE campaign_recap")
+        conn.execute("ALTER TABLE unit DROP COLUMN scars_json")
+        conn.execute("ALTER TABLE campaign DROP COLUMN map_image_path")
+    first._conn.execute("PRAGMA user_version = 2")
+    first.close()
+    second = Store(path, clock=StepClock())
+    assert second.schema_version() == SCHEMA_VERSION == 3
+    assert second.get_campaign(campaign.id).name == "C"
+    assert second.get_progression(campaign.id) == Progression(1, 1)
+    assert second.night_units(night.id) == [unit]
+    assert second.get_setting("camera") == "2"
+    assert second.get_unit_progress(unit.unit_id) == UnitProgress((), ())
+    assert second.get_map_image(campaign.id) is None
+    assert second.get_recap(campaign.id) is None
+    second.save_recap(campaign.id, "Kagabi...", "line_bank")
+    assert second.get_recap(campaign.id) is not None
+    migrated = _table_columns(second)
+    second.close()
+    fresh = Store(tmp_path / "data" / "fresh.sqlite")
+    assert _table_columns(fresh) == migrated
+    fresh.close()
+
+
+def _table_columns(store: Store) -> dict[str, list[str]]:
+    with store.transaction() as conn:
+        tables = [
+            str(row[0])
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+            ).fetchall()
+        ]
+        return {
+            table: sorted(
+                str(row[1]) for row in conn.execute(f"PRAGMA table_info({table})")
+            )
+            for table in tables
+        }
+
+
+def test_preferences_default_and_round_trip(store: Store) -> None:
+    assert store.all_preferences() == dict(SETTING_DEFAULTS)
+    assert store.get_preference("difficulty") == "normal"
+    assert store.get_preference("replay_enabled") is True
+    assert store.get_preference("tts_enabled") is False
+    store.set_preference("difficulty", "hard")
+    store.set_preference("camera_device", 2)
+    store.set_preference("mic_device", "USB Mic")
+    store.set_preference("caption_language", "en")
+    store.set_preference("generated_map", True)
+    store.set_preference("strict_ownership", True)
+    prefs = store.all_preferences()
+    assert prefs["difficulty"] == "hard"
+    assert prefs["camera_device"] == 2
+    assert prefs["mic_device"] == "USB Mic"
+    assert prefs["caption_language"] == "en"
+    assert prefs["generated_map"] is True
+    assert prefs["strict_ownership"] is True
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("nope", True),
+        ("difficulty", "madali"),
+        ("caption_language", "xx"),
+        ("camera_device", -1),
+        ("camera_device", True),
+        ("camera_device", "0"),
+        ("mic_device", ""),
+        ("mic_device", 3),
+        ("replay_enabled", "yes"),
+        ("tts_enabled", 1),
+    ],
+)
+def test_preferences_reject_bad_input(
+    store: Store, key: str, value: SettingValue
+) -> None:
+    with pytest.raises(StoreError):
+        store.set_preference(key, value)
+
+
+def test_preferences_survive_reopen_and_fall_back_when_corrupt(tmp_path: Path) -> None:
+    path = tmp_path / "data" / "p.sqlite"
+    first = Store(path)
+    first.set_preference("tts_enabled", True)
+    first.set_setting("difficulty", "not json")
+    first.set_setting("camera_device", '"two"')
+    first.close()
+    second = Store(path)
+    assert second.get_preference("tts_enabled") is True
+    assert second.get_preference("difficulty") == "normal"
+    assert second.get_preference("camera_device") == 0
+    with pytest.raises(StoreError):
+        second.get_preference("nope")
+    second.close()
+
+
+def test_progression_round_trip_and_limits(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    assert store.get_progression(campaign.id) == Progression(0, 0)
+    store.set_progression(campaign.id, 5, 7)
+    assert store.get_progression(campaign.id) == Progression(5, 7)
+    assert store.get_campaign(campaign.id).barrio_level == 5
+    for level, nights in ((6, 0), (-1, 0), (0, -1)):
+        with pytest.raises(StoreError):
+            store.set_progression(campaign.id, level, nights)
+    with pytest.raises(NotFoundError):
+        store.set_progression("missing", 1, 1)
+    with pytest.raises(NotFoundError):
+        store.get_progression("missing")
+
+
+def test_unit_badges_and_scars(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    night = store.start_or_resume_night(campaign.id)
+    unit = store.add_unit(night, card_fields(), SIGNATURE, UnitPlacement(1, 3.0, 4.0))
+    assert store.get_unit_progress(unit.unit_id) == UnitProgress((), ())
+    saved = store.set_unit_progress(
+        unit.unit_id, ["hp_up", "hp_up", "cd_down"], ["scar_1"]
+    )
+    assert saved == UnitProgress(("hp_up", "cd_down"), ("scar_1",))
+    assert store.get_unit_progress(unit.unit_id) == saved
+    with store.transaction() as conn:
+        row = conn.execute(
+            "SELECT scars FROM unit WHERE id = ?", (unit.unit_id,)
+        ).fetchone()
+    assert row[0] == 1
+    for bad in (["Bad Id"], [""], ["x" * 33], [f"b{i}" for i in range(9)]):
+        with pytest.raises(StoreError):
+            store.set_unit_progress(unit.unit_id, bad, [])
+    with pytest.raises(NotFoundError):
+        store.set_unit_progress("missing", [], [])
+    with pytest.raises(NotFoundError):
+        store.get_unit_progress("missing")
+
+
+def test_recap_save_replace_clear(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    assert store.get_recap(campaign.id) is None
+    first = store.save_recap(campaign.id, "Kagabi...", "spark")
+    assert store.get_recap(campaign.id) == first
+    second = store.save_recap(campaign.id, "Muli", "glimmer")
+    assert store.get_recap(campaign.id) == second
+    assert second.source == "glimmer"
+    assert _count(store, "campaign_recap") == 1
+    assert store.clear_recap(campaign.id)
+    assert not store.clear_recap(campaign.id)
+    assert store.get_recap(campaign.id) is None
+
+
+def test_recap_rejects_bad_input(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    with pytest.raises(StoreError):
+        store.save_recap(campaign.id, "x", "gpt")
+    with pytest.raises(StoreError):
+        store.save_recap(campaign.id, "", "spark")
+    with pytest.raises(StoreError):
+        store.save_recap(campaign.id, "x" * 1001, "spark")
+    with pytest.raises(NotFoundError):
+        store.save_recap("8a1f1f0e-2c4b-4d5e-9f00-0123456789ab", "x", "spark")
+
+
+def test_campaign_units_list_signatures_for_matching(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    other = store.create_campaign("D", Difficulty.NORMAL)
+    night = store.start_or_resume_night(campaign.id)
+    first = store.add_unit(night, card_fields(), SIGNATURE, UnitPlacement(1, 3.0, 4.0))
+    second = store.add_unit(
+        night, card_fields("Tasa", "wall"), SIGNATURE, UnitPlacement(2, 5.0, 6.0)
+    )
+    store.set_unit_progress(first.unit_id, ["hp_up"], [])
+    units = store.campaign_units(campaign.id)
+    assert [u.unit_id for u in units] == [first.unit_id, second.unit_id]
+    stored = units[0]
+    assert stored.card == card_fields()
+    assert stored.signature.label == "mug"
+    assert stored.signature.histogram == (0.5, 0.5)
+    assert stored.signature.area_cm2 == 40.0
+    assert stored.signature.aspect == 1.0
+    assert stored.signature.ref_crop_path.read_bytes() == b"png"
+    assert stored.progress.badges == ("hp_up",)
+    assert store.campaign_units(other.id) == []
+
+
+def test_campaign_units_refuse_escaping_crop_path(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    _seed_night_graph(store, campaign.id)
+    with store.transaction() as conn:
+        conn.execute("UPDATE object_signature SET ref_crop_path = '../../x.png'")
+    with pytest.raises(UnsafePathError):
+        store.campaign_units(campaign.id)
+
+
+def test_map_image_path_round_trip_and_guards(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    assert store.get_map_image(campaign.id) is None
+    target = store.campaign_dir(campaign.id) / "map.png"
+    store.set_map_image(campaign.id, target)
+    assert store.get_map_image(campaign.id) == target
+    store.set_map_image(campaign.id, None)
+    assert store.get_map_image(campaign.id) is None
+    with pytest.raises(UnsafePathError):
+        store.set_map_image(campaign.id, store.data_root / "elsewhere.png")
+    with pytest.raises(NotFoundError):
+        store.set_map_image("8a1f1f0e-2c4b-4d5e-9f00-0123456789ab", None)
+    with pytest.raises(NotFoundError):
+        store.get_map_image("8a1f1f0e-2c4b-4d5e-9f00-0123456789ab")
+    with store.transaction() as conn:
+        conn.execute("UPDATE campaign SET map_image_path = '../x.png'")
+    with pytest.raises(UnsafePathError):
+        store.get_map_image(campaign.id)
+
+
+def test_delete_campaign_removes_map_file(store: Store) -> None:
+    campaign = store.create_campaign("C", Difficulty.NORMAL)
+    target = store.campaign_dir(campaign.id) / "map.png"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"map")
+    store.set_map_image(campaign.id, target)
+    assert store.delete_campaign(campaign.id)
+    assert not target.exists()
