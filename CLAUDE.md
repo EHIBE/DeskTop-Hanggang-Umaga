@@ -10,7 +10,7 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 
 ## State
 
-| Item | Status (2026-10-28) |
+| Item | Status (2026-11-03) |
 |---|---|
 | Scaffold | Done. Commit 3379e9c |
 | Docs | Full AI-ready doc set added 2026-10-28 (see Docs map) |
@@ -32,24 +32,22 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 | Phase 14 replay | Built 2026-10-29. Highlights, 10 FPS proxy, Files upload with expiry and delete, one SAM video request, reel render with sprites, damage numbers and dawn title card, anchor box fallback, Make Replay and Show in folder controls. Real reel needs ffmpeg and the key |
 | Phase 15 code side | Done 2026-10-29. Root README with real numbers only, secret scan of history and tree (no secrets, one fake test key), raw video and voice audio ignored, summon how-it-was-made panel with model names, re-anchor flash, ffmpeg notice, `eval/run_eval.py cost`, final docs and demo audits. Video, license, freeze tag and submission are Manual: EHIBE |
 | UI redesign | Done 2026-10-31. First-run Filipino or English pick, FIL / ENG toggle, one caption line per message, pixel night scene, JRPG windows, pixel icons, title-screen Start, short KeySetup, step-list Calibration, scene Sunrise and Defeat. Component CSS moved into `@layer components` |
-| Tests | 1219 backend passing. ruff, mypy --strict, typecheck, lint, prettier clean |
-| CI, git hooks | None |
+| Finalization Phase 1 and 2 | Done 2026-11-03. ADR-0111 and ADR-0112, run command fixed, `DESKTOP_FFMPEG` passed to the backend, `null` origin only when packaged (`DESKTOP_PACKAGED`), electron-vite temp bundles ignored, P08 off Charm and Scout, `@electron-toolkit/preload` removed, CI workflow added |
+| Tests | 1229 backend passing from the repo root or `backend`. ruff, mypy --strict, typecheck, lint, prettier clean. npm audit: 32 moderate, all in dev tooling (eslint, electron-builder chains) |
+| CI, git hooks | `.github/workflows/ci.yml` (Windows, Python 3.13, Node 22). First run after EHIBE pushes. No git hooks |
 
 ## Pending queue
 
-Ordered. Canonical schedule: `docs/delivery/schedule.md`.
+Ordered. Canonical: `docs/FINALIZATION_PLAN.md`. Phase 1 and 2 done.
 
-1. Manual: EHIBE. Official Rules answers, credits, `MODEL_API_KEY` in `backend/.env`, Contributor mode off (`docs/rules-notes.md`)
-2. Manual: EHIBE. Run the Phase 1 smoke scripts (`docs/rules-notes.md` runbook)
-3. Manual: EHIBE. Look at the window: KeySetup or Start, then Calibration with the real camera (feed at 20 FPS+, 4 corner taps, ruler check)
-4. Manual: EHIBE. Install ffmpeg on PATH before Phase 13
-5. Manual: EHIBE. Run `backend\.venv\Scripts\python -m smoke.assets --date <today>` from `backend` for placeholder and enemy art, then rate sprites (E5)
-6. Manual: EHIBE. Voice smoke script, then a spoken night (captions, chips, "hindi", "tapos na", hold Space) and record a DIARIZATION fixture so the event field names are verified
-7. Manual: EHIBE. Play a Demo Safe night with Wi-Fi off, kill the app at turn 5 and resume, delete a test campaign and check `%APPDATA%\DeskTop` (Playtest 1)
-8. Manual: EHIBE. Play a night with a tikbalang push and a duwende steal on the real table (turn 3 on Normal teaches the push)
-9. Manual: EHIBE. Install ffmpeg, play two consented nights, run `eval/run_eval.py e4 --db` and `e6 --db` on the database, record E1 to E3 data, then the freeze tag (`git tag freeze-nov3`, push) at Nov 3 6:00 PM SGT and Playtest 2
-10. Manual: EHIBE. After a consented night, tap Make the Replay, open the reel in Windows Media Player and check sprites stay on objects (FR-47 90%)
-11. Manual: EHIBE. Choose the license, add the demo GIF and video link to README.md, record the video per docs/delivery/video-script.md, push the repo public, submit by Nov 4 11:00 PM SGT and save the confirmation
+1. Manual: EHIBE. Phase 3: claim credits, confirm Contributor mode off, fill `docs/rules-notes.md`, paste the key in KeySetup and `backend/.env`, then say "key is in"
+2. Claude with EHIBE watching. Phase 3 smoke scripts and `python -m smoke.assets --date 2026-11-03` inside the $15 day budget. EHIBE rates 20 sprites for E5
+3. Claude. Phase 4 game feel before 5:30 PM SGT: sound cues, first-night hints, folklore glossary, speaker chip, in that order and cut in reverse
+4. Claude. Phase 5 FIL and ENG screenshots of every screen, overflow fixes, impeccable audit of the Night HUD
+5. Manual: EHIBE. Freeze at Nov 3 6:00 PM SGT: `git tag freeze-nov3` and push
+6. Claude. Phase 6 packaged zip with the backend bundled and fuses on (ADR-0111)
+7. Manual: EHIBE with Claude. Phase 7 ffmpeg (`winget install Gyan.FFmpeg`), Playtest 1 Demo Safe with Wi-Fi off, table run with push and steal, two consented nights, evals E1 to E6, replay check
+8. EHIBE with Claude. Phase 8 video, LICENSE, README numbers, submission text, secret scan, push and submit by Nov 4 11:00 PM SGT
 
 ## Constraints
 
@@ -69,18 +67,14 @@ Ordered. Canonical schedule: `docs/delivery/schedule.md`.
 
 ## Bugs and contradictions
 
-Each has a Proposed ADR in `docs/decisions/`.
+Each has an ADR in `docs/decisions/`.
 
-| ID | Issue | ADR |
-|---|---|---|
-B11 (fixed port) closed in M3. B1 to B10 resolved 2026-10-28 (ADR-0101 to ADR-0110 accepted, B1, B2, B3, B6 code paths, B7 and B8 fixed in M0).
+B1 to B11 closed (ADR-0101 to ADR-0110, B11 in M3). B12 planned through electron-builder `electronFuses` in Phase 6 (ADR-0111, no new dependency). B13 done 2026-11-03, `@electron-toolkit/preload` removed. B15 approved and closed 2026-11-03 (schema v2 stays).
 
 | ID | Open issue | Owner |
 |---|---|---|
-| B12 | No Electron fuses (RunAsNode, ASAR integrity). Needs `@electron/fuses`, a new dependency | Approval: EHIBE |
-| B13 | `@electron-toolkit/preload` unused since ADR-0103. Removal is a dependency change | Approval: EHIBE |
-| B14 | Python 3.11 not installed, venv uses 3.13. ffmpeg not on PATH | ADR-0101, Manual: EHIBE |
-| B15 | Schema v2 adds `night.board_json` with a stepped migration so restore is exact. data-model.md asks for approval on schema changes | Approval: EHIBE |
+| B12 | Fuses not applied yet. Lands with the packaged zip | Claude, Phase 6 |
+| B14 | ffmpeg not on PATH. Venv uses Python 3.13 per ADR-0101 | Manual: EHIBE (D14) |
 
 ## Commands
 
@@ -112,7 +106,10 @@ Run from repo root.
 | Visual design | `docs/design/DESIGN.md` |
 | Architecture and contracts | `docs/architecture/` |
 | Setup, standards, tests, security | `docs/engineering/` |
+| Finalization roadmap, Nov 3 to Nov 5 | `docs/FINALIZATION_PLAN.md` |
+| Working prompt | `docs/prompts/FEATURE_PROMPT.md` |
 | Schedule, risks, demo | `docs/delivery/` |
+| Release zip, live API, judging score | `docs/delivery/release-and-packaging.md`, `docs/delivery/live-api-runbook.md`, `docs/delivery/judging-scorecard.md` |
 | Market and judging | `docs/market/` |
 | Decisions | `docs/decisions/` |
 | How to build, by phase | `docs/DeskTop_Build_Guide.md` |
@@ -152,4 +149,4 @@ All on Sonnet 5.5, medium effort. Files in `.claude/agents/`.
 
 ## Decisions
 
-Accepted: ADR-0001 to ADR-0012 and ADR-0101 to ADR-0110. ADR-0012 holds the MVP build defaults (damage with shields, walls, ties, fail-closed token). Proposed: none. Index: `docs/decisions/README.md`.
+Accepted: ADR-0001 to ADR-0012 and ADR-0101 to ADR-0112. ADR-0111 covers the packaged zip and origin. ADR-0112 covers the finalization scope. ADR-0012 holds the MVP build defaults (damage with shields, walls, ties, fail-closed token). Proposed: none. Index: `docs/decisions/README.md`.
