@@ -110,7 +110,7 @@ function denyAllPermissions(): void {
 }
 
 function backendDir(): string {
-  if (is.dev) return join(app.getAppPath(), '..', 'backend')
+  if (!app.isPackaged) return join(app.getAppPath(), '..', 'backend')
   return join(process.resourcesPath, 'backend')
 }
 
@@ -168,6 +168,11 @@ function registerIpc(keystore: Keystore, backend: BackendProcess, userDataDir: s
   })
 }
 
+function pythonPath(dir: string): string {
+  if (app.isPackaged) return join(dir, 'python', 'python.exe')
+  return join(dir, '.venv', 'Scripts', 'python.exe')
+}
+
 async function startApp(): Promise<void> {
   electronApp.setAppUserModelId(APP_USER_MODEL_ID)
   denyAllPermissions()
@@ -175,7 +180,7 @@ async function startApp(): Promise<void> {
   const keystore = new Keystore(userDataDir)
   const dir = backendDir()
   const backend = new BackendProcess({
-    pythonPath: join(dir, '.venv', 'Scripts', 'python.exe'),
+    pythonPath: pythonPath(dir),
     backendDir: dir,
     userDataDir,
     allowedOrigins: allowedOrigins(),

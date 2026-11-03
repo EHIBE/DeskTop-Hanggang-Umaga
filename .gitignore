@@ -21,3 +21,5 @@ eval/voice/*.wav
 eval/voice/*.webm
 eval/voice/*.m4a
 eval/voice/*.mp3
+app/staging/
+release/
