@@ -21,7 +21,7 @@ Every functional and non-functional requirement with where it lives and its buil
 | Non-functional | NFR-01 to NFR-31 |
 | Demo-critical (★) | 31 FRs |
 | Status values | Planned, Built, Tested, Cut, Could |
-| Status on 2026-11-03 | M0 to M11 and Phases 12 to 14 code built offline. Live runs, evals with real data, freeze, Playtest 2, video and submission remain. Rows below give each test. F16 progression and F23 Settings cut by ADR-0112 |
+| Status on 2026-11-03 | M0 to M11 and Phases 12 to 14 code built offline. Live runs, evals with real data, freeze, Playtest 2, video and submission remain. Rows below give each test. F16 progression and F23 Settings cut by ADR-0112. Phase 4 game feel built 2026-11-03 (sound cues, first-night hints, folklore glossary, speaker chip), spec `design/onboarding-and-tutorial.md` |
 
 Update the Status column when a requirement is built (code merged) and tested (test green). Use the `desktop-docs-sync` skill.
 
@@ -78,7 +78,7 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | FR-16 | | Cap 12 objects, 2 Charms, 2 Walls | F02 | JS-02 | rules/units.py, vision/summon.py | test_units.py, test_summon.py | Tested |
 | FR-17 | ★ | Voice session per phase, ENDPOINTING then DIARIZATION | F10 | JS-03 | backend/voice/session.py, game/night.py | test_voice_session.py, test_voice_flow.py. Live fixture Manual: EHIBE | Built (night DIARIZATION session only) |
 | FR-18 | | Voice claim maps labels to players and units | F11 | JS-03 | backend/voice/claim.py, game/night.py | test_claim.py, test_voice_flow.py (spoken claims, relabel, reclaim) | Tested |
-| FR-19 | ★ | Live partial and final captions with speaker chip | F10 | JS-04 | hud/Captions.tsx, hud/OrderChips.tsx | test_voice_flow.py (caption messages). Display Manual: EHIBE | Built |
+| FR-19 | ★ | Live partial and final captions with speaker chip | F10 | JS-04 | hud/Captions.tsx, hud/OrderChips.tsx, components/SpeakerChip.tsx, lib/speaker.ts | test_voice_flow.py (caption messages). P1 to P4 chip with colour and shape added 2026-11-03. Display Manual: EHIBE | Built |
 | FR-20 | ★ | Local Taglish and English command grammar under 20 ms | F10 | JS-03 | backend/voice/grammar.py | test_grammar.py (triggers, Taglish examples, misfires, under 20 ms median). E3 Manual: EHIBE | Tested |
 | FR-21 | | Spark fallback parser | F12 | JS-03 | n/a | n/a | Cut |
 | FR-22 | ★ | Order chip before resolve, "hindi" or X cancels | F10 | JS-04 | hud/OrderChips.tsx, voice/grammar.py | test_grammar.py, test_voice_flow.py (voice chip, spoken cancel) | Tested |

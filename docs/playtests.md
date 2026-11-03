@@ -5,7 +5,7 @@ read_when: [after a playtest, writing impact framing, reviewing Taglish copy]
 canonical_for: [playtest records, copy review record]
 sources: [docs/engineering/testing-strategy.md, docs/DeskTop_PRD.md#playtests]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-03
 related: [docs/engineering/testing-strategy.md, docs/design/cultural-care.md, docs/market/judging-strategy.md]
 ---
 
@@ -49,7 +49,10 @@ Each line reviewed by at least 2 Filipino playtesters before recording (`design/
 
 | Key or line | Reviewer 1 | Reviewer 2 | Change |
 |---|---|---|---|
-| | | | |
+| `sfx.on`, `sfx.off` (Phase 4, 2026-11-03) | Pending | Pending | Agent check by desktop-cultural-reviewer changed bukas and sarado to naka-on and naka-off |
+| `tut.*` hints, 8 keys (Phase 4) | Pending | Pending | Agent check shortened every hint to fit one 24 px line and matched the End turn label |
+| `gloss.*` title, open, close and 8 terms (Phase 4) | Pending | Pending | English descriptions verbatim from `cultural-care.md`. Tagalog descriptions wait for a Filipino reviewer |
+| `speaker.p1` to `speaker.p4`, `speaker.unknown` (Phase 4) | Pending | Pending | Agent check replaced Manlalaro with Player |
 
 ## Consent and likeness
 

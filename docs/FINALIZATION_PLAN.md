@@ -109,6 +109,8 @@ Commits: `docs: Record live smoke results and official rules answers`, `feat: Ad
 
 Raises Demo Quality and Impact. Spec: `docs/design/onboarding-and-tutorial.md`. Every new line goes through desktop-add-copy-key and desktop-cultural-reviewer.
 
+Status: Built 2026-11-03 by 4:10 PM SGT, nothing cut. Typecheck, lint, prettier and build clean. Copy passed the agent cultural check and waits on 2 Filipino reviewers in `docs/playtests.md`. Not yet seen in the running app, that is Phase 5. Open: overlap still shows one caption line because a caption carries one speaker, and tap chips carry no speaker.
+
 | Step | Task | Check | Commit |
 |---|---|---|---|
 | 4.1 | Sound cues made with WebAudio: ambience, spawn gong, End Turn bell, hit, dodge, sunrise chime, defeat tone. Mute toggle saved locally. Never the only signal | Heard in a run, mute works, reduced-motion untouched, no files added | `feat: Add code-made sound cues with a mute toggle` |

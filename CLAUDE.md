@@ -33,21 +33,21 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 | Phase 15 code side | Done 2026-10-29. Root README with real numbers only, secret scan of history and tree (no secrets, one fake test key), raw video and voice audio ignored, summon how-it-was-made panel with model names, re-anchor flash, ffmpeg notice, `eval/run_eval.py cost`, final docs and demo audits. Video, license, freeze tag and submission are Manual: EHIBE |
 | UI redesign | Done 2026-10-31. First-run Filipino or English pick, FIL / ENG toggle, one caption line per message, pixel night scene, JRPG windows, pixel icons, title-screen Start, short KeySetup, step-list Calibration, scene Sunrise and Defeat. Component CSS moved into `@layer components` |
 | Finalization Phase 1 and 2 | Done 2026-11-03. ADR-0111 and ADR-0112, run command fixed, `DESKTOP_FFMPEG` passed to the backend, `null` origin only when packaged (`DESKTOP_PACKAGED`), electron-vite temp bundles ignored, P08 off Charm and Scout, `@electron-toolkit/preload` removed, CI workflow added |
+| Finalization Phase 4 | Built 2026-11-03. WebAudio sound cues with a mute switch (`lib/sound.ts`, `desktop.sound`), first-night hints turns 1 to 3 (`lib/tutorial.ts`, `desktop.tutorial`), folklore glossary from Start and pause, P1 to P4 speaker chip. Copy reviews by Filipino players pending |
 | Tests | 1229 backend passing from the repo root or `backend`. ruff, mypy --strict, typecheck, lint, prettier clean. npm audit: 32 moderate, all in dev tooling (eslint, electron-builder chains) |
 | CI, git hooks | `.github/workflows/ci.yml` (Windows, Python 3.13, Node 22). First run after EHIBE pushes. No git hooks |
 
 ## Pending queue
 
-Ordered. Canonical: `docs/FINALIZATION_PLAN.md`. Phase 1 and 2 done.
+Ordered. Canonical: `docs/FINALIZATION_PLAN.md`. Phases 1, 2 and 4 done.
 
 1. Manual: EHIBE. Phase 3: claim credits, confirm Contributor mode off, fill `docs/rules-notes.md`, paste the key in KeySetup and `backend/.env`, then say "key is in"
 2. Claude with EHIBE watching. Phase 3 smoke scripts and `python -m smoke.assets --date 2026-11-03` inside the $15 day budget. EHIBE rates 20 sprites for E5
-3. Claude. Phase 4 game feel before 5:30 PM SGT: sound cues, first-night hints, folklore glossary, speaker chip, in that order and cut in reverse
-4. Claude. Phase 5 FIL and ENG screenshots of every screen, overflow fixes, impeccable audit of the Night HUD
-5. Manual: EHIBE. Freeze at Nov 3 6:00 PM SGT: `git tag freeze-nov3` and push
-6. Claude. Phase 6 packaged zip with the backend bundled and fuses on (ADR-0111)
-7. Manual: EHIBE with Claude. Phase 7 ffmpeg (`winget install Gyan.FFmpeg`), Playtest 1 Demo Safe with Wi-Fi off, table run with push and steal, two consented nights, evals E1 to E6, replay check
-8. EHIBE with Claude. Phase 8 video, LICENSE, README numbers, submission text, secret scan, push and submit by Nov 4 11:00 PM SGT
+3. Claude. Phase 5 FIL and ENG screenshots of every screen, overflow fixes, impeccable audit of the Night HUD
+4. Manual: EHIBE. Freeze at Nov 3 6:00 PM SGT: `git tag freeze-nov3` and push
+5. Claude. Phase 6 packaged zip with the backend bundled and fuses on (ADR-0111)
+6. Manual: EHIBE with Claude. Phase 7 ffmpeg (`winget install Gyan.FFmpeg`), Playtest 1 Demo Safe with Wi-Fi off, table run with push and steal, two consented nights, evals E1 to E6, replay check
+7. EHIBE with Claude. Phase 8 video, LICENSE, README numbers, submission text, secret scan, push and submit by Nov 4 11:00 PM SGT
 
 ## Constraints
 
