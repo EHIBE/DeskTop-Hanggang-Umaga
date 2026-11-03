@@ -34,8 +34,10 @@ Project memory for AI agents. Read this first, then `docs/README.md`, then the o
 | UI redesign | Done 2026-10-31. First-run Filipino or English pick, FIL / ENG toggle, one caption line per message, pixel night scene, JRPG windows, pixel icons, title-screen Start, short KeySetup, step-list Calibration, scene Sunrise and Defeat. Component CSS moved into `@layer components` |
 | Finalization Phase 1 and 2 | Done 2026-11-03. ADR-0111 and ADR-0112, run command fixed, `DESKTOP_FFMPEG` passed to the backend, `null` origin only when packaged (`DESKTOP_PACKAGED`), electron-vite temp bundles ignored, P08 off Charm and Scout, `@electron-toolkit/preload` removed, CI workflow added |
 | Finalization Phase 4 | Built 2026-11-03. WebAudio sound cues with a mute switch (`lib/sound.ts`, `desktop.sound`), first-night hints turns 1 to 3 (`lib/tutorial.ts`, `desktop.tutorial`), folklore glossary from Start and pause, P1 to P4 speaker chip. Copy reviews by Filipino players pending |
-| Full audit | Done 2026-11-03 by seven agents (security, privacy and cost, correctness, checks, demo readiness, docs, cultural). No critical or high code findings. Fixed: spawn error crash, symlinked recordings folder, generic notice for unexpected errors, replay cleared on quit, cancelled paid calls charged, Connecting stall message, Calibration rescan, honest model labels, glossary focus, push-to-talk in dialogs, hint slot shift, cultural copy fixes, LICENSE added. Open: zip and fuses (Phase 6), Quit from pause, Tagalog glossary text, live evals and playtests |
-| Tests | 1232 backend passing from the repo root or `backend`, 94% coverage, E7 50 of 50 (rerun 2026-11-03). ruff, mypy --strict, typecheck, lint, prettier clean. npm audit: 32 moderate, all in dev tooling (eslint, electron-builder chains) |
+| Full audit | Done 2026-11-03 by seven agents (security, privacy and cost, correctness, checks, demo readiness, docs, cultural). No critical or high code findings. Fixed: spawn error crash, symlinked recordings folder, generic notice for unexpected errors, replay cleared on quit, cancelled paid calls charged, Connecting stall message, Calibration rescan, honest model labels, glossary focus, push-to-talk in dialogs, hint slot shift, cultural copy fixes, LICENSE added. Open: Tagalog glossary text, live evals and playtests |
+| Post-freeze features | Built 2026-11-04 by EHIBE's call (ADR-0113). Kapre smoke with P08 back on Charm and Scout, Lost detection, barrio level, badges and scars, returning objects, Kagabi recap, Spark fallback parser, strict ownership, generated barrio map, optional Muse Glimmer recap (local Ollama, `DESKTOP_GLIMMER_URL`), Settings screen, Quit from pause, Back from Calibration. Schema v3 (additive). 16 states. Live checks Manual: EHIBE |
+| Phase 6 release zip | Done 2026-11-04. `npm --prefix app run dist:win`, portable Python copied from the base 3.13 install (`app/scripts/stage-backend.mjs`), fuses on, `release/DeskTop-1.0.0-win.zip` 327.1 MB. Packaged app connects, saves settings and closes cleanly. Not yet run on a machine without Python |
+| Tests | 1487 backend passing from the repo root or `backend`, E7 50 of 50 (rerun 2026-11-04). Coverage last measured 94% before the post-freeze work. ruff, mypy --strict, typecheck, lint, prettier clean. npm audit: 32 moderate, all in dev tooling (eslint, electron-builder chains) |
 | CI, git hooks | `.github/workflows/ci.yml` (Windows, Python 3.13, Node 22). First run after EHIBE pushes. No git hooks |
 
 ## Pending queue
@@ -45,8 +47,8 @@ Ordered. Canonical: `docs/FINALIZATION_PLAN.md`. Phases 1, 2 and 4 done.
 1. Manual: EHIBE. Phase 3: claim credits, confirm Contributor mode off, fill `docs/rules-notes.md`, paste the key in KeySetup and `backend/.env`, then say "key is in"
 2. Claude with EHIBE watching. Phase 3 smoke scripts and `python -m smoke.assets --date 2026-11-03` inside the $15 day budget. EHIBE rates 20 sprites for E5
 3. Claude. Phase 5 FIL and ENG screenshots of every screen, overflow fixes, impeccable audit of the Night HUD
-4. Manual: EHIBE. Freeze at Nov 3 6:00 PM SGT: `git tag freeze-nov3` and push
-5. Claude. Phase 6 packaged zip with the backend bundled and fuses on (ADR-0111)
+4. Manual: EHIBE. Tag and push the current tree (the freeze moved, see ADR-0113). Phase 6 zip done 2026-11-04
+5. Manual: EHIBE. Run the zip on a second Windows machine or a clean user account without Python
 6. Manual: EHIBE with Claude. Phase 7 ffmpeg (`winget install Gyan.FFmpeg`), Playtest 1 Demo Safe with Wi-Fi off, table run with push and steal, two consented nights, evals E1 to E6, replay check
 7. EHIBE with Claude. Phase 8 video, LICENSE, README numbers, submission text, secret scan, push and submit by Nov 4 11:00 PM SGT
 
@@ -70,11 +72,10 @@ Ordered. Canonical: `docs/FINALIZATION_PLAN.md`. Phases 1, 2 and 4 done.
 
 Each has an ADR in `docs/decisions/`.
 
-B1 to B11 closed (ADR-0101 to ADR-0110, B11 in M3). B12 planned through electron-builder `electronFuses` in Phase 6 (ADR-0111, no new dependency). B13 done 2026-11-03, `@electron-toolkit/preload` removed. B15 approved and closed 2026-11-03 (schema v2 stays).
+B1 to B11 closed (ADR-0101 to ADR-0110, B11 in M3). B12 closed 2026-11-04, fuses applied through electron-builder `electronFuses` (ADR-0111). B13 done 2026-11-03, `@electron-toolkit/preload` removed. B15 approved and closed 2026-11-03 (schema v2 stays).
 
 | ID | Open issue | Owner |
 |---|---|---|
-| B12 | Fuses not applied yet. Lands with the packaged zip | Claude, Phase 6 |
 | B14 | ffmpeg not on PATH. Venv uses Python 3.13 per ADR-0101 | Manual: EHIBE (D14) |
 
 ## Commands
@@ -90,6 +91,7 @@ Run from repo root.
 | Format | `npm --prefix app run format` |
 | Audit | `npm --prefix app audit` |
 | Run app | `npm --prefix app run dev` |
+| Release zip | `npm --prefix app run dist:win`, then zip `app\dist\win-unpacked` to `release\DeskTop-1.0.0-win.zip` |
 | Run backend | `cd backend`, set `DESKTOP_TOKEN` (64 hex) and `DESKTOP_DEV=1`, then `.venv\Scripts\python -m uvicorn server:create_app_from_env --factory --host 127.0.0.1 --port 8765`. Full steps: `docs/engineering/troubleshooting.md` |
 | Python lint | `cd backend` then `.venv\Scripts\python -m ruff check .` |
 | Python types | `cd backend` then `.venv\Scripts\python -m mypy --strict --exclude .venv .` |
@@ -150,4 +152,4 @@ All on Sonnet 5.5, medium effort. Files in `.claude/agents/`.
 
 ## Decisions
 
-Accepted: ADR-0001 to ADR-0012 and ADR-0101 to ADR-0112. ADR-0111 covers the packaged zip and origin. ADR-0112 covers the finalization scope. ADR-0012 holds the MVP build defaults (damage with shields, walls, ties, fail-closed token). Proposed: none. Index: `docs/decisions/README.md`.
+Accepted: ADR-0001 to ADR-0012 and ADR-0101 to ADR-0113. ADR-0113 covers the post-freeze cut features. ADR-0111 covers the packaged zip and origin. ADR-0112 covers the finalization scope. ADR-0012 holds the MVP build defaults (damage with shields, walls, ties, fail-closed token). Proposed: none. Index: `docs/decisions/README.md`.

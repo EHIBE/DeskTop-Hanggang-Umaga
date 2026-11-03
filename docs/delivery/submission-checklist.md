@@ -21,6 +21,7 @@ Submit by Nov 4 11:00 PM SGT, well before the Nov 5 10:00 AM SGT hard deadline. 
 | Hard deadline | Nov 5, 10:00 AM SGT (02:00 UTC, Nov 4 9:00 PM ET) |
 | Fallback | Submit whatever is done by Nov 5, 8:00 AM SGT |
 | Track and theme | Indie, Build for Your World |
+| Release zip | `release/DeskTop-1.0.0-win.zip`, 327.1 MB, SHA-256 `F4CBF5C5D79B2AAB82C4DFCEFF45F43BFC19EC5FD6EDF3582FE3D30C46EFFD77`, built 2026-11-04 at commit 442dc3e. Secret scan clean |
 
 ## Checklist
 

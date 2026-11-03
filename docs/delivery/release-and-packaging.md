@@ -19,7 +19,7 @@ The release is an unsigned zip of the unpacked Windows app. It carries its own p
 |---|---|
 | Artifact | `release/DeskTop-1.0.0-win.zip`, unsigned, from `app/dist/win-unpacked` |
 | Size | 327.1 MB zipped, 875 MB unpacked |
-| SHA-256 | `2D12235A0613FBDB8C68E5485BE3E5A0077E02B09814AF13AFE2A5F4C6A6881A` (first build, 2026-11-04. A rebuild changes it) |
+| SHA-256 | `F4CBF5C5D79B2AAB82C4DFCEFF45F43BFC19EC5FD6EDF3582FE3D30C46EFFD77` (final post-freeze build at commit 442dc3e, 2026-11-04, 327.1 MB. A rebuild changes it) |
 | Build command | `npm --prefix app run dist:win` |
 | Staging only | `npm --prefix app run bundle:backend` |
 | Platform | Windows only |
@@ -94,7 +94,7 @@ Get-FileHash release\DeskTop-1.0.0-win.zip -Algorithm SHA256
 | 5 | Full Demo Safe night with Wi-Fi off | Planned |
 | 6 | Size recorded | Done, 327.1 MB zip |
 | 7 | Secret scan | Done, see above |
-| 8 | SHA-256 in `docs/delivery/submission-checklist.md` | Planned. Record after the final rebuild |
+| 8 | SHA-256 in `docs/delivery/submission-checklist.md` | Done 2026-11-04. Window close checked, no DeskTop.exe or python.exe left. Settings save checked in the packaged app |
 | 9 | `backend.log` holds no key or token | Seen with no key set. Token redaction lives in `backend.ts` |
 | 10 | Close the window and no `python.exe` is left | Unverified, see smoke result |
 | 11 | Run on a machine or account without Python installed | Unverified |
