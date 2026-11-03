@@ -124,4 +124,4 @@ More: `docs/product/scope-and-cuts.md` and `docs/delivery/risk-register.md`.
 
 ## License
 
-To be chosen by EHIBE before the repo goes public. The proposed default is MIT for code and CC BY-NC 4.0 for assets made for DeskTop, with third-party assets keeping their own licenses (`docs/delivery/readme-outline.md`).
+Code: MIT, see `LICENSE`. Original assets made for DeskTop: CC BY-NC 4.0, see `assets/LICENSE-ASSETS.md`. Third-party assets keep their own licenses, listed in that file.

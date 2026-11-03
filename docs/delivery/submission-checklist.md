@@ -31,7 +31,7 @@ Submit by Nov 4 11:00 PM SGT, well before the Nov 5 10:00 AM SGT hard deadline. 
 - [ ] Description pasted, updated with real numbers, proofread
 - [ ] Every Meta model used is named
 - [ ] Screenshots: summon split screen, HUD mid-night, sunrise, replay frame
-- [ ] License decided (Q3 default: MIT code, CC BY-NC 4.0 assets)
+- [x] License decided (D12): MIT code in `LICENSE`, CC BY-NC 4.0 assets in `assets/LICENSE-ASSETS.md`. Added 2026-11-03
 - [ ] Submission confirmation screenshot saved
 
 Pushing to GitHub needs an explicit instruction from EHIBE (`engineering/git-and-commits.md`).
