@@ -566,8 +566,8 @@ const entries = {
   },
   'settings.map': { tl: 'Mapa ng baryo na gawa ng AI', en: 'Generated barrio map' },
   'settings.map_hint': {
-    tl: 'Gumagamit ng API key. Mga $0.01 isang beses kada kampanya.',
-    en: 'Uses the API key. About $0.01 once per campaign.'
+    tl: 'Ipinapadala ang isang litrato ng bakanteng mesa sa Muse Image. Mga $0.01 isang beses kada kampanya.',
+    en: 'Sends one photo of the empty desk to Muse Image. About $0.01 once per campaign.'
   },
   'settings.on': { tl: 'Naka-on', en: 'On' },
   'settings.off': { tl: 'Naka-off', en: 'Off' },

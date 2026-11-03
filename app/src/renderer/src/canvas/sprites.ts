@@ -123,11 +123,18 @@ export function useBitmap(data: string | null): ImageBitmap | null {
   useEffect(() => {
     if (data === null || data === '') return
     let active = true
+    let made: ImageBitmap | null = null
     void decode(data).then((bitmap) => {
-      if (active) setDecoded({ data, bitmap })
+      if (!active) {
+        bitmap?.close()
+        return
+      }
+      made = bitmap
+      setDecoded({ data, bitmap })
     })
     return () => {
       active = false
+      made?.close()
     }
   }, [data])
 

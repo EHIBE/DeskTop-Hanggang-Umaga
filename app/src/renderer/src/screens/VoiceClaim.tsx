@@ -203,50 +203,52 @@ function VoiceClaim({ state, send, subscribe }: VoiceClaimProps): React.JSX.Elem
             {say('claim.duplicate')}
           </p>
         )}
-        <section aria-label={say('rec.consent')} className="flex flex-col gap-3">
-          <Bilingual copyKey="rec.consent" />
-          <Bilingual copyKey="rec.no_ok" />
-          {(state.night?.players ?? []).map((player) => {
-            const answered = Object.prototype.hasOwnProperty.call(state.consents, player)
-            const agreed = answered && state.consents[player]
-            const declined = answered && !state.consents[player]
-            const label = t('rec.player', { name: player })
-            return (
-              <div
-                key={player}
-                role="group"
-                aria-label={pick(label)}
-                className="flex items-center gap-3"
-              >
-                <span className="min-w-0 flex-1 truncate">
-                  {agreed ? '✓ ' : declined ? '✗ ' : '? '}
-                  {player}
-                </span>
-                <button
-                  type="button"
-                  className="btn w-[140px] shrink-0"
-                  aria-pressed={agreed}
-                  onClick={() => answer(player, true)}
+        {state.settings.replay_enabled && (
+          <section aria-label={say('rec.consent')} className="flex flex-col gap-3">
+            <Bilingual copyKey="rec.consent" />
+            <Bilingual copyKey="rec.no_ok" />
+            {(state.night?.players ?? []).map((player) => {
+              const answered = Object.prototype.hasOwnProperty.call(state.consents, player)
+              const agreed = answered && state.consents[player]
+              const declined = answered && !state.consents[player]
+              const label = t('rec.player', { name: player })
+              return (
+                <div
+                  key={player}
+                  role="group"
+                  aria-label={pick(label)}
+                  className="flex items-center gap-3"
                 >
-                  {agreed ? '✓ ' : ''}
-                  {say('rec.agree')}
-                </button>
-                <button
-                  type="button"
-                  className="btn w-[140px] shrink-0"
-                  aria-pressed={declined}
-                  onClick={() => answer(player, false)}
-                >
-                  {declined ? '✗ ' : ''}
-                  {say('rec.decline')}
-                </button>
-              </div>
-            )
-          })}
-          {Object.keys(state.consents).length === 0 && (
-            <p className="caption-en">{say('rec.waiting')}</p>
-          )}
-        </section>
+                  <span className="min-w-0 flex-1 truncate">
+                    {agreed ? '✓ ' : declined ? '✗ ' : '? '}
+                    {player}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn w-[140px] shrink-0"
+                    aria-pressed={agreed}
+                    onClick={() => answer(player, true)}
+                  >
+                    {agreed ? '✓ ' : ''}
+                    {say('rec.agree')}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn w-[140px] shrink-0"
+                    aria-pressed={declined}
+                    onClick={() => answer(player, false)}
+                  >
+                    {declined ? '✗ ' : ''}
+                    {say('rec.decline')}
+                  </button>
+                </div>
+              )
+            })}
+            {Object.keys(state.consents).length === 0 && (
+              <p className="caption-en">{say('rec.waiting')}</p>
+            )}
+          </section>
+        )}
         <div className="mt-auto flex gap-4">
           <button type="button" className="btn flex-1" onClick={done}>
             {say('claim.skip')}

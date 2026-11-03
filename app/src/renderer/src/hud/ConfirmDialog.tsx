@@ -41,13 +41,17 @@ function ConfirmDialog({ confirm, onAccept, onCancel }: ConfirmDialogProps): Rea
         {say('confirm.seconds', { seconds })}
       </p>
       <div className="flex justify-end gap-4">
-        <button type="button" className="btn btn-big" onClick={() => onCancel(confirmId)}>
+        <button
+          type="button"
+          className="btn btn-big"
+          data-autofocus
+          onClick={() => onCancel(confirmId)}
+        >
           {say('confirm.no')}
         </button>
         <button
           type="button"
           className="btn btn-primary btn-big"
-          data-autofocus
           onClick={() => onAccept(confirmId)}
         >
           {say('confirm.yes')}
