@@ -1,0 +1,69 @@
+# DeskTop: Hanggang Umaga
+
+> Windows desktop game where a top-down webcam turns real desk objects into 16-bit pixel art units. One to four players at one table move the objects by hand and give Taglish or English voice orders to survive Filipino folklore creatures for 8 turns until sunrise. Electron, React and TypeScript renderer, FastAPI, OpenCV and SQLite backend on 127.0.0.1, four Meta models (Muse Spark 1.3, SAM 3.1, Muse Image 1.0, Muse Voice Transcribe 1.0). A deterministic rules engine owns every number. Solo build by EHIBE for the Meta Global AI Developer Hackathon 2026, Indie track.
+
+Start with CLAUDE.md for current state, constraints and commands, then docs/README.md for the doc map. Each fact has one canonical file, named in its `canonical_for` front matter. Code beats docs.
+
+## Entry points
+
+- [CLAUDE.md](CLAUDE.md): current state, pending queue, constraints, bugs, commands, agents and skills
+- [Docs index](docs/README.md): every doc, read order by task, doc conventions
+- [README](README.md): human overview with diagrams, privacy, real test and eval numbers
+- [How to run](docs/how-to-run.md): player guide for the zip and from source
+- [Glossary](docs/glossary.md): terms and ID prefixes
+
+## Game rules
+
+- [Core loop](docs/game/core-loop.md): one night, turn by turn
+- [State machine](docs/game/state-machine.md): the 16 states and transitions
+- [Units and classes](docs/game/units-and-classes.md): 8 classes, roster limits, clamps
+- [Powers](docs/game/powers.md): P01 to P12
+- [Enemies](docs/game/enemies.md): aswang, tikbalang, kapre, manananggal, duwende
+- [Waves and difficulty](docs/game/waves-and-difficulty.md): spawn table by turn
+- [Combat math](docs/game/combat-math.md): damage, shields, walls, ties
+- [Campaign progression](docs/game/campaign-progression.md): barrio level, badges, scars, returning objects
+
+## Architecture and contracts
+
+- [Overview](docs/architecture/overview.md): processes, data flow, trust boundaries
+- [Backend modules](docs/architecture/backend-modules.md): module map and duties
+- [Frontend modules](docs/architecture/frontend-modules.md): Electron main, preload, renderer
+- [WebSocket protocol](docs/architecture/websocket-protocol.md): every message type
+- [Data model](docs/architecture/data-model.md): SQLite schema v3
+- [Meta API integration](docs/architecture/meta-api-integration.md): client, retries, breaker
+- [AI contracts](docs/architecture/ai-contracts.md): prompts, schemas, validation
+- [Reliability and fallbacks](docs/architecture/reliability-and-fallbacks.md): what happens when a model fails
+- [Cost and budget](docs/architecture/cost-and-budget.md): per-call prices, warn at $90, stop at $120
+
+## Engineering
+
+- [Windows setup](docs/engineering/setup-windows.md): dev environment and run commands
+- [Environment and config](docs/engineering/environment-and-config.md): every env var
+- [Security and privacy](docs/engineering/security-and-privacy.md): token, key storage, data leaving the laptop
+- [Testing strategy](docs/engineering/testing-strategy.md): test layers and evals E1 to E7
+- [Troubleshooting](docs/engineering/troubleshooting.md): failures mapped to copy keys and fallbacks
+
+## Design
+
+- [Design system](docs/design/DESIGN.md): tokens, type, windows
+- [Copy deck](docs/design/copy-deck.md): every player-facing string by copy key
+- [Cultural care](docs/design/cultural-care.md): folklore and Taglish rules
+
+## Delivery and results
+
+- [Finalization plan](docs/FINALIZATION_PLAN.md): Nov 3 to Nov 5 roadmap and owners
+- [Eval results](docs/eval.md): real eval runs only
+- [Playtests](docs/playtests.md): real sessions only
+- [Release and packaging](docs/delivery/release-and-packaging.md): zip size and SHA-256
+- [Submission text](docs/delivery/submission-text.md): paste-ready form drafts
+- [Official Rules notes](docs/rules-notes.md): rules facts with source and access date
+- [Decisions](docs/decisions/README.md): ADR index
+
+## Optional
+
+- [Build log](docs/delivery/build-log.md): dated milestone history
+- [PRD](docs/DeskTop_PRD.md): original requirements, kept unchanged as history
+- [Build Guide](docs/DeskTop_Build_Guide.md): original phase plan, kept unchanged as history
+- [Feature prompt](docs/prompts/FEATURE_PROMPT.md): master working prompt for code features
+- [Docs feature prompt](docs/prompts/DOCS_FEATURE_PROMPT.md): working prompt for docs work
+- [Archived prompts](docs/prompts/archive/MVP_BUILD_PROMPT.md): older prompts

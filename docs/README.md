@@ -6,7 +6,7 @@ canonical_for: [doc map, doc conventions, read order]
 sources: [CLAUDE.md, docs/DeskTop_PRD.md, docs/DeskTop_Build_Guide.md]
 status: active
 last_verified: 2026-11-04
-related: [CLAUDE.md, docs/glossary.md, docs/prompts/FEATURE_PROMPT.md]
+related: [CLAUDE.md, llms.txt, README.md, docs/glossary.md, docs/prompts/FEATURE_PROMPT.md, docs/delivery/build-log.md]
 ---
 
 # Docs index
@@ -19,7 +19,9 @@ This file maps every document in `docs/` and says which ones to read for each ki
 |---|---|
 | What to build | `DeskTop_PRD.md` v1.1 (canonical source, kept unchanged) |
 | How and when to build | `DeskTop_Build_Guide.md` (canonical for schedule, phases, cut list) |
-| Working prompt | `prompts/FEATURE_PROMPT.md`. Finalization roadmap: `FINALIZATION_PLAN.md` |
+| Working prompt | `prompts/FEATURE_PROMPT.md`. Docs work: `prompts/DOCS_FEATURE_PROMPT.md`. Finalization roadmap: `FINALIZATION_PLAN.md` |
+| Entry points | Humans: `../README.md`, then `how-to-run.md`. AI: `../CLAUDE.md`, then this file, then `../llms.txt` |
+| History | `delivery/build-log.md`. CLAUDE.md State holds current state only |
 | Precedence | Code beats docs on what exists. PRD beats derived docs on what to build. Build Guide beats PRD on schedule and cuts |
 | Conflicts | Recorded as ADRs in `decisions/` |
 
@@ -37,7 +39,8 @@ This file maps every document in `docs/` and says which ones to read for each ki
 | `how-to-run.md` | Friendly guide to install, launch and play the game. Start here if you just want to play |
 | `eval.md` | Eval results E1 to E7 (real runs only) |
 | `playtests.md` | Playtest logs (real sessions only) |
-| `rules-notes.md` | Official Rules answers and smoke-test findings |
+| `rules-notes.md` | Official Rules answers, event page facts and smoke-test findings |
+| `images/` | README and guide screenshots, captured from the running app over CDP |
 
 ## Derived documents
 
@@ -49,9 +52,10 @@ This file maps every document in `docs/` and says which ones to read for each ki
 | `design/` | DESIGN, screens, hud-components, copy-deck, art-direction, audio, accessibility, cultural-care, onboarding-and-tutorial | Look, feel, words |
 | `architecture/` | overview, backend-modules, frontend-modules, websocket-protocol, data-model, meta-api-integration, ai-contracts, sprite-pipeline, tracking-and-reanchor, voice-pipeline, reliability-and-fallbacks, cost-and-budget | System and contracts |
 | `engineering/` | setup-windows, coding-standards, testing-strategy, security-and-privacy, environment-and-config, git-and-commits, definition-of-done, troubleshooting | How to work |
-| `delivery/` | schedule, risk-register, demo-runbook, video-script, submission-checklist, readme-outline, judging-scorecard, submission-text, release-and-packaging, live-api-runbook, handoff-ui-redesign | Shipping |
+| `delivery/` | schedule, risk-register, demo-runbook, video-script, submission-checklist, readme-outline, judging-scorecard, submission-text, release-and-packaging, live-api-runbook, handoff-ui-redesign, build-log | Shipping and history |
 | `decisions/` | README, template, ADR-0001 to ADR-0012, ADR-0101 to ADR-0113 | Why things are the way they are |
 | root | `glossary.md` | Terms and ID prefixes |
+| repo root | `README.md`, `llms.txt`, `CLAUDE.md`, `LICENSE` | Human overview, AI link list, agent memory, license |
 
 ## Read order by task
 
@@ -67,7 +71,8 @@ This file maps every document in `docs/` and says which ones to read for each ki
 | Data | `architecture/data-model.md` |
 | Finalization | `FINALIZATION_PLAN.md`, `delivery/judging-scorecard.md`, `delivery/live-api-runbook.md`, `delivery/release-and-packaging.md` |
 | Demo prep | `delivery/demo-runbook.md`, `delivery/video-script.md`, `delivery/submission-checklist.md`, `market/judging-strategy.md` |
-| Docs work | this file, `prompts/DOCS_FEATURE_PROMPT.md` section 4.7, `decisions/README.md` |
+| Docs work | this file, `prompts/DOCS_FEATURE_PROMPT.md` section 4.7, `decisions/README.md`, `../llms.txt` |
+| Project history | `delivery/build-log.md`, `decisions/README.md` |
 
 ## Conventions for adding docs
 
