@@ -5,19 +5,20 @@ read_when: [Official Rules arrive, after smoke tests, before submission]
 canonical_for: [Official Rules answers, smoke test findings]
 sources: [docs/DeskTop_Build_Guide.md#01-account-and-rules-checks, docs/product/open-questions.md]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/product/open-questions.md, docs/architecture/meta-api-integration.md, docs/delivery/submission-checklist.md]
 ---
 
 # Official Rules notes
 
-Record answers from the Official Rules here with the exact rule text or link. As of 2026-10-28 nothing is recorded.
+Record answers from the Official Rules here with the exact rule text or link. As of 2026-11-04 09:10 SGT the Official Rules text is not recorded. Only facts from the public event page are below, each with its source and access date.
 
 ## Key facts
 
 | Item | Status |
 |---|---|
-| Official Rules read | Not recorded |
+| Official Rules read | Not recorded. Manual: EHIBE (Phase 3.1) |
+| Official deadline | Nov 4, 9:00 PM ET, which is Nov 5, 10:00 AM SGT (EST is UTC-5 after Nov 1). Source: event page, accessed 2026-11-04 |
 | Credits claimed | Not recorded |
 | Standard mode confirmed | Not recorded |
 | Structured output layout (A6) | Not tested |
@@ -26,13 +27,13 @@ Record answers from the Official Rules here with the exact rule text or link. As
 
 | Item | Unconfirmed note | PRD default | Official answer | Source |
 |---|---|---|---|---|
-| Demo video length | 3 minutes, main judging artifact | 2:30 | | |
+| Demo video length | 3 minutes, main judging artifact | 2:30 | Not stated on the event page | [Event page](https://cerebralvalley.ai/e/meta-ai-developer-hackathon), accessed 2026-11-04 |
 | Repo | Public repo required | Public | | |
 | Pre-existing code | Only work built during the event counts | New repo after kickoff | | |
 | Model use | Pass/fail check of real Meta Model API use | 4 Meta models | | |
 | Credits | Claim by Nov 4 | Claim early | | |
-| Team | Max 4, one submission per team | Solo | | |
-| Judging weights (A1) | 30, 25, 25, 20 | As PRD | | |
+| Team | Max 4, one submission per team | Solo | Team size not stated on the event page. Tracks: Indie developer track for individual builders and students, Startup track for teams and founders | [Event page](https://cerebralvalley.ai/e/meta-ai-developer-hackathon), accessed 2026-11-04 |
+| Judging weights (A1) | 30, 25, 25, 20 | As PRD | Unverified. The event page lists two criteria, project idea and technical skill, and says "Both criteria are weighted equally". The page reads like application review, so final judging weights wait on the Official Rules | [Event page](https://cerebralvalley.ai/e/meta-ai-developer-hackathon), accessed 2026-11-04 |
 | Required submission fields | | | | |
 | Community vote rules (Q2) | | | | |
 | IP and license terms | Perpetual license to organizers | Accepted (R17) | | |

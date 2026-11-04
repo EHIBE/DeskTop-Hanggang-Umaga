@@ -5,13 +5,13 @@ read_when: [after a playtest, writing impact framing, reviewing Taglish copy]
 canonical_for: [playtest records, copy review record]
 sources: [docs/engineering/testing-strategy.md, docs/DeskTop_PRD.md#playtests]
 status: active
-last_verified: 2026-11-03
+last_verified: 2026-11-04
 related: [docs/engineering/testing-strategy.md, docs/design/cultural-care.md, docs/market/judging-strategy.md]
 ---
 
 # Playtests
 
-Real sessions only, labeled qualitative and small sample. No playtest has run yet as of 2026-11-03.
+Real sessions only, labeled qualitative and small sample. No playtest has run yet as of 2026-11-04 09:45 SGT.
 
 ## Key facts
 

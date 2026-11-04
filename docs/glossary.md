@@ -5,7 +5,7 @@ read_when: [meeting an unfamiliar term, naming things in code or copy]
 canonical_for: [term definitions, ID prefixes]
 sources: [docs/DeskTop_PRD.md#22-appendix, docs/DeskTop_PRD.md#content-list]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/design/cultural-care.md, docs/design/copy-deck.md]
 ---
 
@@ -73,7 +73,13 @@ Every term the project uses, in one place. In-app folklore descriptions are cano
 | Ghost | Outline showing a start position or a push target |
 | Lost | Unit off the play area. Cannot act or be targeted |
 | Stolen | Unit taken by a duwende |
-| Scar | -1 max HP next night for a unit that went down (Could) |
+| Scar | -1 max HP for a unit that went down, floor 1 (`rules/progression.py`) |
+| Peklat | Filipino label for a scar (`scar.label` in `copy.ts`) |
+| Usok ng Kapre | Smoke cloud from a kapre. 10 cm radius, hides what is inside (`SMOKE_RADIUS_CM` in `rules/resolve.py`) |
+| Liwanag | Power P08. Clears smoke clouds within 12 cm (`SMOKE_CLEAR_RADIUS_CM`) |
+| Badge | Reward a unit picks after a night. Either +1 max HP (at most 2 of these) or Cooldown -1 (`rules/progression.py`) |
+| Barrio level | `min(5, nights survived)`. Stored as `campaign.barrio_level` |
+| Returning object | Object from an earlier night matched by local signature. Keeps its unit and sprite (`vision/returning.py`) |
 | Demo Safe Mode | Offline-capable mode with cached assets, local narration, local grammar, tap controls |
 | Forest edge | Outer 5 cm of the play area where enemies spawn |
 | Line bank | Local fallback narration lines in `assets/lines.json` |

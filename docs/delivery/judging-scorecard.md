@@ -5,7 +5,7 @@ read_when: [prioritizing the last days before submission, planning video shots, 
 canonical_for: [judging scorecard, model to workflow map, finalization tasks per criterion]
 sources: [docs/market/judging-strategy.md, docs/market/positioning-and-messaging.md, docs/product/goals-and-metrics.md, docs/delivery/video-script.md, docs/eval.md, README.md]
 status: active
-last_verified: 2026-11-03
+last_verified: 2026-11-04
 related: [docs/delivery/submission-text.md, docs/delivery/submission-checklist.md, docs/delivery/demo-runbook.md, docs/rules-notes.md]
 ---
 
@@ -17,12 +17,12 @@ This page scores DeskTop against the four assumed judging criteria, lists the ev
 
 | Fact | Value |
 |---|---|
-| Weights | Impact 30, Use of Meta AI Tooling 25, Demo Quality 25, Technical Depth and Execution 20. Assumed, not yet recorded from the Official Rules (A1). Verify in `docs/rules-notes.md` |
+| Weights | Impact 30, Use of Meta AI Tooling 25, Demo Quality 25, Technical Depth and Execution 20. Assumed, not yet recorded from the Official Rules (A1). The event page lists two criteria, project idea and technical skill, weighted equally. That reads like application review, so the final weights stay Unverified. Details in `docs/rules-notes.md` |
 | Baseline total | 81.75 of 100 (as specified). Canonical: `docs/market/judging-strategy.md` |
 | Target total | 88.25 of 100 |
 | Video | Max 3:00 assumed. The script is extended to about 2:50. Canonical: `docs/delivery/video-script.md` |
-| Freeze | New features end Nov 3 6:00 PM SGT. Fixes, packaging, docs and video until Nov 4 11:00 PM SGT |
-| Evals recorded | E7 only (50 of 50, 2026-10-29). E1 to E6 not run. Canonical: `docs/eval.md` |
+| Freeze | New features ended Nov 3 6:00 PM SGT. EHIBE then approved the cut features after the freeze (ADR-0113). Fixes, packaging, docs and video until Nov 4 11:00 PM SGT |
+| Evals recorded | E7 only (50 of 50 identical, 2026-11-04 08:59 SGT, commit 4b90671). E1 to E6 not run. Canonical: `docs/eval.md` |
 
 ## Score summary
 
@@ -75,9 +75,9 @@ Code paths: `backend/vision/` (summon, SAM, sprites), `backend/gm/` (narrator), 
 |---|---|
 | What judges look for | Deterministic, crash-free live reliability. A seamless journey. A compelling 3-minute video |
 | Evidence today | Demo Safe Mode plays a full night offline. Autosave restore at the saved turn. 20 s narration timeout with a local line. Rules engine is deterministic (E7, 50 of 50). Runbook: `docs/delivery/demo-runbook.md`. UI redesign done 2026-10-31 |
-| Gaps | KeySetup, Calibration, Night, Sunrise and Defeat have not been seen in the running app. No packaged build. Sound cues and speaker chip built 2026-11-03, not yet heard or seen live. Zero crash-free dry runs logged. No video footage |
-| Finalization tasks | Build the unsigned Windows zip with the backend bundled, then test it on a clean path. Sound cues and speaker chip are built. Run the Playtest 1 checklist and three consecutive clean runs before recording. Record the video to the script. Keep a backup recording |
-| Video proof | Hook in the first 8 seconds. Full night (current script 0:55 to 1:35). Manananggal split (1:35 to 1:50). Sunrise (1:50 to 2:05). No cuts hiding failures |
+| Gaps | KeySetup, Calibration, Night, Sunrise and Defeat have not been seen in the running app. The unsigned zip is built (2026-11-04, ADR-0111) but the clean-machine run is Manual: EHIBE. Rescore pending. Sound cues and speaker chip built 2026-11-03, not yet heard or seen live. Zero crash-free dry runs logged. No video footage |
+| Finalization tasks | The unsigned Windows zip with the backend bundled is built (2026-11-04). Test it on a clean path. Sound cues and speaker chip are built. Run the Playtest 1 checklist and three consecutive clean runs before recording. Record the video to the script. Keep a backup recording |
+| Video proof | Hook in the first 8 seconds. Full night (current script 0:55 to 1:30). Kapre smoke (1:30 to 1:42). Manananggal split (1:52 to 2:02). Sunrise (2:02 to 2:17). No cuts hiding failures |
 | Rule | 0 crashes in the last 3 runs before recording (`docs/product/goals-and-metrics.md`) |
 
 ## Technical Depth and Execution (weight 20)
@@ -85,16 +85,16 @@ Code paths: `backend/vision/` (summon, SAM, sprites), `backend/gm/` (narrator), 
 | Item | Detail |
 |---|---|
 | What judges look for | Sound architecture, graceful recovery, edge-case resilience, production code quality |
-| Evidence today | Pure rules engine owns every number (`backend/rules/`). Hybrid tracking with re-anchor ladder. Token-gated backend on 127.0.0.1, key in safeStorage. Cost meter with hard stop. Schema v2 with stepped migration. Tests, ruff, mypy --strict, tsc, eslint and prettier clean. Test count: [MEASURED: re-read from the test run on submit day] (1,232 on 2026-11-03). E7 50 of 50. Rules resolve 1.1 ms median, tracker 31.9 ms median (`README.md`) |
-| Gaps | CI workflow added, first run after push. No Electron fuses yet (Phase 6). No Python dependency audit (known gap, accepted). Packaged origin fixed (ADR-0111), backend bundling still to do. E1 to E6 not run |
-| Finalization tasks | Set fuses through the electron-builder `electronFuses` config. Fix the code-check bugs listed in the shared brief. Run E1, E2, E4, E6 and record real numbers. State the Python audit gap honestly |
-| Video proof | Under-the-hood shot with architecture, hybrid tracking, rules engine, eval numbers and cost per night (current script 2:05 to 2:20). Show only numbers from `docs/eval.md` |
+| Evidence today | Pure rules engine owns every number (`backend/rules/`). Hybrid tracking with re-anchor ladder. Token-gated backend on 127.0.0.1, key in safeStorage. Cost meter with hard stop. Schema v3 with stepped migration (ADR-0113). Tests, ruff, mypy --strict, tsc and eslint clean. Prettier flags `app/package.json` (2026-11-04). Test count: Canonical: CLAUDE.md State. E7 50 of 50. Rules resolve 0.4 ms median, tracker 34.7 ms median, both 2026-11-04 (`README.md`) |
+| Gaps | CI workflow added, first run after push. Electron fuses on and backend bundled in the zip (ADR-0111). Clean-machine run not done. No Python dependency audit (known gap, accepted). E1 to E6 not run. Rescore pending |
+| Finalization tasks | Fuses set through the electron-builder `electronFuses` config (done). Run E1, E2, E4, E6 and record real numbers. State the Python audit gap honestly |
+| Video proof | Under-the-hood shot with architecture, hybrid tracking, rules engine, eval numbers and cost per night (current script 2:27 to 2:42). Show only numbers from `docs/eval.md` |
 
 ## Finalization task list
 
 | Task | Closes gap in | Owner |
 |---|---|---|
-| Pre-built unsigned Windows zip with bundled backend | Demo, Technical | Build, then EHIBE verifies |
+| Pre-built unsigned Windows zip with bundled backend | Demo, Technical | Done 2026-11-04, EHIBE verifies on a clean machine |
 | Live Muse pipeline proof (smoke, assets, one reel) | Tooling | EHIBE with key |
 | E1, E5, E6 real numbers in `docs/eval.md` | Tooling, Technical | EHIBE and test runner |
 | Code-synthesized sound effects | Demo | Built 2026-11-03 |
@@ -102,7 +102,7 @@ Code paths: `backend/vision/` (summon, SAM, sprites), `backend/gm/` (narrator), 
 | First-night tutorial hints | Impact, Demo | Built 2026-11-03 |
 | Speaker chip | Demo, Tooling | Built 2026-11-03 |
 | GitHub Actions workflow | Technical | Built 2026-11-03, EHIBE pushes |
-| Electron fuses via `electronFuses` | Technical | Config |
+| Electron fuses via `electronFuses` | Technical | Done (ADR-0111) |
 | Troubleshooting section | Demo, Technical | Done, `docs/engineering/troubleshooting.md` |
 | Real-player footage with written OK | Impact | EHIBE |
 

@@ -17,9 +17,9 @@ All player-facing text, keyed. `app/src/renderer/src/lib/copy.ts` and `assets/li
 
 | Fact | Value |
 |---|---|
-| UI keys | 336 in copy.ts on 2026-11-04 (48 from PRD, the rest Proposed) |
+| UI keys | 349 in copy.ts on 2026-11-04 09:40 SGT, each listed once below (48 from PRD, the rest Proposed) |
 | Line bank moments | 31 in `assets/lines.json` (the 19 earlier moments plus kapre_smoke_telegraph, kapre_smoke_hit, unit_lost, unit_returned, ownership_confirm, badge_earned, scar_gained, object_recognized, recap_win, recap_lose, recap_badge, recap_scar). Canonical: the file |
-| Placeholders | [name], [unit], [object], [player], [feature], [HP], [n], [action], [target], [pangalan], [turn], [seconds], [beaten], [turns], [downed], [badge] |
+| Placeholders | [name], [unit], [object], [player], [feature], [HP], [n], [action], [target], [pangalan], [turn], [seconds], [beaten], [turns], [downed], [badge], [piyesa], [piece] |
 | Review | 2 Filipino playtesters review every Taglish line before recording |
 | Process | Add keys with the `desktop-add-copy-key` skill |
 
@@ -67,6 +67,7 @@ All player-facing text, keyed. `app/src/renderer/src/lib/copy.ts` and `assets/li
 | lose | Bumagsak ang kubo... Subukan ulit bukas ng gabi. | The kubo fell... Try again tomorrow night. | M7 to M8, Proposed, cultural review 2026-11-03 |
 | rec.consent | Ire-record ang gabing ito para sa replay. Payag ba lahat? | Tonight will be recorded for the replay. Does everyone agree? |
 | rec.on | Nagre-record | Recording |
+| rec.player | Sagot ni [name] | [name]'s answer |
 | replay.making | Ginagawa ang replay... | Making the replay... |
 | net.slow | Medyo mabagal ang koneksyon. Tuloy pa rin tayo. | The connection is slow. We'll keep going. |
 | net.down | Offline muna ang [feature]. Gamitin ang tap controls. | [feature] is offline. Use tap controls. |
@@ -166,6 +167,8 @@ English text for these is a proposal for playtester review.
 | diff.mahirap | Mahirap | Hard | M3, playtester review |
 | calib.camera | Pumili ng camera | Pick a camera | M3, playtester review |
 | calib.no_camera | Walang nakitang camera. | No camera found. | M3, playtester review |
+| calib.no_picture | walang larawan | no picture | M3, playtester review |
+| calib.scanning | Hinahanap ang mga camera... | Looking for cameras... | Fix 5e0cff7, playtester review |
 | calib.reset | Ulitin ang mga kanto | Redo the corners | M3, playtester review |
 | calib.remove | Alisin ang papel, tapos pindutin ang Tapos na. | Remove the sheet, then press Done. | M3, playtester review |
 | calib.confirm | Tapos na | Done | M3, playtester review |
@@ -255,6 +258,7 @@ English text for these is a proposal for playtester review.
 | claim.done | Tapos na | Done | M7 to M8, Proposed, playtester review |
 | claim.skip | Laktawan | Skip | M7 to M8, Proposed, playtester review |
 | claim.tap_unit | I-tap ang piyesa, tapos ang pangalan. | Tap a piece, then a name. | M7 to M8, Proposed, playtester review |
+| claim.voice_hint | Sabihin: ako si [pangalan], hawak ko ang [piyesa] | Say: I'm [name], I'll take [piece] | Phase 12, playtester review |
 | claim.duplicate | Magkaiba dapat ang mga pangalan. | Names must be different. | M7 to M8, Proposed, playtester review |
 | score.alive | Buhay na kakampi | Allies alive | M7 to M8, Proposed, playtester review |
 | score.kubo | HP ng kubo | Kubo HP | M7 to M8, Proposed, playtester review |
