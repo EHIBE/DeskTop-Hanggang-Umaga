@@ -67,7 +67,7 @@ This file maps every document in `docs/` and says which ones to read for each ki
 | Data | `architecture/data-model.md` |
 | Finalization | `FINALIZATION_PLAN.md`, `delivery/judging-scorecard.md`, `delivery/live-api-runbook.md`, `delivery/release-and-packaging.md` |
 | Demo prep | `delivery/demo-runbook.md`, `delivery/video-script.md`, `delivery/submission-checklist.md`, `market/judging-strategy.md` |
-| Docs work | this file, `prompts/archive/FEATURE_PROMPT_docs_program.md` section 4.7, `decisions/README.md` |
+| Docs work | this file, `prompts/DOCS_FEATURE_PROMPT.md` section 4.7, `decisions/README.md` |
 
 ## Conventions for adding docs
 
