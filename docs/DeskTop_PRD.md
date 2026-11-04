@@ -1,4 +1,5 @@
 # DeskTop: Hanggang Umaga | Product Requirements Document
+> Historical document, kept unchanged since 2026-10-28. Current state lives in [CLAUDE.md](../CLAUDE.md) and the [docs index](README.md).
 
 **DeskTop: any desk is a game board.**
 

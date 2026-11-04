@@ -5,20 +5,20 @@ read_when: [writing the root README.md]
 canonical_for: [README outline, license default]
 sources: [docs/DeskTop_PRD.md#readme-outline, docs/DeskTop_Build_Guide.md#152-readme]
 status: active
-last_verified: 2026-10-29
+last_verified: 2026-11-04
 related: [docs/delivery/submission-checklist.md, docs/product/product-brief.md]
 ---
 
 # README outline
 
-The root README was written on 2026-10-29 (Phase 15). The demo GIF, video link and license wait on EHIBE. Each section below names the doc to pull from, so the README summarizes rather than duplicates.
+The root README was written on 2026-10-29 (Phase 15). `README.md` was rewritten 2026-11-04 following `docs/prompts/DOCS_FEATURE_PROMPT.md` section 4.7.2 and is the live version. `LICENSE` and `assets/LICENSE-ASSETS.md` exist. The demo video link waits on EHIBE. Each section below names the doc to pull from, so the README summarizes rather than duplicates.
 
 ## Key facts
 
 | Fact | Value |
 |---|---|
 | File | `README.md` at repo root (Phase 15) |
-| License default | MIT code, CC BY-NC 4.0 assets made for DeskTop, third-party assets keep their own (Q3, decide by Nov 3) |
+| License default | MIT code, CC BY-NC 4.0 assets made for DeskTop, third-party assets keep their own (Q3, decided) |
 
 ## Sections
 

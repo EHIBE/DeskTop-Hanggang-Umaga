@@ -5,7 +5,7 @@ read_when: [finishing any feature]
 canonical_for: [definition of done]
 sources: [docs/prompts/FEATURE_PROMPT.md#6-verify, docs/prompts/FEATURE_PROMPT.md#7-document, docs/DeskTop_Build_Guide.md#how-to-use-this-guide]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/engineering/testing-strategy.md, docs/engineering/git-and-commits.md, docs/product/requirements-index.md]
 ---
 

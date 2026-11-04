@@ -5,7 +5,7 @@ read_when: [planning posts, cutting social clips, after submission]
 canonical_for: [bonus prize plan, social clip list, channel plan]
 sources: [docs/DeskTop_PRD.md#bonus-prize-plan-community-vote-most-viral, docs/DeskTop_Build_Guide.md#154-after-submitting-nov-5-to-8, docs/market/market-and-audience.md]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/market/positioning-and-messaging.md, docs/delivery/video-script.md, docs/product/open-questions.md]
 ---
 
@@ -58,4 +58,4 @@ Proposed hook lines need playtester review like all Taglish copy.
 
 ## Post-hackathon roadmap (for "what next" posts)
 
-Regional folklore pack, classroom mode, phone as camera, wave editor, offline Glimmer narration, more languages if the voice model adds them. Out of scope for v1 (`product/scope-and-cuts.md`).
+Regional folklore pack, classroom mode, phone as camera, wave editor, Glimmer recap on by default with a bundled local model (built but optional today), more languages if the voice model adds them. Out of scope for v1 (`product/scope-and-cuts.md`).

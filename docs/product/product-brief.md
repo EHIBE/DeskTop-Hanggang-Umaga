@@ -5,7 +5,7 @@ read_when: [onboarding, writing pitch or README text, explaining the product]
 canonical_for: [elevator pitch, model map summary]
 sources: [docs/DeskTop_PRD.md#1-summary-one-pager, docs/DeskTop_PRD.md#2-working-backwards-press-release-and-faq]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/product/goals-and-metrics.md, docs/market/positioning-and-messaging.md, docs/architecture/meta-api-integration.md]
 ---
 

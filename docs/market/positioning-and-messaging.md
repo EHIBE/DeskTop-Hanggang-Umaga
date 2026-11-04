@@ -5,7 +5,7 @@ read_when: [writing the video voice-over, README intro, submission text, social 
 canonical_for: [positioning statement, value props, messaging rules]
 sources: [docs/DeskTop_PRD.md#1-summary-one-pager, docs/DeskTop_PRD.md#2-working-backwards-press-release-and-faq, docs/market/market-and-audience.md, docs/market/competitive-landscape.md]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/market/judging-strategy.md, docs/market/launch-and-community.md, docs/product/personas-and-jobs.md]
 ---
 

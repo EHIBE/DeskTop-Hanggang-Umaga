@@ -5,7 +5,7 @@ read_when: [changing this area, questioning this choice]
 canonical_for: [ADR-0009]
 sources: [docs/DeskTop_PRD.md#flow-f8-replay, docs/architecture/sprite-pipeline.md]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/decisions/README.md, CLAUDE.md]
 ---
 

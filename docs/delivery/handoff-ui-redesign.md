@@ -1,3 +1,14 @@
+---
+title: UI redesign handoff
+purpose: Record of the 2026-10-31 pixel night UI redesign and the CDP screenshot method for the running app
+read_when: [changing renderer screens, capturing screenshots of the running app, checking what the redesign verified]
+canonical_for: [UI redesign handoff, CDP screenshot method]
+sources: [app/src/renderer/src, git commit 1942e78]
+status: active
+last_verified: 2026-11-04
+related: [docs/design/DESIGN.md, docs/design/screens.md, docs/FINALIZATION_PLAN.md, docs/images]
+---
+
 # DeskTop UI redesign handoff
 
 2026-10-31 · EHIBE

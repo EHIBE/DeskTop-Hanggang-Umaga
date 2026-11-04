@@ -5,7 +5,7 @@ read_when: [deciding priorities, defining acceptance, running evals]
 canonical_for: [PG-1 to PG-5, success metrics, guardrail metrics]
 sources: [docs/DeskTop_PRD.md#4-goals-non-goals-and-success-metrics]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/market/judging-strategy.md, docs/engineering/testing-strategy.md, docs/product/scope-and-cuts.md]
 ---
 

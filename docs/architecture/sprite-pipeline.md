@@ -5,7 +5,7 @@ read_when: [implementing backend/vision/sprites.py, tuning sprite quality]
 canonical_for: [sprite steps, sprite prompt template, cache key, sprite validation, recording and replay pipeline]
 sources: [docs/DeskTop_PRD.md#sprite-pipeline, docs/DeskTop_Build_Guide.md#phase-5-sprite-pipeline-oct-29-to-30-4-h-f03, docs/DeskTop_PRD.md#flow-f8-replay, docs/DeskTop_Build_Guide.md#phase-14-replay-reel-nov-4-morning-4-h-f15]
 status: active
-last_verified: 2026-10-29
+last_verified: 2026-11-04
 related: [docs/design/art-direction.md, docs/decisions/ADR-0005-chroma-key-sprites.md, docs/architecture/meta-api-integration.md]
 ---
 
@@ -72,7 +72,20 @@ With a style anchor, append: "Match the pixel art style of the second image."
 
 HSV distance as built: OpenCV HSV, hue difference with wraparound scaled so 90 OpenCV units equal 255, then Euclidean with the saturation and value differences. Pixels at distance 40 or less become transparent, then the alpha erodes by 1 px. Opaque means alpha 128 or more. Object colours come from a deterministic median cut.
 
+A returning unit that already has a stored sprite schedules no sprite job (`GameController` summon path) and has no re-roll.
+
 A re-roll that changes the class starts a new sprite job and cancels the older one, and a stale result is dropped. A rename keeps the current sprite (privacy and cost audit, M5), so a later cache lookup under the new name misses and the unit keeps its existing sprite. The sprite subject is Spark's filtered `sprite_subject_en` or a fixed fallback, never the player name. A cache hit costs nothing.
+
+## Optional barrio map
+
+| Item | Value |
+|---|---|
+| Module | `backend/vision/barrio_map.py` (`BarrioMapService`) |
+| Call | A second Muse Image call, separate from sprites |
+| Input | One photo of the empty desk, plus the style anchor when one exists |
+| Cost | $0.01 per campaign (`IMAGE_PER_IMAGE_USD`) |
+| Cache | Saved per campaign, so a later night reuses it |
+| Default | Off. The `generated_map` setting turns it on (FR-54) |
 
 ## Note on keying math
 

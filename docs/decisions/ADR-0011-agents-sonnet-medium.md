@@ -5,7 +5,7 @@ read_when: [changing this area, questioning this choice]
 canonical_for: [ADR-0011]
 sources: [docs/prompts/FEATURE_PROMPT.md, docs/engineering/git-and-commits.md]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/decisions/README.md, CLAUDE.md]
 ---
 

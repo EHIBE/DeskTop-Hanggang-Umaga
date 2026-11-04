@@ -5,7 +5,7 @@ read_when: [building or reviewing any UI, copy or input path]
 canonical_for: [accessibility rules, input parity]
 sources: [docs/DeskTop_PRD.md#10-non-functional-requirements, docs/DeskTop_PRD.md#11-ux-and-ui]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/design/DESIGN.md, docs/design/hud-components.md, docs/design/copy-deck.md]
 ---
 
@@ -39,7 +39,11 @@ DeskTop is played by groups sitting around a laptop, some who will not speak and
 | Downed unit | Grey plus no ring plus strip shows "Bagsak" |
 | Intent arrow | "!" icon plus damage number |
 | Uncertain | "?" badge |
-| Stolen | Lock icon |
+| Stolen | X mark plus the text "status.stolen" (`hud/StatusBadge.tsx`) |
+| Lost | Crossed circle plus the text "status.lost" |
+| Out | Triangle plus the text "status.out" with turns |
+| Smoked | Block shape plus the text "status.smoked" |
+| Badge and scar marks | Heart, bolt and scar icons with one `aria-label` and title listing them (`components/UnitMarks.tsx`) |
 
 ## Input parity (NFR-28, FR-25)
 
@@ -51,6 +55,10 @@ DeskTop is played by groups sitting around a laptop, some who will not speak and
 | Summon name | Typed name field |
 | Voice claim | Tap name chips, drag units |
 | Push-to-talk | Hold Space |
+| Settings | Settings button on Start and in the pause window |
+| Quit from pause | Quit button, then a confirm button (`pause.quit_confirm`) |
+| Badge pick | Tap a badge choice in the badge panel (`components/BadgePanel.tsx`) |
+| Close a dialog | Esc closes it (`components/Dialog.tsx`) |
 
 ## Language
 

@@ -49,7 +49,7 @@ Each record explains one decision: its context, the choice, and the cost. Accept
 | [0109](ADR-0109-schedule-source.md) | Build Guide schedule supersedes PRD timeline (B9) | 2026-10-28 |
 | [0110](ADR-0110-missing-prd-prompt.md) | Missing DeskTop_PRD_Prompt.md (B10) | 2026-10-28 |
 | [0111](ADR-0111-packaged-build-and-origin.md) | Packaged zip, fuses through electron-builder, `null` origin only when packaged | 2026-11-03 |
-| [0112](ADR-0112-finalization-scope.md) | Finalization scope: game feel features, cuts, P08 off Charm and Scout, no pip-audit | 2026-11-03 |
+| [0112](ADR-0112-finalization-scope.md) | Finalization scope: game feel features, cuts, no pip-audit. The Settings and F16 cuts and P08 off Charm and Scout are superseded by ADR-0113 | 2026-11-03 |
 | [0113](ADR-0113-post-freeze-cut-features.md) | Post-freeze cut features: build every cut feature before the zip, each off or fallback by default | 2026-11-03 |
 
 ## Proposed

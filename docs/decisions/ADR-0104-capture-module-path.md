@@ -5,7 +5,7 @@ read_when: [changing this area, questioning this choice]
 canonical_for: [ADR-0104]
 sources: [CLAUDE.md#bugs-and-contradictions, docs/prompts/archive/FEATURE_PROMPT_docs_program.md#3-project]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/decisions/README.md, CLAUDE.md]
 ---
 

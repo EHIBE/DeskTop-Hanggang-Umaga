@@ -33,11 +33,11 @@ EHIBE answered "all defaults" to the 31 discovery questions. These are binding f
 
 | # | Decision |
 |---|---|
-| D1 | The freeze holds at Nov 3 6:00 PM SGT for new features |
+| D1 | The freeze holds at Nov 3 6:00 PM SGT for new features. Superseded by ADR-0113: every cut feature was built after the freeze |
 | D2 | Production ready means a pre-built, unsigned Windows zip with the Python backend bundled |
-| D3 | Build today: code-made sound cues, folklore glossary, first-night tutorial hints, speaker chip. Skip Settings |
-| D4 | Campaign progression F16 is cut |
-| D5 | P08 Liwanag leaves the Charm and Scout power lists while Kapre smoke is cut |
+| D3 | Build today: code-made sound cues, folklore glossary, first-night tutorial hints, speaker chip. Skip Settings. The Settings skip is superseded by ADR-0113, Settings is built |
+| D4 | Campaign progression F16 is cut. Superseded by ADR-0113, F16 is built |
+| D5 | P08 Liwanag leaves the Charm and Scout power lists while Kapre smoke is cut. Superseded by ADR-0113, Kapre smoke is built and P08 is back on both lists |
 | D6 | EHIBE pastes the key in KeySetup and types it into `backend/.env`. Claude never reads that file |
 | D7 | Live budget today is $15. Claude may run smoke and asset scripts with EHIBE watching |
 | D8 | Contributor mode off is confirmed by EHIBE in the dashboard |
@@ -137,12 +137,16 @@ Raises Demo Quality. Uses CDP screenshots per `docs/delivery/handoff-ui-redesign
 
 ## Freeze: Nov 3, 6:00 PM SGT
 
+Status: The freeze moved with ADR-0113. Checks were rerun on 2026-11-04, results in CLAUDE.md State. The tag and push wait on EHIBE.
+
 - [ ] All tests, mypy, ruff, typecheck, lint, prettier and npm audit pass. Results recorded.
 - [ ] EHIBE runs `git tag freeze-nov3` and pushes.
 
 ## Phase 6: packaged zip (Claude, 6:00 PM to 8:30 PM)
 
 Raises Demo Quality and Technical Depth. Canonical steps: `docs/delivery/release-and-packaging.md`.
+
+Status: Done 2026-11-04. `release/DeskTop-1.0.0-win.zip` built at commit 5e0cff7, 323.8 MB (339,507,320 bytes), SHA-256 in the release doc. Packaged app connects, saves settings and closes cleanly. A Wi-Fi off Demo Safe night in the packaged app and a run on a machine without Python are still open, Manual: EHIBE.
 
 | Step | Task | Check |
 |---|---|---|
@@ -171,9 +175,9 @@ Raises Demo Quality and Impact.
 
 | Step | Task | Owner |
 |---|---|---|
-| 8.1 | Extend `docs/delivery/video-script.md` to about 2:50 with the live model pipeline shot | Claude |
+| 8.1 | Extend `docs/delivery/video-script.md` to about 2:50 with the live model pipeline shot. Done 2026-11-04 | Claude |
 | 8.2 | Record and edit the video, captions burned in | EHIBE |
-| 8.3 | Add `LICENSE` (MIT) and the asset license note | Claude |
+| 8.3 | Add `LICENSE` (MIT) and the asset license note. Done 2026-11-03 | Claude |
 | 8.4 | README: measured numbers, demo GIF, video link, zip link | Claude drafts, EHIBE adds links |
 | 8.5 | Fill `docs/delivery/submission-text.md` placeholders with measured numbers | Claude |
 | 8.6 | Secret scan of tree, history and the zip | Claude |

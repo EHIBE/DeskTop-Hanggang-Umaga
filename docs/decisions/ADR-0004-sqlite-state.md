@@ -1,11 +1,11 @@
 ---
 title: ADR-0004 SQLite for game state, Muse Glimmer only as a Could
-purpose: Record the decision on sQLite for game state, Muse Glimmer only as a Could
+purpose: Record the decision on SQLite for game state, Muse Glimmer only as a Could
 read_when: [changing this area, questioning this choice]
 canonical_for: [ADR-0004]
 sources: [docs/DeskTop_PRD.md#sqlite-schema, docs/architecture/data-model.md]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/decisions/README.md, CLAUDE.md]
 ---
 
@@ -34,6 +34,7 @@ Store all state in local SQLite (schema in backend/db/schema.sql). Autosave is o
 - Crash restore at turn start (FR-41)
 - Database lives in the Electron user data folder
 - Glimmer is optional and labeled when used
+- Amendment: Glimmer recap built 2026-11-04, off until DESKTOP_GLIMMER_URL is set (ADR-0113)
 
 ## Alternatives considered
 

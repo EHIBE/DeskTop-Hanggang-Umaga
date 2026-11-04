@@ -5,7 +5,7 @@ read_when: [implementing capture/calibration.py, capture/tracker.py, vision/sam.
 canonical_for: [calibration math, tracker behavior, re-anchor ladder, object signature]
 sources: [docs/DeskTop_PRD.md#sam-usage-spec, docs/DeskTop_Build_Guide.md#phase-2-camera-and-calibration-oct-28-2-h-f01, docs/DeskTop_Build_Guide.md#phase-6-tracking-and-re-anchor-oct-30-to-31-7-h-f04--f05]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/decisions/ADR-0002-hybrid-tracking.md, docs/game/balance-and-tuning.md, docs/architecture/meta-api-integration.md]
 ---
 
@@ -71,7 +71,7 @@ An A4 sheet gives a top-down desk plane. Local trackers move sprites between tur
 | Between-turn recovery | `GameController.recover_lost_objects()`, run once a second by the server. Off in Demo Safe Mode |
 | End Turn re-anchor | `GameController.reanchor_all()`. Allowed in Demo Safe Mode (FR-50). Positions saved in one transaction. End Turn calls it from M7 |
 
-Benchmark on 2026-10-28: 12 KCF trackers on a synthetic 1200x800 frame, median 31.9 ms per update. Real desk numbers wait on E2 and a live run.
+Benchmark on 2026-11-04: 12 KCF trackers on a synthetic 1200x800 frame, median 34.7 ms per update (31.9 ms on 2026-10-28). Real desk numbers wait on E2 and a live run.
 
 ## Look-alike objects (R03)
 
@@ -82,6 +82,17 @@ Benchmark on 2026-10-28: 12 KCF trackers on a synthetic 1200x800 frame, median 3
 ## Object signature
 
 Label, HSV histogram (8x4x4 bins over the masked crop), footprint area in cm2, bounding aspect, 128 px reference crop. Match score 0.5 histogram + 0.3 area + 0.2 aspect, match at 0.8+.
+
+## Lost detection and returning objects
+
+| Item | Value |
+|---|---|
+| Lost check | At End Turn after re-anchor, `update_lost` in `backend/rules/lost.py` runs on every watched unit (not down, stolen, lost or out) |
+| Goes off desk | Hull centroid outside the play area sets `off_desk` and emits a LOST event |
+| Comes back | Centroid inside the play area clears `off_desk`, resets start to the new position and emits FOUND |
+| Signature match | `SIGNATURE_MATCH_MIN` 0.8 in `config.py` |
+| Returning object | `backend/vision/returning.py` matches a new object to a unit from an earlier night |
+| Returning thresholds | `MATCH_THRESHOLD` 0.78, `AMBIGUITY_MARGIN` 0.04, `MIN_HISTOGRAM_SIMILARITY` 0.70 |
 
 ## Edge cases owned here
 

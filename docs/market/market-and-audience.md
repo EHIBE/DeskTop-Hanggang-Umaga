@@ -27,7 +27,7 @@ sources:
   - https://www.outsourceaccelerator.com/glossary/game-developers-association-philippines/
   - https://gmanetwork.com/news/scitech/technology/809092/pinoy-made-game-good-knight-is-on-sale-available-on-steam-early-access/story
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related:
   - docs/product/personas-and-jobs.md
   - docs/market/positioning-and-messaging.md

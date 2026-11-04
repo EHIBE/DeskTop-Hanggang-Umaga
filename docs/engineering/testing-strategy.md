@@ -20,7 +20,7 @@ All automated tests run offline against recorded fixtures, so they cost nothing 
 | Framework | pytest (backend). Renderer: Node built-in `node:test` with `--experimental-strip-types`, no extra dependency |
 | Command | `backend\.venv\Scripts\python -m pytest backend/tests -q` and `npm --prefix app run test` |
 | Coverage target | 90%+ of rules functions (NFR-31). Measure with `cd backend` then `.venv\Scripts\python -m pytest tests -q --cov=rules` |
-| Python static checks | ruff check, ruff format and mypy --strict (ADR-0101). All clean on 2026-11-04 with 2,182 backend tests and 84 renderer tests passing. Coverage 96% overall, `server.py` 100%, `night.py` 93% |
+| Python static checks | ruff check, ruff format and mypy --strict (ADR-0101). All clean on 2026-11-04. Current test counts and coverage: Canonical: `CLAUDE.md` State |
 | Fixtures | `fixtures/` from Phase 1 smoke tests and later recordings |
 | Determinism | E7 must be 100% |
 | CI | `.github/workflows/ci.yml` (Windows, Python 3.13, Node 22): ruff, ruff format, mypy strict, pytest, typecheck, lint, prettier. First run after EHIBE pushes |

@@ -18,8 +18,8 @@ The release is an unsigned zip of the unpacked Windows app. It carries its own p
 | Fact | Value |
 |---|---|
 | Artifact | `release/DeskTop-1.0.0-win.zip`, unsigned, from `app/dist/win-unpacked` |
-| Size | 327.1 MB zipped, 875 MB unpacked |
-| SHA-256 | `A6BE68E4E84B55849B592FBB66E7D5CBB273E665C58E747911DDB8F3ACFBD8CF` (final build at commit 5e0cff7, 2026-11-04, 323.8 MB. Tests folders in site-packages excluded. Camera list and live preview checked in the packaged app. A rebuild changes it) |
+| Size | 323.8 MB zipped (339,507,320 bytes), 860.1 MB unpacked (901,863,091 bytes). MB here means 1,048,576 bytes, as Windows Explorer shows it. Measured 2026-11-04 09:00 SGT |
+| SHA-256 | `A6BE68E4E84B55849B592FBB66E7D5CBB273E665C58E747911DDB8F3ACFBD8CF` (final build at commit 5e0cff7, 2026-11-04, rechecked 2026-11-04 09:00 SGT. Tests folders in site-packages excluded. Camera list and live preview checked in the packaged app. A rebuild changes it) |
 | Build command | `npm --prefix app run dist:win` |
 | Staging only | `npm --prefix app run bundle:backend` |
 | Platform | Windows only |
@@ -66,7 +66,7 @@ Run from `app/dist/win-unpacked` with `DeskTop.exe --remote-debugging-port=9444`
 
 - Backend log: `Uvicorn running on http://127.0.0.1:57193`, then `"WebSocket /ws" [accepted]` and `desktop.server websocket accepted`.
 - Renderer page text read over the debug port: the language pick (Filipino, English), so it got past Connecting.
-- The app was stopped by killing its processes, so the clean window close path and the child exit were not checked.
+- The app was stopped by killing its processes, so this first run did not check the clean window close path. A later check on 2026-11-04 did, see checklist row 10.
 
 ## Secret scan of the unpacked tree
 
@@ -89,14 +89,14 @@ Get-FileHash release\DeskTop-1.0.0-win.zip -Algorithm SHA256
 |---|---|---|
 | 1 | Build runs without errors | Done 2026-11-04. The renderer was built with `electron-vite build` that day because the renderer had a typecheck error mid-edit. Rerun `dist:win` on a green tree |
 | 2 | Unzip into a clean folder | Unverified. The unpacked folder was tested in place |
-| 3 | `DeskTop.exe` opens and the backend is healthy | Done |
+| 3 | `DeskTop.exe` opens and the backend is healthy | Done. Settings save checked in the packaged app 2026-11-04 |
 | 4 | First run shows the language pick, then KeySetup | Language pick seen. KeySetup Unverified |
 | 5 | Full Demo Safe night with Wi-Fi off | Planned |
-| 6 | Size recorded | Done, 327.1 MB zip |
+| 6 | Size recorded | Done, 323.8 MB zip |
 | 7 | Secret scan | Done, see above |
-| 8 | SHA-256 in `docs/delivery/submission-checklist.md` | Done 2026-11-04. Window close checked, no DeskTop.exe or python.exe left. Settings save checked in the packaged app |
+| 8 | SHA-256 in `docs/delivery/submission-checklist.md` | Done 2026-11-04 |
 | 9 | `backend.log` holds no key or token | Seen with no key set. Token redaction lives in `backend.ts` |
-| 10 | Close the window and no `python.exe` is left | Unverified, see smoke result |
+| 10 | Close the window and no `python.exe` is left | Done 2026-11-04 on the final build. No DeskTop.exe or python.exe left after close |
 | 11 | Run on a machine or account without Python installed | Unverified |
 
 ## Known gaps
@@ -109,4 +109,4 @@ Get-FileHash release\DeskTop-1.0.0-win.zip -Algorithm SHA256
 | Large download | OpenCV, numpy, shapely and the Python runtime | Accepted |
 | NSIS installer | `build:win` still builds it but it is untested | Use the zip |
 | No Python audit | `pip-audit` is not configured | Known gap |
-| Camera and mic untested in the packaged app | Permission handlers deny all by default | Unverified |
+| Mic untested in the packaged app | The backend owns the mic, the Electron permission handlers deny all by default | Unverified. The camera list and live preview were checked in the packaged app on 2026-11-04 |

@@ -5,7 +5,7 @@ read_when: [changing this area, questioning this choice]
 canonical_for: [ADR-0010]
 sources: [docs/DeskTop_PRD.md#per-model-integration-table, docs/architecture/meta-api-integration.md]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/decisions/README.md, CLAUDE.md]
 ---
 

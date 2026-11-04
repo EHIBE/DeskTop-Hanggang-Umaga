@@ -5,19 +5,19 @@ read_when: [before recording, before live finals, rehearsing]
 canonical_for: [dry-run checklist, demo night steps, live finals plan]
 sources: [docs/DeskTop_PRD.md#demo-dry-run-checklist-before-recording-and-before-live-finals, docs/DeskTop_Build_Guide.md#135-playtest-2-and-demo-recording-25-h-evening]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/delivery/video-script.md, docs/architecture/reliability-and-fallbacks.md, docs/design/cultural-care.md]
 ---
 
 # Demo runbook
 
-The demo is recorded on Nov 3 evening and may be repeated live at finals on Nov 9. Run the checklist each time, then play at least two full nights with recording on.
+The demo is recorded on Nov 4 and may be repeated live at finals on Nov 9. No recording or playtest has been logged yet. Run the checklist each time, then play at least two full nights with recording on.
 
 ## Key facts
 
 | Fact | Value |
 |---|---|
-| Recording night | Nov 3 evening (after the 6:00 PM SGT freeze) |
+| Recording day | Nov 4 (no recording logged yet) |
 | Gate | 3 crash-free nights in a row before recording |
 | Footage | Saved to 2 drives |
 | Players | 2 or 3 Filipino friends with written OK |
@@ -32,7 +32,9 @@ The demo is recorded on Nov 3 evening and may be repeated live at finals on Nov 
 - [ ] Sprites and cards for the demo set cached
 - [ ] Mic: test sentence transcribes, room quiet, fan off
 - [ ] Credits: balance checked, api_usage under $90
-- [ ] Demo Safe Mode tested once with Wi-Fi off
+- [ ] Demo Safe Mode tested once with Wi-Fi off. A camera is still required in Demo Safe Mode
+- [ ] ffmpeg check: `ffmpeg -version` works or `DESKTOP_FFMPEG` points at it (B14)
+- [ ] Release zip run: unzip `release/DeskTop-1.0.0-win.zip` and play one night from it
 - [ ] Backup recording of a full night on a second drive
 - [ ] Screen recorder at 1080p 30 FPS with audio
 - [ ] Phone on a tripod filming the table from the side for B-roll
@@ -60,4 +62,4 @@ The demo is recorded on Nov 3 evening and may be repeated live at finals on Nov 
 
 ## Shots the video needs from demo night
 
-Summon split screen, voice claim chips, a dodge, a tikbalang shove, the manananggal split with Asin, sunrise, and real reactions. Full list: `video-script.md`.
+Summon split screen, voice claim chips, a dodge, a tikbalang shove, a Kapre smoke, a scar or badge, the Kagabi recap, the manananggal split with Asin, sunrise, and real reactions. Full list: `video-script.md`.

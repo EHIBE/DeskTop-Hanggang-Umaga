@@ -86,7 +86,7 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | FR-23 | | Detect overlapping speakers, "Isa-isa lang!" | F11 | JS-03 | voice/session.py | test_voice_session.py (overlap drops both) | Tested |
 | FR-24 | ★ | Push-to-talk (hold Space), mode switch | F10 | JS-10 | hud/VoiceControls.tsx, game/night.py, voice/session.py | test_voice_session.py, test_voice_flow.py. Space key Manual: EHIBE | Built |
 | FR-25 | ★ | Tap menu for every voice action | F13 | JS-14 | hud/TapMenu.tsx | test_night_flow.py (intent validation). TapMenu.tsx | Built |
-| FR-26 | ★ | Local tracker, sprites follow at 10 Hz+, render 30 FPS+ | F04 | JS-05 | backend/capture/tracker.py, game/night.py, screens/Summon.tsx | test_tracker.py benchmark: 12 KCF trackers 31.9 ms median per update on a synthetic 1200x800 frame. Real-desk check Manual: EHIBE | Tested |
+| FR-26 | ★ | Local tracker, sprites follow at 10 Hz+, render 30 FPS+ | F04 | JS-05 | backend/capture/tracker.py, game/night.py, screens/Summon.tsx | test_tracker.py benchmark: 12 KCF trackers 34.7 ms median per update on a synthetic 1200x800 frame (2026-11-04, was 31.9 ms on 2026-10-28). Real-desk check Manual: EHIBE | Tested |
 | FR-27 | ★ | Freeze sprite on tracker loss, re-lock within 1 s | F04 | JS-07 | capture/tracker.py | test_tracker.py, test_tracking_flow.py | Tested |
 | FR-28 | ★ | Re-anchor all objects with one SAM call at End Turn | F05 | JS-05 | vision/sam.py, game/night.py (`reanchor_all`) | test_reanchor.py, test_tracking_flow.py. E2 Manual: EHIBE | Built |
 | FR-29 | ★ | Drift reconcile and identity recovery ladder | F05 | JS-07 | vision/sam.py, vision/signature.py | test_reanchor.py (every ladder step) | Tested |
@@ -125,13 +125,13 @@ RICE score = Reach x Impact x Confidence / Effort. Must at 4.0+, Should 2.0 to 3
 | NFR-01 | Latency | Summon to card with placeholder 8 s p90 | E6 | Planned |
 | NFR-02 | Latency | Real sprite 30 s p90, never blocks | E6. Never blocks: background task (test_server.py) | Built |
 | NFR-03 | Latency | End Turn to first animation 4 s p90 | E6 | Planned |
-| NFR-04 | Latency | Rules resolution 50 ms for 12 units and 8 enemies | test_resolve.py perf: 1.1 ms median for 12 units and 8 enemies | Tested |
+| NFR-04 | Latency | Rules resolution 50 ms for 12 units and 8 enemies | test_resolve.py perf: 0.4 ms median for 12 units and 8 enemies (2026-11-04, was 1.1 ms on 2026-10-28) | Tested |
 | NFR-05 | Latency | Speech end to chip, grammar path 3 s p90 | E6 | Planned |
 | NFR-06 | Latency | Speech end to chip, Spark path 6 s p90 | n/a until the fallback is wired and timed in E6 | Planned |
 | NFR-07 | Latency | Partial caption 1.5 s p90 | E6 | Planned |
 | NFR-08 | Latency | Narration caption 6 s p90, animations never wait | E6 | Planned |
 | NFR-09 | Performance | Overlay 30 FPS+ at 1080p | manual | Planned |
-| NFR-10 | Performance | Tracker 10 Hz+ with 12 objects at 640x360 | benchmark (31.9 ms median, about 31 Hz, synthetic frame) | Tested |
+| NFR-10 | Performance | Tracker 10 Hz+ with 12 objects at 640x360 | benchmark (34.7 ms median, about 29 Hz, synthetic frame, 2026-11-04) | Tested |
 | NFR-11 | Performance | Backend CPU under 70% on 4 cores in PLAYER_PHASE | manual | Planned |
 | NFR-12 | Reliability | Timeouts: Spark 20 s, SAM image 10 s, SAM video 120 s, Muse Image 45 s, Files 60 s | unit test (test_meta_client.py) | Tested |
 | NFR-13 | Reliability | 2 retries, 0.5 s then 1 s, jitter 250 ms, Retry-After, no retry on 400 | unit test (test_meta_client.py) | Tested |

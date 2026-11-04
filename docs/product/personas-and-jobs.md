@@ -5,7 +5,7 @@ read_when: [designing a flow, writing copy, framing impact]
 canonical_for: [personas, JS-01 to JS-14]
 sources: [docs/DeskTop_PRD.md#5-users-personas-and-job-stories, docs/DeskTop_PRD.md#3-problem-alignment]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/market/market-and-audience.md, docs/product/requirements-index.md]
 ---
 

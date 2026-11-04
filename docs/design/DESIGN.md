@@ -5,7 +5,7 @@ read_when: [any UI work, choosing a color or size, reviewing a screen]
 canonical_for: [color tokens, type scale, sizing rules, motion rules, visual bans]
 sources: [docs/DeskTop_PRD.md#art-direction, docs/DeskTop_PRD.md#hud-layout-1920x1080, docs/DeskTop_PRD.md#10-non-functional-requirements]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/design/screens.md, docs/design/hud-components.md, docs/design/art-direction.md, docs/design/accessibility.md]
 ---
 
@@ -130,6 +130,6 @@ Animations start from rules events at once. They never wait for narration.
 
 ## Implementation notes
 
-- Tailwind v4 is installed but not wired yet (ADR-0102). Define tokens in an `@theme` block once wired.
+- Tokens live in the `@theme` block of `app/src/renderer/src/assets/main.css`. Tailwind v4 is wired (ADR-0102).
+- Settings and Recap use the shared `Dialog` window (`components/Dialog.tsx`). `LangToggle` sits on Start, KeySetup and Calibration, not in Settings, where a language picker is built into the screen itself.
 - Use `image-rendering: pixelated` on every canvas and sprite image.
-- Keep the scaffold styles (`base.css`, wavy lines, Electron logo) out of the game screens. Replace them when building Start.

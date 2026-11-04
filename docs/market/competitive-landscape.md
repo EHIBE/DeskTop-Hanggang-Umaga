@@ -23,7 +23,7 @@ sources:
   - https://www.noypigeeks.com/?p=260003
   - https://nintendo.com/games/detail/agnostiko-origins-switch
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related:
   - docs/product/personas-and-jobs.md
   - docs/market/positioning-and-messaging.md

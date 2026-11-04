@@ -5,7 +5,7 @@ read_when: [prioritizing work for score, planning the video, final review before
 canonical_for: [rubric scorecard, indie lens score, feasibility score, appeal score, score levers]
 sources: [docs/DeskTop_PRD.md#20-scoring, docs/DeskTop_PRD.md#4-goals-non-goals-and-success-metrics]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/delivery/video-script.md, docs/market/positioning-and-messaging.md, docs/product/goals-and-metrics.md]
 ---
 
@@ -27,7 +27,7 @@ Weighted total = sum of score x weight / 10. Original DeskStage concept scored 6
 
 Math check: 7 x 3 + 9 x 2.5 + 8.5 x 2.5 + 8.5 x 2 = 21 + 22.5 + 21.25 + 17 = 81.75. Target: 8 x 3 + 9.5 x 2.5 + 9 x 2.5 + 9 x 2 = 24 + 23.75 + 22.5 + 18 = 88.25.
 
-Note: the Build Guide cut F12, F22, Kapre smoke and all Coulds. None of the scored levers depend on them, so the scores stand. Rescore when the Official Rules arrive.
+Note: F12, F22, Kapre smoke and all Coulds were cut, then built after the freeze (ADR-0113). None of the scored levers depend on them, so the scores stand. The event page lists two criteria, project idea and technical skill, weighted equally (`docs/rules-notes.md`). That reads like application review, so the weights above stay assumed. Rescore when the Official Rules arrive.
 
 ## How each criterion is earned
 
@@ -47,7 +47,7 @@ Note: the Build Guide cut F12, F22, Kapre smoke and all Coulds. None of the scor
 | 3 | Pre-built Windows zip and one-command setup | Demo +0.5, Tech +0.25 | +1.75 |
 | 4 | A 10 s classroom clip (facilitator running a night) | Impact +0.5 | +1.50 |
 | 5 | Publish E1 to E7 on screen and in the README | Tech +0.5 | +1.00 |
-| 6 | Glimmer offline recap, labeled | Tooling +0.25 | +0.63 (Could, cut) |
+| 6 | Glimmer offline recap, labeled | Tooling +0.25 | +0.63 (Could, built, off until `DESKTOP_GLIMMER_URL` is set) |
 
 Levers 1 and 2 together add 6.75 points, to about 88.5.
 

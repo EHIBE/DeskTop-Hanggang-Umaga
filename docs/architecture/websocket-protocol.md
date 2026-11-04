@@ -11,7 +11,7 @@ related: [docs/architecture/overview.md, docs/engineering/security-and-privacy.m
 
 # WebSocket protocol
 
-The renderer and backend talk over one WebSocket at `ws://127.0.0.1:8765/ws`. Messages marked Established are built and tested. Only `uncertain.tap` and the envelope fields `seq` and `turn` are still Proposed. New messages go through the `desktop-add-ws-message` skill.
+The renderer and backend talk over one WebSocket at `ws://127.0.0.1:<port>/ws`, where Electron picks a free port each launch (8765 only for a manual run). Messages marked Established are built and tested. Only `uncertain.tap` and the envelope fields `seq` and `turn` are still Proposed. New messages go through the `desktop-add-ws-message` skill.
 
 ## Key facts
 

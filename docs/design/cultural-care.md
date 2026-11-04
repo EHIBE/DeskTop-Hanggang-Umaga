@@ -5,7 +5,7 @@ read_when: [writing copy or prompts, making enemy art, reviewing GM output, befo
 canonical_for: [in-app folklore glossary, cultural rules, content safety controls, review checklist]
 sources: [docs/DeskTop_PRD.md#cultural-care, docs/DeskTop_PRD.md#content-list, docs/DeskTop_PRD.md#content-safety]
 status: active
-last_verified: 2026-10-28
+last_verified: 2026-11-04
 related: [docs/design/copy-deck.md, docs/architecture/ai-contracts.md, docs/game/enemies.md]
 ---
 
@@ -39,6 +39,12 @@ Some places in the Philippines face real stigma from aswang stories. Creatures f
 | Albularyo | A traditional folk healer |
 | Anting-anting | An amulet believed to give protection |
 | Bahay kubo | A traditional Filipino house made of bamboo and nipa |
+| Usok ng Kapre | The smoke of the kapre's big cigar. It hides whatever stands inside until a light clears it |
+| Liwanag | A power of light that clears the kapre's smoke around a piece |
+
+The in-app glossary has 10 entries (`components/GlossaryPanel.tsx`, `gloss.*` keys in `lib/copy.ts`). Text above is the ENG text.
+
+Open item: the `tl` text of the eight older entries (Aswang to Bahay kubo) in `copy.ts` is still English. Only Usok ng Kapre and Liwanag have real Tagalog. Needs a Filipino reviewer.
 
 ## Rules
 

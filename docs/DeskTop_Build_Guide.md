@@ -1,4 +1,5 @@
 # DeskTop: Hanggang Umaga | Step-by-Step Build Guide
+> Historical document, kept unchanged since 2026-10-28. Current state lives in [CLAUDE.md](../CLAUDE.md) and the [docs index](README.md).
 
 **Companion to `DeskTop_PRD.md`.** The PRD says *what* to build. This guide says *how*, in order.
 
