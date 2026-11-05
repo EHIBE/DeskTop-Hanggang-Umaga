@@ -1,5 +1,6 @@
 out
 dist
+staging
 pnpm-lock.yaml
 LICENSE.md
 tsconfig.json
