@@ -8,6 +8,8 @@ A webcam turns the things on your desk into pixel heroes who hold off Filipino f
 
 **Demo video:** not recorded yet. The link goes here once it is uploaded.
 
+**Download:** `DeskTop-1.0.0-win.zip` (323.8 MB). The link goes here once the zip is attached to a release. Setup steps: [From the zip](#from-the-zip).
+
 ## What it is
 
 Put a mug, a coin and your keys on the desk, point a webcam straight down, and they become 16-bit units with a card, a power and a sprite. One to four friends at one table slide the real objects by hand and give orders out loud in Taglish or English. For eight turns, aswang, tikbalang, kapre, manananggal and duwende crawl in from the edges of the desk, and you hold the bahay kubo hanggang umaga.
