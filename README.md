@@ -8,7 +8,7 @@ A webcam turns the things on your desk into pixel heroes who hold off Filipino f
 
 **Demo video:** not recorded yet. The link goes here once it is uploaded.
 
-**Download:** `DeskTop-1.0.0-win.zip` (323.8 MB). The link goes here once the zip is attached to a release. Setup steps: [From the zip](#from-the-zip).
+**Download:** [`DeskTop-1.0.0-win.zip`](https://github.com/EHIBE/DeskTop-Hanggang-Umaga/releases/tag/v1.0.0) (323.8 MB) from the v1.0.0 release. Setup steps: [From the zip](#from-the-zip).
 
 ## What it is
 
@@ -63,7 +63,7 @@ You need a Windows 10 or 11 laptop, a webcam pointed straight down at the desk f
 
 ### From the zip
 
-1. Download `DeskTop-1.0.0-win.zip` from the [Releases page](https://github.com/EHIBE/DeskTop-Hanggang-Umaga/releases) once it is attached.
+1. Download `DeskTop-1.0.0-win.zip` from the [v1.0.0 release](https://github.com/EHIBE/DeskTop-Hanggang-Umaga/releases/tag/v1.0.0).
 2. Check the download in PowerShell. The hash must match the one in [release and packaging](docs/delivery/release-and-packaging.md).
 
    ```powershell
